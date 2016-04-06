@@ -29,8 +29,7 @@ public class Query {
 	private final LinkedHashMap<String, Object> params;
 	
 	public Query(String sql, Connection conn) {
-		
-		this.sql = sql;
+		this.sql = sql.replaceAll(REGEX_PARAM.pattern(), "?");;
 		this.conn = conn;
 		
 		// We parse out the parameters immediately so we don't constantly have to perform a string match
@@ -112,9 +111,8 @@ public class Query {
 	/**
 	 * Executes and retrieves the raw ResultSet object from this query's payload
 	 */
-	private ResultSet execute() throws SQLException {
-		String nativeSql = this.sql.replaceAll(REGEX_PARAM.pattern(), "?");
-		PreparedStatement ps = conn.prepareStatement(nativeSql);
+	public ResultSet execute() throws SQLException {
+		PreparedStatement ps = conn.prepareStatement(sql);
 		int p = 1;
 		for (Map.Entry<String, Object> e : params.entrySet()) { // This will be correctly ordered since we use LinkedHashMap
 			String param = e.getKey();
