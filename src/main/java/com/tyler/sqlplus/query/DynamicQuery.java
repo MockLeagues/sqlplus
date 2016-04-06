@@ -39,7 +39,7 @@ public class DynamicQuery {
 		for (Object o : params) {
 			paramMap.put(p++ + "", o);
 		}
-		return  new Query(stmts.stream().collect(Collectors.joining(" ")), conn, paramMap);
+		return new Query(stmts.stream().collect(Collectors.joining(" ")), conn, paramMap);
 	}
 	
 }

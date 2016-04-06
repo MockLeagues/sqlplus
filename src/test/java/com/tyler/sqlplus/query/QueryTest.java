@@ -1,7 +1,6 @@
 package com.tyler.sqlplus.query;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.sql.Connection;
 import java.time.LocalDate;
@@ -216,4 +215,20 @@ public class QueryTest extends EmployeeDBTest {
 			assertEquals(new Integer(6), total);
 		}
 	}
+	
+	@Test
+	public void bindParamsNonNullForCreate() throws Exception {
+		Employee toCreate = new Employee();
+		toCreate.hired = new Date();
+		toCreate.name = "tester-pojo";
+		toCreate.salary = 20000;
+		toCreate.type = Type.HOURLY;
+		try (Connection conn = getConnection()) {
+			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn).bindParams(toCreate, false);
+			q.executeUpdate();
+			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
+			assertEquals(new Integer(1), actual);
+		}
+	}
+	
 }

@@ -145,7 +145,7 @@ public class ResultMapper {
 		}
 	}
 
-	private static String getMappedColName(Field field) {
+	public static String getMappedColName(Field field) {
 		Column annot = field.getDeclaredAnnotation(Column.class);
 		return annot != null && annot.name().length() > 0 ? annot.name() : field.getName();
 	}

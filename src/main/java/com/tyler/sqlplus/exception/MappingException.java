@@ -12,5 +12,9 @@ public class MappingException extends RuntimeException {
 	public MappingException(String msg, Throwable e) {
 		super(msg, e);
 	}
+
+	public MappingException(Exception e) {
+		super(e);
+	}
 	
 }
