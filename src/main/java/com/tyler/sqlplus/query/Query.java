@@ -7,11 +7,13 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.mysql.jdbc.Statement;
 import com.tyler.sqlplus.MappedPOJO;
 import com.tyler.sqlplus.ResultMapper;
 import com.tyler.sqlplus.ResultSets;
@@ -65,7 +67,7 @@ public class Query {
 	 */
 	public <T> Stream<T> streamAs(Class<T> mapClass) {
 		try {
-			ResultSet rs = prepareStatement().executeQuery();
+			ResultSet rs = prepareStatement(false).executeQuery();
 			ResultMapper mapper = new ResultMapper();
 			return ResultSets.rowStream(rs).map(row -> mapper.toPOJO(rs, mapClass)).distinct().map(MappedPOJO::getPOJO);
 		} catch (SQLException e) {
@@ -124,8 +126,32 @@ public class Query {
 	 * Execute this query's payload as an update statement
 	 */
 	public void executeUpdate() {
+		executeUpdate(false, null);
+	}
+	
+	/**
+	 * Executes this query's payload as an update statement, optionally returning the generated keys as instances of the given class
+	 */
+	public <T> List<T> executeUpdate(boolean returnKeys, Class<T> targetKeyClass) {
 		try {
-			prepareStatement().executeUpdate();
+			PreparedStatement ps = prepareStatement(returnKeys);
+			int affectedRows = ps.executeUpdate();
+			if (returnKeys && affectedRows > 0) {
+				ResultSet autoKeys = ps.getGeneratedKeys();
+				return
+					ResultSets
+					.rowStream(autoKeys)
+					.map(rs -> {
+						try {
+							return rs.getObject(1);
+						} catch (SQLException e) {
+							throw new RuntimeException(e);
+						}
+					})
+					.map(key -> Conversion.toJavaValue(targetKeyClass, key))
+					.collect(Collectors.toList());
+			}
+			return null;
 		} catch (SQLException e) {
 			throw new SQLSyntaxException(e);
 		}
@@ -138,7 +164,7 @@ public class Query {
 	 */
 	public <T> T fetchScalar(Class<T> scalarClass) {
 		try {
-			ResultSet rs = prepareStatement().executeQuery();
+			ResultSet rs = prepareStatement(false).executeQuery();
 			if (!rs.next()) {
 				throw new NoResultsException();
 			}
@@ -152,12 +178,19 @@ public class Query {
 	}
 
 	/**
-	 * Executes and retrieves the raw ResultSet object from this query's payload
+	 * Executes and retrieves the raw ResultSet object from this query's payload using the given return auto-keys flag
 	 */
-	public PreparedStatement prepareStatement() throws SQLException {
-		PreparedStatement ps = conn.prepareStatement(sql);
+	public PreparedStatement prepareStatement(boolean returnAutoKeys) throws SQLException {
+		PreparedStatement ps = returnAutoKeys ?
+		                           conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) :
+		                           conn.prepareStatement(sql);
 		int p = 1;
-		for (Object value : params.values()) { // This will be correctly ordered since we use LinkedHashMap
+		for (Map.Entry<String, Object> e : params.entrySet()) { // This will be correctly ordered since we use LinkedHashMap
+			Object value = e.getValue();
+			if (value == null) {
+				ps.close();
+				throw new SQLSyntaxException("Value not set for parameter " + e.getKey());
+			}
 			if (value instanceof Enum) {
 				value = value.toString();
 			}

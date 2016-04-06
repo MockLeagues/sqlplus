@@ -225,9 +225,23 @@ public class QueryTest extends EmployeeDBTest {
 		toCreate.type = Type.HOURLY;
 		try (Connection conn = getConnection()) {
 			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn).bindParams(toCreate, false);
-			q.executeUpdate();
+			q.executeUpdate(false, null);
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
 			assertEquals(new Integer(1), actual);
+		}
+	}
+	
+	@Test
+	public void returnGeneratedKeys() throws Exception {
+		transact("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
+		try (Connection conn = getConnection()) {
+			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn);
+			q.setParameter("type", "HOURLY");
+			q.setParameter("name", "tester-2");
+			q.setParameter("hired", "2015-01-01");
+			q.setParameter("salary", "10000");
+			Integer key = q.executeUpdate(true, Integer.class).get(0);
+			assertEquals(new Integer(2), key);
 		}
 	}
 	

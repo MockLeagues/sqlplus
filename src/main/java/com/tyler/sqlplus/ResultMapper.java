@@ -78,7 +78,7 @@ public class ResultMapper {
 					}
 					try {
 						Object value = columnLabel_value.get(mappedCol);
-						value = Conversion.toEntityValue(value, field); // Apply conversion
+						value = Conversion.toJavaValue(field, value); // Apply conversion
 						ReflectionUtils.set(field, mappedPOJO.pojo, value);
 					}
 					catch (Exception e) {
@@ -119,7 +119,7 @@ public class ResultMapper {
 			}
 			
 			String colName = getMappedColName(idField);
-			Object key = Conversion.toEntityValue(row.getObject(colName), idField);
+			Object key = Conversion.toJavaValue(idField, row.getObject(colName));
 			
 			// Assert we have a lookup table for the key -> instance for this type
 			Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);

@@ -28,22 +28,20 @@ public class Conversion {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static Object toEntityValue(Object dbValue, Field target) throws Exception {
+	public static Object toJavaValue(Field target, Object dbValue) throws Exception {
 		Column annot = target.getDeclaredAnnotation(Column.class);
 		if (annot != null && annot.converter().length > 0) { // Custom conversion class
 			return annot.converter()[0].newInstance().apply(dbValue);
 		}
-		else if (Enum.class.isAssignableFrom(target.getType())) { // Must convert over to specific enum type for this field
-			return target.getType().getDeclaredMethod("valueOf", String.class).invoke(null, dbValue.toString());
-		}
-		else {
-			return toJavaValue(target.getType(), dbValue);
-		}
+		return toJavaValue(target.getType(), dbValue);
 	}
 	
 	@SuppressWarnings("unchecked")
 	public static <T> T toJavaValue(Class<T> targetClass, Object dbValue) {
 		try {
+			if (Enum.class.isAssignableFrom(targetClass)) { // Must convert over to specific enum type for this field
+				return (T) targetClass.getDeclaredMethod("valueOf", String.class).invoke(null, dbValue.toString());
+			}
 			Function<Object, Object> converter = JAVA_FROMDB.get(targetClass);
 			if (converter == null) {
 				throw new MappingException("Unsupported java class type for DB conversion: " + targetClass.getName());
