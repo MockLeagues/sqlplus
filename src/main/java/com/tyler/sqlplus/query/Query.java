@@ -26,7 +26,7 @@ public class Query {
 	
 	private final String sql;
 	private final Connection conn;
-	private final LinkedHashMap<String, Object> params;
+	private LinkedHashMap<String, Object> params;
 	
 	public Query(String sql, Connection conn) {
 		this.sql = sql.replaceAll(REGEX_PARAM.pattern(), "?");;
@@ -41,6 +41,13 @@ public class Query {
 		}
 	}
 
+	// Package-private constructor for the dynamic query class which sets parameters directly
+	Query(String sql, Connection conn, LinkedHashMap<String, Object> params) {
+		this.sql = sql;
+		this.conn = conn;
+		this.params = params;
+	}
+	
 	public Query setParameter(String key, Object val) {
 		if (!params.containsKey(key)) {
 			throw new SQLSyntaxException("Unknown query parameter: " + key);
