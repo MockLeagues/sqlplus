@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import com.tyler.sqlplus.annotation.Column;
 import com.tyler.sqlplus.annotation.MultiRelation;
@@ -21,6 +20,9 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
  */
 public class ResultMapper {
 
+	// Caches the reflected field representing the POJO's database key so that we don't have to look it up each time
+	private static final Map<Class<?>, Field> TYPE_ID = new HashMap<>();
+	
 	// Used to track objects already created from the result set so we don't make duplicates
 	private Map<Class<?>, Map<Object, MappedPOJO<?>>> class_key_instance = new HashMap<>();
 	
@@ -99,20 +101,25 @@ public class ResultMapper {
 	private <T> MappedPOJO<T> assertInstance(Class<T> mapClass, ResultSet row) {
 		
 		try {
-			// Grab the key of this row based on the map class (remains null if we do not have a field annotated as key)
-			Object key = null;
-			Optional<Field> optIdField = Arrays.stream(mapClass.getDeclaredFields())
-			                                   .filter(f -> f.isAnnotationPresent(Column.class) && f.getDeclaredAnnotation(Column.class).key())
-			                                   .findFirst();
+			Field idField = null;
+			if (TYPE_ID.containsKey(mapClass)) {
+				idField = TYPE_ID.get(mapClass);
+			}
+			else {
+				idField = Arrays.stream(mapClass.getDeclaredFields())
+				                .filter(f -> f.isAnnotationPresent(Column.class) && f.getDeclaredAnnotation(Column.class).key())
+				                .findFirst()
+				                .orElseGet(() -> null);
+				TYPE_ID.put(mapClass, idField);
+			}
 			
-			// We only care about looking up existing entities by ID if we have an ID column for the class, otherwise we just return the new instance
-			if (!optIdField.isPresent()) {
+			// If the POJO does not have an ID field than we can't put it in our ID lookup table to re-retrieve it later, so we just return it now
+			if (idField == null) {
 				return new MappedPOJO<T>(mapClass.newInstance(), null);
 			}
-				
-			Field idField = optIdField.get();
+			
 			String colName = getMappedColName(idField);
-			key = Conversion.toEntityValue(row.getObject(colName), idField);
+			Object key = Conversion.toEntityValue(row.getObject(colName), idField);
 			
 			// Assert we have a lookup table for the key -> instance for this type
 			Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);
