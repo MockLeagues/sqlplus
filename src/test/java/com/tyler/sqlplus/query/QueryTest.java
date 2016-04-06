@@ -5,7 +5,6 @@ import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
@@ -32,15 +31,6 @@ public class QueryTest extends EmployeeDBTest {
 		}
 	}
 	
-	@Test
-	public void setsOrderedParams() {
-		Query q = new Query("select * from myTable where id = :id and name = :name and age = :age", null);
-		q.setParameter("name", "Tester");
-		q.setParameter("age", 35);
-		q.setParameter("id", 1234);
-		List<Object> ordered = q.getOrderedParameters();
-		assertEquals(Arrays.asList(1234, "Tester", 35), ordered);
-	}
 	
 	public static class Address {
 		public Integer addressId;
@@ -73,6 +63,36 @@ public class QueryTest extends EmployeeDBTest {
 			assertEquals("Othertown", second.city);
 			assertEquals("CA", second.state);
 			assertEquals("54321", second.zip);
+		}
+	}
+	
+	@Test
+	public void queryWithParams() throws Exception {
+		transact(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
+			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
+		);
+		try (Connection conn = getConnection()) {
+			Address result =
+				new Query("select address_id as addressId, street as street, state as state, city as city, zip as zip from address a where state = :state and city = :city", conn)
+				.setParameter("state", "CA")
+				.setParameter("city", "Othertown")
+				.findAs(Address.class);
+			assertEquals("Elm Street", result.street);
+		}
+	}
+	
+	@Test
+	public void throwsErrorIfParamValueNotSet() throws Exception {
+		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+		try (Connection conn = getConnection()) {
+			try {
+				new Query("select address_id from address where state = :state", conn).findAs(Address.class);
+				fail("Expected query to fail because no parameter was set");
+			} catch (SQLSyntaxException e) {
+				assertEquals("Value not set for parameter state", e.getMessage());
+			}
 		}
 	}
 	

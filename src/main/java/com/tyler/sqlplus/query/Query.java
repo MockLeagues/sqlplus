@@ -4,8 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -26,16 +25,24 @@ public class Query {
 	
 	private final String sql;
 	private final Connection conn;
-	private final Map<String, Object> params;
+	private final LinkedHashMap<String, Object> params;
 	
 	public Query(String sql, Connection conn) {
+		
 		this.sql = sql;
 		this.conn = conn;
-		this.params = new HashMap<>();
+		
+		// We parse out the parameters immediately so we don't constantly have to perform a string match
+		// each time a parameter is set to validate it exists
+		this.params = new LinkedHashMap<>();
+		Matcher paramsMatcher = REGEX_PARAM.matcher(sql);
+		while (paramsMatcher.find()) {
+			params.put(paramsMatcher.group().substring(1), null);
+		}
 	}
 
 	public Query setParameter(String key, Object val) {
-		if (!sql.contains(":" + key)) {
+		if (!params.containsKey(key)) {
 			throw new SQLSyntaxException("Unknown query parameter: " + key);
 		}
 		this.params.put(key, val);
@@ -108,23 +115,15 @@ public class Query {
 		String nativeSql = this.sql.replaceAll(REGEX_PARAM.pattern(), "?");
 		PreparedStatement ps = conn.prepareStatement(nativeSql);
 		int p = 1;
-		for (Object o : getOrderedParameters()) {
-			ps.setObject(p++, o);
+		for (Map.Entry<String, Object> e : params.entrySet()) { // This will be correctly ordered since we use LinkedHashMap
+			String param = e.getKey();
+			Object value = e.getValue();
+			if (value == null) {
+				throw new SQLSyntaxException("Value not set for parameter " + param);
+			}
+			ps.setObject(p++, value);
 		}
 		return ps.executeQuery();
-	}
-	
-	/**
-	 *  Converts the parameter map to an ordered list of objects which can be set via index on a native JDBC statement
-	 */
-	public List<Object> getOrderedParameters() {
-		List<Object> paramList = new ArrayList<>();
-		Matcher paramMatch = REGEX_PARAM.matcher(sql);
-		while (paramMatch.find()) {
-			String paramKey = paramMatch.group().substring(1);
-			paramList.add(this.params.get(paramKey));
-		}
-		return paramList;
 	}
 
 }
