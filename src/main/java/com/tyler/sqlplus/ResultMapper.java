@@ -22,12 +22,12 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
 public class ResultMapper {
 
 	// Used to track objects already created from the result set so we don't make duplicates
-	private Map<Class<?>, Map<Object, Object>> class_key_instance = new HashMap<>();
+	private Map<Class<?>, Map<Object, MappedPOJO<?>>> class_key_instance = new HashMap<>();
 	
 	/**
 	 * Maps the current row of the result set to the given POJO class
 	 */
-	public <T> T toPOJO(ResultSet rs, Class<T> mapClass) {
+	public <T> MappedPOJO<T> toPOJO(ResultSet rs, Class<T> mapClass) {
 		return toPOJO(rs, mapClass, null);
 	}
 	
@@ -36,9 +36,9 @@ public class ResultMapper {
 	 * call was made to map another child object on the same row. Tracking this class allows us to avoid circular references
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public <T> T toPOJO(ResultSet rs, Class<T> mapClass, Class<?> parentRef) {
+	public <T> MappedPOJO<T> toPOJO(ResultSet rs, Class<T> mapClass, Class<?> parentRef) {
 		try {
-			T instance = assertInstance(mapClass, rs);
+			MappedPOJO<T> mappedPOJO = assertInstance(mapClass, rs);
 			
 			Map<String, Object> columnLabel_value = ResultSets.toMap(rs);
 			
@@ -46,8 +46,8 @@ public class ResultMapper {
 				
 				if (field.isAnnotationPresent(SingleRelation.class)) {
 					if (parentRef == null || parentRef != field.getType()) { // Protect against circular reference
-						Object relation = toPOJO(rs, field.getType(), mapClass);
-						ReflectionUtils.set(field, instance, relation);
+						MappedPOJO<?> relation = toPOJO(rs, field.getType(), mapClass);
+						ReflectionUtils.set(field, mappedPOJO.pojo, relation.pojo);
 					}
 				}
 				else if (field.isAnnotationPresent(MultiRelation.class)) {
@@ -58,14 +58,14 @@ public class ResultMapper {
 							throw new MappingException("@MultiRelation annotated field '" + field.getName() + "' must be of a collection type");
 						}
 						
-						Object relation = toPOJO(rs, relationType, mapClass);
-						Collection relatedCollection = (Collection) ReflectionUtils.get(field, instance);
+						MappedPOJO<?> relation = toPOJO(rs, relationType, mapClass);
+						Collection relatedCollection = (Collection) ReflectionUtils.get(field, mappedPOJO.pojo);
 						if (relatedCollection == null) {
 							relatedCollection = new ArrayList<>();
-							ReflectionUtils.set(field, instance, relatedCollection);
+							ReflectionUtils.set(field, mappedPOJO.pojo, relatedCollection);
 						}
-						if (!relatedCollection.contains(relation)) {
-							relatedCollection.add(relation);
+						if (!relatedCollection.contains(relation.pojo)) {
+							relatedCollection.add(relation.pojo);
 						}
 					}
 				}
@@ -77,7 +77,7 @@ public class ResultMapper {
 					try {
 						Object value = columnLabel_value.get(mappedCol);
 						value = Conversion.toEntityValue(value, field); // Apply conversion
-						ReflectionUtils.set(field, instance, value);
+						ReflectionUtils.set(field, mappedPOJO.pojo, value);
 					}
 					catch (Exception e) {
 						throw new MappingException("Error setting field '" + field.getName() + "' in class " + mapClass.getName(), e);
@@ -85,7 +85,7 @@ public class ResultMapper {
 				}
 			}
 			
-			return instance;
+			return mappedPOJO;
 		}
 		catch (Exception e) {
 			throw new MappingException("Error mapping POJO from result set row", e);
@@ -96,7 +96,7 @@ public class ResultMapper {
 	 * Makes a new instance of the given map class for the current row, if one does not exist within the currently processed rows of the result set, or else pulls the current one
 	 */
 	@SuppressWarnings("unchecked")
-	private <T> T assertInstance(Class<T> mapClass, ResultSet row) {
+	private <T> MappedPOJO<T> assertInstance(Class<T> mapClass, ResultSet row) {
 		
 		try {
 			// Grab the key of this row based on the map class (remains null if we do not have a field annotated as key)
@@ -107,7 +107,7 @@ public class ResultMapper {
 			
 			// We only care about looking up existing entities by ID if we have an ID column for the class, otherwise we just return the new instance
 			if (!optIdField.isPresent()) {
-				return mapClass.newInstance();
+				return new MappedPOJO<T>(mapClass.newInstance(), null);
 			}
 				
 			Field idField = optIdField.get();
@@ -115,21 +115,23 @@ public class ResultMapper {
 			key = Conversion.toEntityValue(row.getObject(colName), idField);
 			
 			// Assert we have a lookup table for the key -> instance for this type
-			Map<Object, Object> key_instance = class_key_instance.get(mapClass);
-			if (key_instance == null) {
-				key_instance = new HashMap<>();
-				class_key_instance.put(mapClass, key_instance);
+			Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);
+			if (key_pojo == null) {
+				key_pojo = new HashMap<>();
+				class_key_instance.put(mapClass, key_pojo);
 			}
 			
-			T instance = null;
-			if (key_instance.containsKey(key)) {
-				instance = (T) key_instance.get(key);
+			MappedPOJO<T> mappedPojo = null;
+			if (key_pojo.containsKey(key)) {
+				mappedPojo = (MappedPOJO<T>) key_pojo.get(key);
 			}
 			else {
-				instance = mapClass.newInstance();
-				key_instance.put(key, instance);
+				T pojo = mapClass.newInstance();
+				ReflectionUtils.set(idField, pojo, key);
+				mappedPojo = new MappedPOJO<T>(pojo, key);
+				key_pojo.put(key, mappedPojo);
 			}
-			return instance;
+			return mappedPojo;
 		}
 		catch (Exception e) {
 			throw new MappingException("Could not instantiate instance of POJO map class " + mapClass.getName(), e);

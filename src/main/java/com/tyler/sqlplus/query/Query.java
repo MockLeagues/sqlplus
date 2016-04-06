@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.tyler.sqlplus.MappedPOJO;
 import com.tyler.sqlplus.ResultMapper;
 import com.tyler.sqlplus.ResultSets;
 import com.tyler.sqlplus.conversion.Conversion;
@@ -56,7 +57,7 @@ public class Query {
 		try {
 			ResultSet rs = execute();
 			ResultMapper mapper = new ResultMapper();
-			return ResultSets.rowStream(rs).map(row -> mapper.toPOJO(rs, mapClass)).distinct();
+			return ResultSets.rowStream(rs).map(row -> mapper.toPOJO(rs, mapClass)).distinct().map(MappedPOJO::getPOJO);
 		} catch (SQLException e) {
 			throw new SQLSyntaxException("Error executing query", e);
 		}
