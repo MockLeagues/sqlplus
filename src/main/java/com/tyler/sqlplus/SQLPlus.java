@@ -9,7 +9,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
-import com.tyler.sqlplus.query.Query;
 
 public class SQLPlus {
 
