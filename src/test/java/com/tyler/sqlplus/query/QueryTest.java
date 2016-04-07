@@ -1,6 +1,9 @@
 package com.tyler.sqlplus.query;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.time.LocalDate;
@@ -12,6 +15,7 @@ import org.junit.Test;
 
 import com.tyler.sqlplus.annotation.Column;
 import com.tyler.sqlplus.annotation.MultiRelation;
+import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
 
@@ -169,7 +173,7 @@ public class QueryTest extends EmployeeDBTest {
 		}
 	}
 	
-	public static class EmployeeRelations {
+	public static class EmployeeMultiRelation {
 		public enum Type { HOURLY, SALARY; }
 		public @Column(name = "employee_id", key = true) Integer employeeId;
 		public Type type;
@@ -193,7 +197,7 @@ public class QueryTest extends EmployeeDBTest {
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
 		try (Connection conn= getConnection()) {
-			List<EmployeeRelations> es = new Query("select * from employee e join office o on e.employee_id = o.employee_id", conn).fetchAs(EmployeeRelations.class);
+			List<EmployeeMultiRelation> es = new Query("select * from employee e join office o on e.employee_id = o.employee_id", conn).fetchAs(EmployeeMultiRelation.class);
 			assertEquals(1, es.size());
 			assertEquals(3, es.get(0).offices.size());
 			assertEquals("Office A", es.get(0).offices.get(0).name);
@@ -202,6 +206,39 @@ public class QueryTest extends EmployeeDBTest {
 		}
 	}
 	
+	@Test
+	public void leavesMultiRelationNullIfNoFieldsForIt() throws Exception {
+		transact(
+			"insert into employee(type, name, salary, hired) values ('SALARY', 'Steve Jobs', '41000000', '1982-05-13')",
+			"insert into office(office_name, `primary`, employee_id) values ('Office A', 1, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office B', 0, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
+		);
+		try (Connection conn= getConnection()) {
+			List<EmployeeMultiRelation> es = new Query("select * from employee e", conn).fetchAs(EmployeeMultiRelation.class);
+			assertEquals(1, es.size());
+			assertNull(es.get(0).offices);
+		}
+	}
+	
+	public static class EmployeeSingleRelation {
+		public enum Type { HOURLY, SALARY; }
+		public Integer employeeId;
+		public Type type;
+		public String name;
+		public Integer salary;
+		public Date hired;
+		public @SingleRelation Address address;
+	}
+	@Test
+	public void leavesSingleRelationNullIfNoFieldsForIt() throws Exception {
+		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+		transact("insert into employee(type, name, salary, hired, address_id) values('HOURLY', 'Billy Bob', '42000', '2015-01-01', 1)");
+		try (Connection conn = getConnection()) {
+			EmployeeSingleRelation emp = new Query("select * from employee", conn).findAs(EmployeeSingleRelation.class);
+			assertNull(emp.address);
+		}
+	}
 	
 	@Test
 	public void queryScalar() throws Exception {

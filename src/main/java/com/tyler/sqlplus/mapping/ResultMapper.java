@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.tyler.sqlplus.annotation.Column;
 import com.tyler.sqlplus.annotation.MultiRelation;
@@ -27,6 +27,8 @@ public class ResultMapper {
 	
 	// Used to track objects already created from the result set so we don't make duplicates
 	private Map<Class<?>, Map<Object, MappedPOJO<?>>> class_key_instance = new HashMap<>();
+
+	private Set<String> resultColumnNames;
 	
 	/**
 	 * Maps the current row of the result set to the given POJO class
@@ -41,16 +43,26 @@ public class ResultMapper {
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public <T> MappedPOJO<T> toPOJO(ResultSet rs, Class<T> mapClass, Class<?> parentRef) {
+		
 		try {
-			MappedPOJO<T> mappedPOJO = assertInstance(mapClass, rs);
 			
+			if (resultColumnNames == null) {
+				resultColumnNames = ResultSets.getColumns(rs);
+			}
+			
+			MappedPOJO<T> mappedPOJO = assertInstance(mapClass, rs);
 			Map<String, Object> columnLabel_value = ResultSets.toMap(rs);
+			
+			// Whether at least 1 field in this result set has a corresponding value in the map class
+			// If this remains false after our iteration, we will return null for the POJO
+			boolean hasMappedField = false;
 			
 			for (Field field : mapClass.getDeclaredFields()) {
 				
 				if (field.isAnnotationPresent(SingleRelation.class)) {
 					if (parentRef == null || parentRef != field.getType()) { // Protect against circular reference
 						MappedPOJO<?> relation = toPOJO(rs, field.getType(), mapClass);
+						if (relation == null) continue; // Left join or no join
 						ReflectionUtils.set(field, mappedPOJO.pojo, relation.pojo);
 					}
 				}
@@ -63,6 +75,8 @@ public class ResultMapper {
 						}
 						
 						MappedPOJO<?> relation = toPOJO(rs, relationType, mapClass);
+						if (relation == null) continue; // Left join or no join
+						
 						Collection relatedCollection = (Collection) ReflectionUtils.get(field, mappedPOJO.pojo);
 						if (relatedCollection == null) {
 							relatedCollection = new ArrayList<>();
@@ -76,6 +90,7 @@ public class ResultMapper {
 				else {
 					String mappedCol = getMappedColName(field);
 					if (columnLabel_value.containsKey(mappedCol)) {
+						hasMappedField = true;
 						try {
 							Object value = columnLabel_value.get(mappedCol);
 							value = Conversion.toJavaValue(field, value); // Apply conversion
@@ -86,13 +101,12 @@ public class ResultMapper {
 						}
 					}
 					else { 
-						List<String> columns = ResultSets.getColumns(rs);
-						System.err.println("Could not map pojo field '" + field.getName() + "' in class " + mapClass.getName() + " to any column in " + columns + " from result set, leaving null");
+						System.err.println("Could not map pojo field '" + field.getName() + "' in class " + mapClass.getName() + " to any column in " + resultColumnNames + " from result set, leaving null");
 					}
 				}
 			}
 			
-			return mappedPOJO;
+			return hasMappedField ? mappedPOJO : null;
 		}
 		catch (Exception e) {
 			throw new MappingException("Error mapping POJO from result set row", e);
@@ -123,8 +137,14 @@ public class ResultMapper {
 				return new MappedPOJO<T>(mapClass.newInstance(), null);
 			}
 			
-			String colName = getMappedColName(idField);
-			Object key = Conversion.toJavaValue(idField, row.getObject(colName));
+			String keyColumnName = getMappedColName(idField);
+			
+			// If we don't have the key column in our result set then we just return the instance now since we can't set it
+			if (!resultColumnNames.contains(keyColumnName)) {
+				return new MappedPOJO<T>(mapClass.newInstance(), null);
+			}
+			
+			Object key = Conversion.toJavaValue(idField, row.getObject(keyColumnName));
 			
 			// Assert we have a lookup table for the key -> instance for this type
 			Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);
@@ -139,7 +159,6 @@ public class ResultMapper {
 			}
 			else {
 				T pojo = mapClass.newInstance();
-				ReflectionUtils.set(idField, pojo, key);
 				mappedPojo = new MappedPOJO<T>(pojo, key);
 				key_pojo.put(key, mappedPojo);
 			}

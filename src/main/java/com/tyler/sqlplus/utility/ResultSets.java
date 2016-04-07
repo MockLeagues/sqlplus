@@ -5,8 +5,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashSet;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -91,7 +92,7 @@ public class ResultSets {
 		}
 	}
 	
-	public static List<String> getColumns(ResultSet rs) throws SQLException {
+	public static Set<String> getColumns(ResultSet rs) throws SQLException {
 		ResultSetMetaData meta = rs.getMetaData();
 		int count = meta.getColumnCount();
 		return IntStream.rangeClosed(1, count)
@@ -103,7 +104,7 @@ public class ResultSets {
 		                		throw new RuntimeException(e);
 		                	}
 		                })
-		                .collect(Collectors.toList());
+		                .collect(Collectors.toCollection(LinkedHashSet::new));
 	}
 	
 	
