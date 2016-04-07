@@ -30,7 +30,6 @@ public class QueryTest extends EmployeeDBTest {
 		}
 	}
 	
-	
 	public static class Address {
 		public Integer addressId;
 		public String street;
@@ -38,6 +37,7 @@ public class QueryTest extends EmployeeDBTest {
 		public String state;
 		public String zip;
 	}
+	
 	@Test
 	public void mapResultsToNonRelationalPOJO() throws Exception {
 		transact(

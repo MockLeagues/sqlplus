@@ -2,7 +2,6 @@ package com.tyler.sqlplus.query;
 
 import java.sql.Connection;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,12 +35,11 @@ public class DynamicQuery {
 	}
 	
 	public Query build() {
-		int p = 0;
-		LinkedHashMap<String, Object> paramMap = new LinkedHashMap<>();
+		Query q = new Query(stmts.stream().collect(Collectors.joining(" ")), conn);
 		for (Object o : params) {
-			paramMap.put(p++ + "", o);
+			q.addParameter(o);
 		}
-		return new Query(stmts.stream().collect(Collectors.joining(" ")), conn, paramMap);
+		return q;
 	}
 	
 }

@@ -32,33 +32,42 @@ public class Query {
 	
 	private final String sql;
 	private final Connection conn;
-	private LinkedHashMap<String, Object> params;
+	private LinkedHashMap<String, Object> paramMap;
+	
+	// This is a counter which is incremented each time a raw parameter is added to the query.
+	// It is then used as a key to store the parameter in the param map
+	private int rawParamCounter;
 	
 	public Query(String sql, Connection conn) {
 		this.sql = sql.replaceAll(REGEX_PARAM.pattern(), "?");;
 		this.conn = conn;
+		this.rawParamCounter = 0;
 		
 		// We parse out the parameters immediately so we don't constantly have to perform a string match
 		// each time a parameter is set to validate it exists
-		this.params = new LinkedHashMap<>();
+		this.paramMap = new LinkedHashMap<>();
 		Matcher paramsMatcher = REGEX_PARAM.matcher(sql);
 		while (paramsMatcher.find()) {
-			params.put(paramsMatcher.group().substring(1), null);
+			paramMap.put(paramsMatcher.group().substring(1), null);
 		}
 	}
-
-	// Package-private constructor for the dynamic query class which sets parameters directly
-	Query(String sql, Connection conn, LinkedHashMap<String, Object> params) {
-		this.sql = sql;
-		this.conn = conn;
-		this.params = params;
+	
+	/**
+	 * Adds a raw ordinal parameter to this query. This method should be used to specify values for '?' params in your query
+	 * 
+	 * Note that if you mix calls to addParameter() and setParameter() for any given query, the results will be undefined. It is
+	 * therefore highly recommended not to mix calls to these two methods within a single query
+	 */
+	public Query addParameter(Object param) {
+		this.paramMap.put(rawParamCounter++ + "", param);
+		return this;
 	}
 	
 	public Query setParameter(String key, Object val) {
-		if (!params.containsKey(key)) {
+		if (!paramMap.containsKey(key)) {
 			throw new SQLSyntaxException("Unknown query parameter: " + key);
 		}
-		this.params.put(key, val);
+		this.paramMap.put(key, val);
 		return this;
 	}
 	
@@ -112,8 +121,8 @@ public class Query {
 			try {
 				String mappedCol = ResultMapper.getMappedColName(f);
 				Object paramValue = ReflectionUtils.get(f, o);
-				if ((paramValue != null || bindNull) && params.containsKey(mappedCol)) {
-					this.params.put(mappedCol, paramValue);
+				if ((paramValue != null || bindNull) && paramMap.containsKey(mappedCol)) {
+					this.paramMap.put(mappedCol, paramValue);
 				}
 			} catch (IllegalArgumentException | IllegalAccessException e) {
 				throw new MappingException(e);
@@ -185,7 +194,7 @@ public class Query {
 		                           conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) :
 		                           conn.prepareStatement(sql);
 		int p = 1;
-		for (Map.Entry<String, Object> e : params.entrySet()) { // This will be correctly ordered since we use LinkedHashMap
+		for (Map.Entry<String, Object> e : paramMap.entrySet()) { // This will be correctly ordered since we use LinkedHashMap
 			Object value = e.getValue();
 			if (value == null) {
 				ps.close();
