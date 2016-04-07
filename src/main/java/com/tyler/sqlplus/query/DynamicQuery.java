@@ -2,6 +2,7 @@ package com.tyler.sqlplus.query;
 
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,9 +21,7 @@ public class DynamicQuery {
 	
 	public DynamicQuery query(String sql, Object... params) {
 		this.stmts.add(sql);
-		for (Object o : params) {
-			this.params.add(o);
-		}
+		addParameters(params);
 		return this;
 	}
 	
@@ -32,6 +31,14 @@ public class DynamicQuery {
 	
 	public DynamicQuery queryIfNotNull(Object param, String sql) {
 		return queryIf(param != null, sql, param);
+	}
+	
+	public DynamicQuery addParameters(Object... params) {
+		if (params.length == 0 || params == null) {
+			return this;
+		}
+		this.params.addAll(Arrays.asList(params));
+		return this;
 	}
 	
 	public Query build() {

@@ -9,6 +9,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
+import com.tyler.sqlplus.query.Query;
 
 public class SQLPlus {
 
@@ -58,15 +59,15 @@ public class SQLPlus {
 	/**
 	 * Shortcut method for creating a query which immediately returns a list of mapped POJOs
 	 */
-	public <T> List<T> fetch(Class<T> pojoClass, String sql) {
-		return query(conn -> conn.createQuery(sql).fetchAs(pojoClass));
+	public <T> List<T> fetch(Class<T> pojoClass, String sql, Object... params) {
+		return query(conn -> conn.createDynamicQuery().query(sql, params).build().fetchAs(pojoClass));
 	}
 	
 	/**
 	 * Shortcut method for creating a query which immediately finds a single instance of a mapped POJO
 	 */
-	public <T> T find(Class<T> pojoClass, String sql) {
-		return query(conn -> conn.createQuery(sql).findAs(pojoClass));
+	public <T> T find(Class<T> pojoClass, String sql, Object... params) {
+		return query(conn -> conn.createDynamicQuery().query(sql, params).build().findAs(pojoClass));
 	}
 	
 	/**
