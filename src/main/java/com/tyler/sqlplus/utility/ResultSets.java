@@ -1,4 +1,4 @@
-package com.tyler.sqlplus;
+package com.tyler.sqlplus.utility;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;

@@ -14,9 +14,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.mysql.jdbc.Statement;
-import com.tyler.sqlplus.MappedPOJO;
-import com.tyler.sqlplus.ResultMapper;
-import com.tyler.sqlplus.ResultSets;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.conversion.Conversion;
@@ -24,7 +21,10 @@ import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
+import com.tyler.sqlplus.mapping.MappedPOJO;
+import com.tyler.sqlplus.mapping.ResultMapper;
 import com.tyler.sqlplus.utility.ReflectionUtils;
+import com.tyler.sqlplus.utility.ResultSets;
 
 public class Query {
 

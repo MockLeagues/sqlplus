@@ -1,4 +1,4 @@
-package com.tyler.sqlplus;
+package com.tyler.sqlplus.mapping;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
@@ -15,6 +15,7 @@ import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.conversion.Conversion;
 import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.utility.ReflectionUtils;
+import com.tyler.sqlplus.utility.ResultSets;
 
 /**
  * Executes the process of mapping a result set row to a POJO
@@ -22,7 +23,7 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
 public class ResultMapper {
 
 	// Caches the reflected field representing the POJO's database key so that we don't have to look it up each time
-	private static final Map<Class<?>, Field> TYPE_ID = new HashMap<>();
+	private static final Map<Class<?>, Field> TYPE_KEYFIELD = new HashMap<>();
 	
 	// Used to track objects already created from the result set so we don't make duplicates
 	private Map<Class<?>, Map<Object, MappedPOJO<?>>> class_key_instance = new HashMap<>();
@@ -105,15 +106,15 @@ public class ResultMapper {
 		
 		try {
 			Field idField = null;
-			if (TYPE_ID.containsKey(mapClass)) {
-				idField = TYPE_ID.get(mapClass);
+			if (TYPE_KEYFIELD.containsKey(mapClass)) {
+				idField = TYPE_KEYFIELD.get(mapClass);
 			}
 			else {
 				idField = Arrays.stream(mapClass.getDeclaredFields())
 				                .filter(f -> f.isAnnotationPresent(Column.class) && f.getDeclaredAnnotation(Column.class).key())
 				                .findFirst()
 				                .orElseGet(() -> null);
-				TYPE_ID.put(mapClass, idField);
+				TYPE_KEYFIELD.put(mapClass, idField);
 			}
 			
 			// If the POJO does not have an ID field than we can't put it in our ID lookup table to re-retrieve it later, so we just return it now

@@ -1,4 +1,4 @@
-package com.tyler.sqlplus;
+package com.tyler.sqlplus.mapping;
 
 import java.util.Objects;
 
