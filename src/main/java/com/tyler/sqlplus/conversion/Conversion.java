@@ -1,6 +1,7 @@
 package com.tyler.sqlplus.conversion;
 
 import java.lang.reflect.Field;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ public class Conversion {
 		JAVA_FROMDB.put(Boolean.class, db -> (db + "").equalsIgnoreCase("y") || (db + "").equalsIgnoreCase("true") || (db + "").equalsIgnoreCase("1"));
 		JAVA_FROMDB.put(String.class, db -> db + "");
 		JAVA_FROMDB.put(Date.class, db -> db);
+		JAVA_FROMDB.put(Timestamp.class, db -> db);
 		JAVA_FROMDB.put(LocalDate.class, db -> ((java.sql.Date)db).toLocalDate());
 	}
 	

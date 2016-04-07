@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.tyler.sqlplus.annotation.Column;
@@ -74,7 +75,9 @@ public class ResultMapper {
 				else {
 					String mappedCol = getMappedColName(field);
 					if (!columnLabel_value.containsKey(mappedCol)) {
-						throw new MappingException("Could not map pojo field '" + field.getName() + "' in class " + mapClass.getName() + " to any column in result set");
+						List<String> columns = ResultSets.getColumns(rs);
+						throw new MappingException(
+							"Could not map pojo field '" + field.getName() + "' in class " + mapClass.getName() + " to any column in " + columns + " from result set");
 					}
 					try {
 						Object value = columnLabel_value.get(mappedCol);

@@ -5,9 +5,12 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -88,6 +91,22 @@ public class ResultSets {
 		}
 	}
 	
+	public static List<String> getColumns(ResultSet rs) throws SQLException {
+		ResultSetMetaData meta = rs.getMetaData();
+		int count = meta.getColumnCount();
+		return IntStream.rangeClosed(1, count)
+		                .mapToObj(i -> {
+		                	try {
+		                		return meta.getColumnLabel(i);
+		                	}
+		                	catch (Exception e) {
+		                		throw new RuntimeException(e);
+		                	}
+		                })
+		                .collect(Collectors.toList());
+	}
+	
+	
 	/**
 	 * Returns a function which maps the row of the current result set's cursor into a map of column names to values using the HashMap implementation
 	 */
@@ -129,5 +148,5 @@ public class ResultSets {
 	private static <T> Stream<T> asStream(Iterable<T> iterable) {
 		return StreamSupport.stream(iterable.spliterator(), false);
 	}
-	
+
 }
