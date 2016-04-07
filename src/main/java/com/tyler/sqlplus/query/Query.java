@@ -120,8 +120,8 @@ public class Query {
 		.forEach(f -> { 
 			try {
 				String mappedCol = ResultMapper.getMappedColName(f);
-				Object paramValue = ReflectionUtils.get(f, o);
 				if (paramMap.containsKey(mappedCol)) {
+					Object paramValue = ReflectionUtils.get(f, o);
 					this.paramMap.put(mappedCol, paramValue);
 				}
 			} catch (IllegalArgumentException | IllegalAccessException e) {
