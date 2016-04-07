@@ -235,12 +235,14 @@ public class QueryTest extends EmployeeDBTest {
 	public void returnGeneratedKeys() throws Exception {
 		transact("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
 		try (Connection conn = getConnection()) {
-			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn);
-			q.setParameter("type", "HOURLY");
-			q.setParameter("name", "tester-2");
-			q.setParameter("hired", "2015-01-01");
-			q.setParameter("salary", "10000");
-			Integer key = q.executeUpdate(true, Integer.class).get(0);
+			Integer key =
+				new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+				.setParameter("type", "HOURLY")
+				.setParameter("name", "tester-2")
+				.setParameter("hired", "2015-01-01")
+				.setParameter("salary", "10000")
+				.executeUpdate(true, Integer.class)
+				.get(0);
 			assertEquals(new Integer(2), key);
 		}
 	}

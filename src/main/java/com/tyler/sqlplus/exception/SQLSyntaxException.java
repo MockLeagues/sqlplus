@@ -1,7 +1,5 @@
 package com.tyler.sqlplus.exception;
 
-import java.sql.SQLException;
-
 public class SQLSyntaxException extends RuntimeException {
 
 	public SQLSyntaxException(String msg, Throwable e) {
@@ -12,7 +10,7 @@ public class SQLSyntaxException extends RuntimeException {
 		super(string);
 	}
 
-	public SQLSyntaxException(SQLException e) {
+	public SQLSyntaxException(Exception e) {
 		super(e);
 	}
 	

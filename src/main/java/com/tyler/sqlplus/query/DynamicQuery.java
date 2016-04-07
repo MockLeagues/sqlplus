@@ -21,7 +21,9 @@ public class DynamicQuery {
 	
 	public DynamicQuery query(String sql, Object... params) {
 		this.stmts.add(sql);
-		for (Object o : params) this.params.add(o);
+		for (Object o : params) {
+			this.params.add(o);
+		}
 		return this;
 	}
 	
@@ -34,7 +36,7 @@ public class DynamicQuery {
 	}
 	
 	public Query build() {
-		int p = 1;
+		int p = 0;
 		LinkedHashMap<String, Object> paramMap = new LinkedHashMap<>();
 		for (Object o : params) {
 			paramMap.put(p++ + "", o);

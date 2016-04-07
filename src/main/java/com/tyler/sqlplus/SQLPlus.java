@@ -70,16 +70,6 @@ public class SQLPlus {
 	}
 	
 	/**
-	 * Shortcut method which immediately executes a callback for each mapped result of the given query.
-	 * 
-	 * This method is ideal for processing large result sets, since each mapped instance will be garbage
-	 * collected after each invocation of the callback (therefore preserving memory consumption)
-	 */
-	public <T> void forEach(Class<T> pojoClass, String sql, Consumer<T> action) {
-		transact(conn -> conn.createQuery(sql, pojoClass).stream().forEach(action));
-	}
-	
-	/**
 	 * Shortcut method for querying a single integer scalar value
 	 */
 	public int queryInt(String sql) {
