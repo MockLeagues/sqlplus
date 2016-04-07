@@ -101,7 +101,7 @@ public class ResultMapper {
 						}
 					}
 					else { 
-						System.err.println("Could not map pojo field '" + field.getName() + "' in class " + mapClass.getName() + " to any column in " + resultColumnNames + " from result set, leaving null");
+						// System.err.println("Could not map pojo field '" + field.getName() + "' in class " + mapClass.getName() + " to any column in " + resultColumnNames + " from result set, leaving null");
 					}
 				}
 			}

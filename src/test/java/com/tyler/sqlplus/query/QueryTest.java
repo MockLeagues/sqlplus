@@ -34,6 +34,19 @@ public class QueryTest extends EmployeeDBTest {
 		}
 	}
 	
+	@Test
+	public void throwsErrorIfParamValueNotSet() throws Exception {
+		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+		try (Connection conn = getConnection()) {
+			try {
+				new Query("select address_id from address where state = :state and city = :city", conn).findAs(Address.class);
+				fail("Expected query to fail because no parameter was set");
+			} catch (SQLSyntaxException e) {
+				assertEquals("Missing parameter values for the following parameters: [state, city]", e.getMessage());
+			}
+		}
+	}
+	
 	public static class Address {
 		public Integer addressId;
 		public String street;
@@ -139,8 +152,8 @@ public class QueryTest extends EmployeeDBTest {
 		public Integer employeeId;
 		public Type type;
 		public String name;
-		public Integer salary;
 		public Date hired;
+		public Integer salary;
 	}
 	@Test
 	public void mapEnumTypes() throws Exception {

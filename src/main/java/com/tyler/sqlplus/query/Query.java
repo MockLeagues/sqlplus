@@ -6,8 +6,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -33,22 +35,25 @@ public class Query {
 	private final String sql;
 	private final Connection conn;
 	private LinkedHashMap<String, Object> paramMap;
+	private LinkedHashSet<String> paramLabels;
 	
 	// This is a counter which is incremented each time a raw parameter is added to the query.
 	// It is then used as a key to store the parameter in the param map
 	private int rawParamCounter;
 	
 	public Query(String sql, Connection conn) {
+		
 		this.sql = sql.replaceAll(REGEX_PARAM.pattern(), "?");;
 		this.conn = conn;
 		this.rawParamCounter = 0;
+		this.paramMap = new LinkedHashMap<>();
 		
 		// We parse out the parameters immediately so we don't constantly have to perform a string match
 		// each time a parameter is set to validate it exists
-		this.paramMap = new LinkedHashMap<>();
+		this.paramLabels = new LinkedHashSet<>();
 		Matcher paramsMatcher = REGEX_PARAM.matcher(sql);
 		while (paramsMatcher.find()) {
-			paramMap.put(paramsMatcher.group().substring(1), null);
+			paramLabels.add(paramsMatcher.group().substring(1));
 		}
 	}
 	
@@ -64,7 +69,7 @@ public class Query {
 	}
 	
 	public Query setParameter(String key, Object val) {
-		if (!paramMap.containsKey(key)) {
+		if (!paramLabels.contains(key)) {
 			throw new SQLSyntaxException("Unknown query parameter: " + key);
 		}
 		this.paramMap.put(key, val);
@@ -114,13 +119,14 @@ public class Query {
 	 * Sets parameter values in this query using the given POJO class
 	 */
 	public Query bindParams(Object o) {
+		// TODO: iterate over paramLabels when setting POJO field values
 		Arrays
 		.stream(o.getClass().getDeclaredFields())
 		.filter(f -> !f.isAnnotationPresent(SingleRelation.class) && !f.isAnnotationPresent(MultiRelation.class)) // We don't bind relations
 		.forEach(f -> { 
 			try {
 				String mappedCol = ResultMapper.getMappedColName(f);
-				if (paramMap.containsKey(mappedCol)) {
+				if (paramLabels.contains(mappedCol)) {
 					Object paramValue = ReflectionUtils.get(f, o);
 					this.paramMap.put(mappedCol, paramValue);
 				}
@@ -191,9 +197,18 @@ public class Query {
 	 * Executes and retrieves the raw ResultSet object from this query's payload using the given return auto-keys flag
 	 */
 	public PreparedStatement prepareStatement(boolean returnAutoKeys) throws SQLException {
+		
 		PreparedStatement ps = returnAutoKeys ?
 		                           conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) :
 		                           conn.prepareStatement(sql);
+
+		// Validate we have all parameters set
+		Set<String> missingParams = new LinkedHashSet<>(paramLabels);
+		missingParams.removeAll(paramMap.keySet());
+		if (!missingParams.isEmpty()) {
+			throw new SQLSyntaxException("Missing parameter values for the following parameters: " + missingParams);
+		}
+		
 		int p = 1;
 		for (Map.Entry<String, Object> e : paramMap.entrySet()) { // This will be correctly ordered since we use LinkedHashMap
 			Object value = e.getValue();
