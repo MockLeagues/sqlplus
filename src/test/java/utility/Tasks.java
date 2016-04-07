@@ -10,10 +10,14 @@ public class Tasks {
 	}
 	
 	public static double timeSeconds(Task t) throws Exception {
+		return timeMillis(t) / 1000.0;
+	}
+	
+	public static double timeMillis(Task t) throws Exception {
 		long start = System.currentTimeMillis();
 		t.run();
 		long end = System.currentTimeMillis();
-		return (end - start) / 1000.0;
+		return (end - start);
 	}
 	
 }
