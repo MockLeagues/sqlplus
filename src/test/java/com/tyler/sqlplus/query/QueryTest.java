@@ -116,6 +116,20 @@ public class QueryTest extends EmployeeDBTest {
 		}
 	}
 	
+	@Test
+	public void leavesNullValuesIfCertainFieldsNotPresentInResults() throws Exception {
+		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+		
+		try (Connection conn = getConnection()) {
+			Address result = new Query("select street, city from address", conn).findAs(Address.class);
+			assertNull(result.state);
+			assertNull(result.zip);
+			assertNotNull(result.street);
+			assertNotNull(result.city);
+		}
+	}
+	
+	
 	public static class Employee {
 		public enum Type { HOURLY, SALARY; }
 		public Integer employeeId;

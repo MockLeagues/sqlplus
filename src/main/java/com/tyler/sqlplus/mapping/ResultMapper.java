@@ -75,18 +75,19 @@ public class ResultMapper {
 				}
 				else {
 					String mappedCol = getMappedColName(field);
-					if (!columnLabel_value.containsKey(mappedCol)) {
+					if (columnLabel_value.containsKey(mappedCol)) {
+						try {
+							Object value = columnLabel_value.get(mappedCol);
+							value = Conversion.toJavaValue(field, value); // Apply conversion
+							ReflectionUtils.set(field, mappedPOJO.pojo, value);
+						}
+						catch (Exception e) {
+							throw new MappingException("Error setting field '" + field.getName() + "' in class " + mapClass.getName(), e);
+						}
+					}
+					else { 
 						List<String> columns = ResultSets.getColumns(rs);
-						throw new MappingException(
-							"Could not map pojo field '" + field.getName() + "' in class " + mapClass.getName() + " to any column in " + columns + " from result set");
-					}
-					try {
-						Object value = columnLabel_value.get(mappedCol);
-						value = Conversion.toJavaValue(field, value); // Apply conversion
-						ReflectionUtils.set(field, mappedPOJO.pojo, value);
-					}
-					catch (Exception e) {
-						throw new MappingException("Error setting field '" + field.getName() + "' in class " + mapClass.getName(), e);
+						System.err.println("Could not map pojo field '" + field.getName() + "' in class " + mapClass.getName() + " to any column in " + columns + " from result set, leaving null");
 					}
 				}
 			}
