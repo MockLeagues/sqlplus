@@ -135,14 +135,15 @@ public class Query {
 	 * Execute this query's payload as an update statement
 	 */
 	public void executeUpdate() {
-		executeUpdate(false, null);
+		executeUpdate(null);
 	}
 	
 	/**
-	 * Executes this query's payload as an update statement, optionally returning the generated keys as instances of the given class
+	 * Executes this query's payload as an update statement, returning the generated keys as instances of the given class
 	 */
-	public <T> List<T> executeUpdate(boolean returnKeys, Class<T> targetKeyClass) {
+	public <T> List<T> executeUpdate(Class<T> targetKeyClass) {
 		try {
+			boolean returnKeys = targetKeyClass != null;
 			PreparedStatement ps = prepareStatement(returnKeys);
 			int affectedRows = ps.executeUpdate();
 			if (returnKeys && affectedRows > 0) {

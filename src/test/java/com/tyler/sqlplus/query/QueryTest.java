@@ -225,7 +225,7 @@ public class QueryTest extends EmployeeDBTest {
 		toCreate.type = Type.HOURLY;
 		try (Connection conn = getConnection()) {
 			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn).bindParams(toCreate, false);
-			q.executeUpdate(false, null);
+			q.executeUpdate();
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
 			assertEquals(new Integer(1), actual);
 		}
@@ -241,7 +241,7 @@ public class QueryTest extends EmployeeDBTest {
 				.setParameter("name", "tester-2")
 				.setParameter("hired", "2015-01-01")
 				.setParameter("salary", "10000")
-				.executeUpdate(true, Integer.class)
+				.executeUpdate(Integer.class)
 				.get(0);
 			assertEquals(new Integer(2), key);
 		}
