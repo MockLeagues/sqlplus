@@ -16,6 +16,12 @@ public class Conversion {
 	static {
 		JAVA_FROMDB.put(int.class, db -> ((Number)db).intValue());
 		JAVA_FROMDB.put(Integer.class, db -> ((Number)db).intValue());
+		JAVA_FROMDB.put(short.class, db -> ((Number)db).shortValue());
+		JAVA_FROMDB.put(Short.class, db -> ((Number)db).shortValue());
+		JAVA_FROMDB.put(long.class, db -> ((Number)db).longValue());
+		JAVA_FROMDB.put(Long.class, db -> ((Number)db).longValue());
+		JAVA_FROMDB.put(float.class, db -> ((Number)db).floatValue());
+		JAVA_FROMDB.put(Float.class, db -> ((Number)db).floatValue());
 		JAVA_FROMDB.put(double.class, db -> ((Number)db).doubleValue());
 		JAVA_FROMDB.put(Double.class, db -> ((Number)db).doubleValue());
 		JAVA_FROMDB.put(char.class, db -> String.valueOf(db).charAt(0));

@@ -82,19 +82,6 @@ public class QueryTest extends EmployeeDBTest {
 		}
 	}
 	
-	@Test
-	public void throwsErrorIfParamValueNotSet() throws Exception {
-		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
-		try (Connection conn = getConnection()) {
-			try {
-				new Query("select address_id from address where state = :state", conn).findAs(Address.class);
-				fail("Expected query to fail because no parameter was set");
-			} catch (SQLSyntaxException e) {
-				assertEquals("Value not set for parameter state", e.getMessage());
-			}
-		}
-	}
-	
 	public static class AddressWithAnnot {
 		public @Column(name = "address_id") Integer addressId;
 		public @Column(name = "street") String street;
@@ -224,7 +211,7 @@ public class QueryTest extends EmployeeDBTest {
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
 		try (Connection conn = getConnection()) {
-			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn).bindParams(toCreate, false);
+			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn).bindParams(toCreate);
 			q.executeUpdate();
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
 			assertEquals(new Integer(1), actual);

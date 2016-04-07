@@ -113,7 +113,7 @@ public class Query {
 	/**
 	 * Sets parameter values in this query using the given POJO class
 	 */
-	public Query bindParams(Object o, boolean bindNull) {
+	public Query bindParams(Object o) {
 		Arrays
 		.stream(o.getClass().getDeclaredFields())
 		.filter(f -> !f.isAnnotationPresent(SingleRelation.class) && !f.isAnnotationPresent(MultiRelation.class)) // We don't bind relations
@@ -121,7 +121,7 @@ public class Query {
 			try {
 				String mappedCol = ResultMapper.getMappedColName(f);
 				Object paramValue = ReflectionUtils.get(f, o);
-				if ((paramValue != null || bindNull) && paramMap.containsKey(mappedCol)) {
+				if (paramMap.containsKey(mappedCol)) {
 					this.paramMap.put(mappedCol, paramValue);
 				}
 			} catch (IllegalArgumentException | IllegalAccessException e) {
@@ -198,13 +198,14 @@ public class Query {
 		for (Map.Entry<String, Object> e : paramMap.entrySet()) { // This will be correctly ordered since we use LinkedHashMap
 			Object value = e.getValue();
 			if (value == null) {
-				ps.close();
-				throw new SQLSyntaxException("Value not set for parameter " + e.getKey());
+				ps.setString(p++, null);
 			}
-			if (value instanceof Enum) {
-				value = value.toString();
+			else if (value instanceof Enum) {
+				ps.setString(p++, value.toString());
 			}
-			ps.setObject(p++, value);
+			else {
+				ps.setObject(p++, value);
+			}
 		}
 		return ps;
 	}
