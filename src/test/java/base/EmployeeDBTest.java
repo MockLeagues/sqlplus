@@ -10,6 +10,9 @@ import java.util.List;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import static org.junit.Assert.*;
+
+import utility.Tasks.Task;
 
 public class EmployeeDBTest {
 
@@ -158,6 +161,18 @@ public class EmployeeDBTest {
 		try (Connection conn = getConnection()) {
 			for (String sq : sql) 
 				conn.createStatement().executeUpdate(sq);
+		}
+	}
+	
+	protected static void assertThrows(Task t, Class<? extends Throwable> expectType) {
+		try {
+			t.run();
+			fail("Expected test to throw instance of " + expectType.getName() + " but no error was thrown");
+		}
+		catch (Throwable thrownError) {
+			if (!expectType.equals(thrownError.getClass())) {
+				fail("Expected test to throw instance of " + expectType.getName() + " but no instead got error of type " + thrownError.getClass().getName());
+			}
 		}
 	}
 	

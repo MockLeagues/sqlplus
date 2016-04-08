@@ -1,10 +1,10 @@
 package com.tyler.sqlplus.query;
 
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -16,13 +16,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.mysql.jdbc.Statement;
-import com.tyler.sqlplus.annotation.MultiRelation;
-import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.conversion.Conversion;
 import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
+import com.tyler.sqlplus.mapping.ClassMetaData;
 import com.tyler.sqlplus.mapping.MappedPOJO;
 import com.tyler.sqlplus.mapping.ResultMapper;
 import com.tyler.sqlplus.utility.ReflectionUtils;
@@ -119,17 +118,15 @@ public class Query {
 	 * Sets parameter values in this query using the given POJO class
 	 */
 	public Query bindParams(Object o) {
-		// TODO: iterate over paramLabels when setting POJO field values
-		Arrays
-		.stream(o.getClass().getDeclaredFields())
-		.filter(f -> !f.isAnnotationPresent(SingleRelation.class) && !f.isAnnotationPresent(MultiRelation.class)) // We don't bind relations
-		.forEach(f -> { 
+		ClassMetaData meta = ClassMetaData.getMetaData(o.getClass());
+		paramLabels.forEach(label -> {
 			try {
-				String mappedCol = ResultMapper.getMappedColName(f);
-				if (paramLabels.contains(mappedCol)) {
-					Object paramValue = ReflectionUtils.get(f, o);
-					this.paramMap.put(mappedCol, paramValue);
+				Field mappedField = meta.getMappedField(label);
+				if (mappedField == null) {
+					throw new MappingException("No member exists in class " + o.getClass().getName() + " to bind a value for parameter '" + label + "'");
 				}
+				Object paramValue = ReflectionUtils.get(mappedField, o);
+				this.paramMap.put(label, paramValue);
 			} catch (IllegalArgumentException | IllegalAccessException e) {
 				throw new MappingException(e);
 			}

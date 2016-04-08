@@ -16,6 +16,7 @@ import org.junit.Test;
 import com.tyler.sqlplus.annotation.Column;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
+import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
 
@@ -279,6 +280,40 @@ public class QueryTest extends EmployeeDBTest {
 			q.executeUpdate();
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
 			assertEquals(new Integer(1), actual);
+		}
+	}
+	
+	@Test
+	public void bindParamsNonNullForCreateIfParamsOutOfDeclaredOrder() throws Exception {
+		Employee toCreate = new Employee();
+		toCreate.hired = new Date();
+		toCreate.name = "tester-pojo";
+		toCreate.salary = 20000;
+		toCreate.type = Type.HOURLY;
+		try (Connection conn = getConnection()) {
+			Query q = new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).bindParams(toCreate);
+			q.executeUpdate();
+			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
+			assertEquals(new Integer(1), actual);
+		}
+	}
+	
+	public static class EmployeeMissingBindParam {
+		public enum Type { HOURLY, SALARY; }
+		public com.tyler.sqlplus.query.QueryTest.Employee.Type type;
+		public String name;
+		public Integer salary;
+	}
+	@Test
+	public void bindParamsFailsIfNoMemberForParam() throws Exception {
+		EmployeeMissingBindParam toCreate = new EmployeeMissingBindParam();
+		toCreate.name = "tester-pojo";
+		toCreate.salary = 20000;
+		toCreate.type = Type.HOURLY;
+		try (Connection conn = getConnection()) {
+			assertThrows(() -> {
+				new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).bindParams(toCreate);
+			}, MappingException.class);
 		}
 	}
 	
