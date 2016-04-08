@@ -10,8 +10,9 @@ import java.util.function.Function;
 
 public final class ReflectionUtils {
 
-	private static final Map<Field, Function<Object, Object>> FIELD_GET = new HashMap<>();
-	private static final Map<Field, BiConsumer<Object, Object>> FIELD_SET = new HashMap<>();
+	// It is important to cache reflective data since it can be costly to lookup in bulk
+	private static final Map<Field, Function<Object, Object>> FIELD_GETTER = new HashMap<>();
+	private static final Map<Field, BiConsumer<Object, Object>> FIELD_SETTER = new HashMap<>();
 	private static final Map<Field, Class<?>> FIELD_GENERIC = new HashMap<>();
 	
 	private ReflectionUtils() {}
@@ -32,32 +33,31 @@ public final class ReflectionUtils {
 	}
 	
 	public static Object get(Field field, Object o) throws IllegalArgumentException, IllegalAccessException, SecurityException {
-		Function<Object, Object> getValue = null;
-		if (FIELD_GET.containsKey(field)) {
-			getValue = FIELD_GET.get(field);
+		
+		// See if we can pull a getter from our cache first
+		if (FIELD_GETTER.containsKey(field)) {
+			return FIELD_GETTER.get(field).apply(o);
 		}
-		else {
+		
+		Function<Object, Object> getValue = null;
+		String capFieldName = capitalize(field.getName());
+		try {
+			Method getter = o.getClass().getDeclaredMethod("get" + capFieldName);
+			getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new RuntimeException(e); } }; 
+		}
+		catch (NoSuchMethodException e1) {
 			try {
-				try {
-					Method getter = o.getClass().getDeclaredMethod("get" + field);
-					getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new RuntimeException(e); } }; 
-				} catch (NoSuchMethodException e1) {
-					Method getter = o.getClass().getDeclaredMethod("is" + field);
-					getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new RuntimeException(e); } };
-				}
+				Method getter = o.getClass().getDeclaredMethod("is" + capFieldName);
+				getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new RuntimeException(e); } };
 			}
-			catch (Exception e) {
+			catch (NoSuchMethodException e2) {
 				getValue = (obj) -> {
 					field.setAccessible(true);
-					try {
-						return field.get(obj);
-					} catch (Exception e1) {
-						throw new RuntimeException(e1);
-					}
+					try { return field.get(obj); } catch (Exception e3) { throw new RuntimeException(e3); }
 				};
 			}
-			FIELD_GET.put(field, getValue);
 		}
+		FIELD_GETTER.put(field, getValue);
 		
 		return getValue.apply(o);
 	}
@@ -67,32 +67,30 @@ public final class ReflectionUtils {
 	}
 
 	public static void set(Field field, Object o, Object value) throws IllegalArgumentException, IllegalAccessException {
-		BiConsumer<Object, Object> setValue = null;
 		
-		if (FIELD_SET.containsKey(field)) {
-			setValue = FIELD_SET.get(field);
+		// See if we can pull a setter from our cache first
+		if (FIELD_SETTER.containsKey(field)) {
+			FIELD_SETTER.get(field).accept(o, value);
 		}
-		else {
-			try {
-				String fieldName = field.getName();
-				fieldName = String.valueOf(fieldName.charAt(0)).toUpperCase() + fieldName.substring(1);
-				Method setter = o.getClass().getDeclaredMethod("set" + fieldName, value.getClass());
-				setValue = (obj, val) -> { try { setter.invoke(obj, val); } catch (Exception e) { throw new RuntimeException(e); } }; 
-			}
-			catch (Exception e) {
-				setValue = (obj, val) -> {
-					field.setAccessible(true);
-					try {
-						field.set(obj, val);
-					} catch (Exception e1) {
-						throw new RuntimeException(e1);
-					}
-				};
-			}
-			FIELD_SET.put(field, setValue);
+		
+		BiConsumer<Object, Object> setValue = null;
+		try {
+			Method setter = o.getClass().getDeclaredMethod("set" + capitalize(field.getName()), value.getClass());
+			setValue = (obj, val) -> { try { setter.invoke(obj, val); } catch (Exception e) { throw new RuntimeException(e); } }; 
 		}
+		catch (NoSuchMethodException e) {
+			setValue = (obj, val) -> {
+				field.setAccessible(true);
+				try { field.set(obj, val); } catch (Exception e1) { throw new RuntimeException(e1); }
+			};
+		}
+		FIELD_SETTER.put(field, setValue);
 		
 		setValue.accept(o, value);
+	}
+	
+	private static String capitalize(String s) {
+		return String.valueOf(s.charAt(0)).toUpperCase() + s.substring(1);
 	}
 	
 }
