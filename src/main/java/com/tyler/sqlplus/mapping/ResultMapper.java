@@ -3,7 +3,6 @@ package com.tyler.sqlplus.mapping;
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,9 +21,6 @@ import com.tyler.sqlplus.utility.ResultSets;
  */
 public class ResultMapper {
 
-	// Caches the reflected field representing the POJO's database key so that we don't have to look it up each time
-	private static final Map<Class<?>, Field> TYPE_KEYFIELD = new HashMap<>();
-	
 	// Used to track objects already created from the result set so we don't make duplicates
 	private Map<Class<?>, Map<Object, MappedPOJO<?>>> class_key_instance = new HashMap<>();
 
@@ -120,31 +116,22 @@ public class ResultMapper {
 	private <T> MappedPOJO<T> assertInstance(Class<T> mapClass, ResultSet row) {
 		
 		try {
-			Field idField = null;
-			if (TYPE_KEYFIELD.containsKey(mapClass)) {
-				idField = TYPE_KEYFIELD.get(mapClass);
-			}
-			else {
-				idField = Arrays.stream(mapClass.getDeclaredFields())
-				                .filter(f -> f.isAnnotationPresent(Column.class) && f.getDeclaredAnnotation(Column.class).key())
-				                .findFirst()
-				                .orElseGet(() -> null);
-				TYPE_KEYFIELD.put(mapClass, idField);
-			}
+			ClassMetaData meta = ClassMetaData.getMetaData(mapClass);
 			
 			// If the POJO does not have an ID field than we can't put it in our ID lookup table to re-retrieve it later, so we just return it now
-			if (idField == null) {
+			Field keyField = meta.getKeyField();
+			if (keyField == null) {
 				return new MappedPOJO<T>(mapClass.newInstance(), null);
 			}
 			
-			String keyColumnName = getMappedColName(idField);
+			String keyColumnName = meta.getMappedColumnName(keyField);
 			
 			// If we don't have the key column in our result set then we just return the instance now since we can't set it
 			if (!resultColumnNames.contains(keyColumnName)) {
 				return new MappedPOJO<T>(mapClass.newInstance(), null);
 			}
 			
-			Object key = Conversion.toJavaValue(idField, row.getObject(keyColumnName));
+			Object key = Conversion.toJavaValue(keyField, row.getObject(keyColumnName));
 			
 			// Assert we have a lookup table for the key -> instance for this type
 			Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);
