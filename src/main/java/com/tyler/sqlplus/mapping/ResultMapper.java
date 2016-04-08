@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.tyler.sqlplus.annotation.Column;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.conversion.Conversion;
@@ -40,11 +39,10 @@ public class ResultMapper {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public <T> MappedPOJO<T> toPOJO(ResultSet rs, Class<T> mapClass, Class<?> parentRef) {
 		
+		ClassMetaData meta = ClassMetaData.getMetaData(mapClass);
+		
 		try {
-			
-			if (resultColumnNames == null) {
-				resultColumnNames = ResultSets.getColumns(rs);
-			}
+			if (resultColumnNames == null) resultColumnNames = ResultSets.getColumns(rs);
 			
 			MappedPOJO<T> mappedPOJO = assertInstance(mapClass, rs);
 			Map<String, Object> columnLabel_value = ResultSets.toMap(rs);
@@ -84,12 +82,12 @@ public class ResultMapper {
 					}
 				}
 				else {
-					String mappedCol = getMappedColName(field);
+					String mappedCol = meta.getMappedColumnName(field);
 					if (columnLabel_value.containsKey(mappedCol)) {
 						hasMappedField = true;
 						try {
 							Object value = columnLabel_value.get(mappedCol);
-							value = Conversion.toJavaValue(field, value); // Apply conversion
+							value = Conversion.toJavaValue(field, value);
 							ReflectionUtils.set(field, mappedPOJO.pojo, value);
 						}
 						catch (Exception e) {
@@ -154,11 +152,6 @@ public class ResultMapper {
 		catch (Exception e) {
 			throw new MappingException("Could not instantiate instance of POJO map class " + mapClass.getName(), e);
 		}
-	}
-
-	public static String getMappedColName(Field field) {
-		Column annot = field.getDeclaredAnnotation(Column.class);
-		return annot != null && annot.name().length() > 0 ? annot.name() : field.getName();
 	}
 	
 }
