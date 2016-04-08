@@ -63,7 +63,9 @@ public class Query {
 	 * therefore highly recommended not to mix calls to these two methods within a single query
 	 */
 	public Query addParameter(Object param) {
-		this.paramMap.put(rawParamCounter++ + "", param);
+		String counter = rawParamCounter++ + "";
+		this.paramLabels.add(counter);
+		this.paramMap.put(counter, param);
 		return this;
 	}
 	
