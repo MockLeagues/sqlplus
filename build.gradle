@@ -1,0 +1,24 @@
+
+apply plugin: 'maven'
+apply plugin: 'java'
+
+group = 'com.tyler'
+version = '1.0'
+
+repositories {
+	mavenCentral()
+	mavenLocal()
+}
+
+uploadArchives {
+	repositories {
+		mavenDeployer {
+			repository(url: "file://localhost/C:/Users/Tyler/.m2/repository")
+		}
+	}
+}
+
+dependencies {
+	testCompile 'mysql:mysql-connector-java:5.1.36'
+	testCompile 'junit:junit:4.+'
+}

@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -15,7 +16,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.mysql.jdbc.Statement;
 import com.tyler.sqlplus.conversion.Conversion;
 import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.NoResultsException;
