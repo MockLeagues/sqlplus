@@ -5,7 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +34,7 @@ public class Query {
 	
 	private final String sql;
 	private final Connection conn;
-	private LinkedHashMap<String, Object> paramMap;
+	private Map<String, Object> paramMap;
 	private LinkedHashSet<String> paramLabels;
 	
 	// This is a counter which is incremented each time a raw parameter is added to the query.
@@ -46,7 +46,7 @@ public class Query {
 		this.sql = sql.replaceAll(REGEX_PARAM.pattern(), "?");;
 		this.conn = conn;
 		this.rawParamCounter = 0;
-		this.paramMap = new LinkedHashMap<>();
+		this.paramMap = new HashMap<>();
 		
 		// We parse out the parameters immediately so we don't constantly have to perform a string match
 		// each time a parameter is set to validate it exists
@@ -210,8 +210,8 @@ public class Query {
 		}
 		
 		int p = 1;
-		for (Map.Entry<String, Object> e : paramMap.entrySet()) { // This will be correctly ordered since we use LinkedHashMap
-			Object value = e.getValue();
+		for (String paramLabel : paramLabels) { // This will be correctly ordered since we use LinkedHashSet
+			Object value = paramMap.get(paramLabel);
 			if (value == null) {
 				ps.setString(p++, null);
 			}
