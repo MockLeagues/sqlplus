@@ -10,9 +10,10 @@ import java.util.List;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import static org.junit.Assert.*;
 
-import utility.Tasks.Task;
+import com.tyler.sqlplus.utility.Tasks.Task;
+
+import static org.junit.Assert.*;
 
 public class EmployeeDBTest {
 
