@@ -25,8 +25,8 @@ public class TypedQuery<T> {
 		return q.findAs(type);
 	}
 	
-	public Stream<T> stream(boolean parallel) {
-		return q.streamAs(type, parallel);
+	public Stream<T> stream() {
+		return q.streamAs(type);
 	}
 
 }

@@ -120,7 +120,7 @@ public class ResultSets {
 	 */
 	public static Function<ResultSet, Map<String, Object>> toMap(Supplier<Map<String, Object>> impl) {
 		return rs -> {
-			return cellStream(rs, false).reduce(
+			return cellStream(rs).reduce(
 			                               impl.get(),
 			                               (map, cell) -> { map.put(cell.columnLabel, cell.objectValue); return map; },
 			                               (m1, m2) -> { m1.putAll(m2); return m2; });
@@ -128,26 +128,26 @@ public class ResultSets {
 	};
 	
 	public static final String[] toArray(ResultSet rs) {
-		return cellStream(rs, false).map(c -> c.stringValue).toArray(String[]::new);
+		return cellStream(rs).map(c -> c.stringValue).toArray(String[]::new);
 	};
 	
 	/**
 	 * Produces a stream over each row of the given result set. Since the result set object is always the same, it will
 	 * continuously be yielded to each stream method but with a different cursor position each time
 	 */
-	public static Stream<ResultSet> rowStream(final ResultSet rs, boolean parallel) {
-		return asStream(() -> new RowIterator(rs), parallel);
+	public static Stream<ResultSet> rowStream(final ResultSet rs) {
+		return asStream(() -> new RowIterator(rs));
 	}
 
 	/**
 	 * Produces a stream over the given cells of the current result set row. Cells are yielded according to their ordinal positions in the row
 	 */
-	public static Stream<Cell> cellStream(final ResultSet rs, boolean parallel) {
-		return asStream(() -> new CellIterator(rs), parallel);
+	public static Stream<Cell> cellStream(final ResultSet rs) {
+		return asStream(() -> new CellIterator(rs));
 	}
 	
-	private static <T> Stream<T> asStream(Iterable<T> iterable, boolean parallel) {
-		return StreamSupport.stream(iterable.spliterator(), parallel);
+	private static <T> Stream<T> asStream(Iterable<T> iterable) {
+		return StreamSupport.stream(iterable.spliterator(), false);
 	}
 
 }

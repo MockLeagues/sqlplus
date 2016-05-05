@@ -80,12 +80,12 @@ public class Query {
 	/**
 	 * Returns a stream over the results of this query as mapped instances of the given POJO class
 	 */
-	public <T> Stream<T> streamAs(Class<T> mapClass, boolean parallel) {
+	public <T> Stream<T> streamAs(Class<T> mapClass) {
 		try {
 			ResultSet rs = prepareStatement(false).executeQuery();
 			ResultMapper mapper = new ResultMapper();
-			return ResultSets.rowStream(rs, parallel)
-			                 .map(row -> mapper.toPOJO(rs, mapClass))
+			return ResultSets.rowStream(rs)
+	                         .map(row -> mapper.toPOJO(rs, mapClass))
 			                 .distinct()
 			                 .map(MappedPOJO::getPOJO);
 		} catch (SQLException e) {
@@ -100,7 +100,7 @@ public class Query {
 	 * A NoResultsException is thrown if there are no results
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
-		List<T> uniqueResults = streamAs(resultClass, false).collect(Collectors.toList());
+		List<T> uniqueResults = streamAs(resultClass).collect(Collectors.toList());
 		if (uniqueResults.isEmpty()) {
 			throw new NoResultsException();
 		}
@@ -158,7 +158,7 @@ public class Query {
 				ResultSet autoKeys = ps.getGeneratedKeys();
 				return
 					ResultSets
-					.rowStream(autoKeys, false)
+					.rowStream(autoKeys)
 					.map(rs -> {
 						try {
 							return rs.getObject(1);
