@@ -75,7 +75,7 @@ public final class ReflectionUtils {
 		
 		BiConsumer<Object, Object> setValue = null;
 		try {
-			Method setter = o.getClass().getDeclaredMethod("set" + capitalize(field.getName()), value.getClass());
+			Method setter = o.getClass().getDeclaredMethod("set" + capitalize(field.getName()));
 			setValue = (obj, val) -> { try { setter.invoke(obj, val); } catch (Exception e) { throw new RuntimeException(e); } }; 
 		}
 		catch (NoSuchMethodException e) {

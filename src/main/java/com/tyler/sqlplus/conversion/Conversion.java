@@ -46,6 +46,7 @@ public class Conversion {
 	
 	@SuppressWarnings("unchecked")
 	public static <T> T toJavaValue(Class<T> targetClass, Object dbValue) {
+		if (dbValue == null) return null;
 		try {
 			if (Enum.class.isAssignableFrom(targetClass)) { // Must convert over to specific enum type for this field
 				return (T) targetClass.getDeclaredMethod("valueOf", String.class).invoke(null, dbValue.toString());
