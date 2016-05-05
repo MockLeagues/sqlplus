@@ -58,7 +58,6 @@ public final class ReflectionUtils {
 			}
 		}
 		FIELD_GETTER.put(field, getValue);
-		
 		return getValue.apply(o);
 	}
 
@@ -68,25 +67,24 @@ public final class ReflectionUtils {
 
 	public static void set(Field field, Object o, Object value) throws IllegalArgumentException, IllegalAccessException {
 		
-		// See if we can pull a setter from our cache first
 		if (FIELD_SETTER.containsKey(field)) {
 			FIELD_SETTER.get(field).accept(o, value);
 		}
-		
-		BiConsumer<Object, Object> setValue = null;
-		try {
-			Method setter = o.getClass().getDeclaredMethod("set" + capitalize(field.getName()));
-			setValue = (obj, val) -> { try { setter.invoke(obj, val); } catch (Exception e) { throw new RuntimeException(e); } }; 
+		else {
+			BiConsumer<Object, Object> setValue = null;
+			try {
+				Method setter = o.getClass().getDeclaredMethod("set" + capitalize(field.getName()));
+				setValue = (obj, val) -> { try { setter.invoke(obj, val); } catch (Exception e) { throw new RuntimeException(e); } }; 
+			}
+			catch (NoSuchMethodException e) {
+				setValue = (obj, val) -> {
+					field.setAccessible(true);
+					try { field.set(obj, val); } catch (Exception e1) { throw new RuntimeException(e1); }
+				};
+			}
+			FIELD_SETTER.put(field, setValue);
+			setValue.accept(o, value);
 		}
-		catch (NoSuchMethodException e) {
-			setValue = (obj, val) -> {
-				field.setAccessible(true);
-				try { field.set(obj, val); } catch (Exception e1) { throw new RuntimeException(e1); }
-			};
-		}
-		FIELD_SETTER.put(field, setValue);
-		
-		setValue.accept(o, value);
 	}
 	
 	private static String capitalize(String s) {
