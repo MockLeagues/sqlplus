@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -25,9 +26,9 @@ import base.EmployeeDBTest;
 public class QueryTest extends EmployeeDBTest {
 
 	@Test
-	public void syntaxErrorIfUnkownParamAdded() {
-		Query q = new Query("select * from myTable where id = :id", null);
-		try {
+	public void syntaxErrorIfUnkownParamAdded() throws SQLException {
+		try (Connection conn = getConnection()) {
+			Query q = new Query("select * from myTable where id = :id", conn);
 			q.setParameter("idx", "123");
 			fail("Excepted failure setting unknown parameter");
 		} catch (SQLSyntaxException e) {
@@ -40,10 +41,10 @@ public class QueryTest extends EmployeeDBTest {
 		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		try (Connection conn = getConnection()) {
 			try {
-				new Query("select address_id from address where state = :state and city = :city", conn).findAs(Address.class);
+				new Query("select address_id from address where state = :state and city = :city", conn).setParameter("state", "s").findAs(Address.class);
 				fail("Expected query to fail because no parameter was set");
 			} catch (SQLSyntaxException e) {
-				assertEquals("Missing parameter values for the following parameters: [state, city]", e.getMessage());
+				assertEquals("Missing parameter values for the following parameters: [city]", e.getMessage());
 			}
 		}
 	}
@@ -308,7 +309,7 @@ public class QueryTest extends EmployeeDBTest {
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
 		try (Connection conn = getConnection()) {
-			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn).bindParams(toCreate);
+			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn).addBatch(toCreate);
 			q.executeUpdate();
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
 			assertEquals(new Integer(1), actual);
@@ -323,7 +324,7 @@ public class QueryTest extends EmployeeDBTest {
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
 		try (Connection conn = getConnection()) {
-			Query q = new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).bindParams(toCreate);
+			Query q = new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).addBatch(toCreate);
 			q.executeUpdate();
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
 			assertEquals(new Integer(1), actual);
@@ -344,7 +345,7 @@ public class QueryTest extends EmployeeDBTest {
 		toCreate.type = Type.HOURLY;
 		try (Connection conn = getConnection()) {
 			assertThrows(() -> {
-				new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).bindParams(toCreate);
+				new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).addBatch(toCreate);
 			}, MappingException.class);
 		}
 	}

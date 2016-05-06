@@ -13,6 +13,7 @@ import java.util.function.Supplier;
 import javax.sql.DataSource;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
+import com.tyler.sqlplus.query.Query;
 
 public class SQLPlus {
 
@@ -69,8 +70,12 @@ public class SQLPlus {
 		}
 	}
 	
-	public <T> int[] batchUpdate(String sql, List<T> entities) {
-		return query(conn -> conn.prepareBatch(sql, entities).executeBatch());
+	public <T> void batchUpdate(String sql, List<T> entities) {
+		transact(conn -> {
+			Query q = conn.createQuery(sql);
+			entities.forEach(q::addBatch);
+			q.executeUpdate();
+		});
 	}
 	
 	public int[] batchExec(String... stmts) {

@@ -1,6 +1,8 @@
 package com.tyler.sqlplus.serialization;
 
 import java.lang.reflect.Field;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.HashMap;
@@ -14,6 +16,7 @@ public class Serlializers {
 
 	private final static Map<Class<?>, Function<?, String>> TYPE_SER = new HashMap<>();
 	private final static Map<Class<?>, Function<String, ?>> TYPE_DESER = new HashMap<>();
+	private static String DATE_FORMAT = "yyyy-MM-dd";
 	
 	public static <T> void setDefaultSerializer(Class<T> type, Function<T, String> serializer) {
 		TYPE_SER.put(type, serializer);
@@ -21,6 +24,10 @@ public class Serlializers {
 	
 	public static <T> void setDefaultDeserializer(Class<T> type, Function<String, T> deserializer) {
 		TYPE_DESER.put(type, deserializer);
+	}
+	
+	public static void setDateFormat(String fmt) {
+		DATE_FORMAT = fmt;
 	}
 	
 	static {
@@ -58,8 +65,17 @@ public class Serlializers {
 		setDefaultSerializer(LocalDate.class, d -> d.toString());
 		setDefaultDeserializer(LocalDate.class, LocalDate::parse);
 		
-		setDefaultSerializer(Date.class, d -> d.toString());
-		setDefaultDeserializer(Date.class, db -> new Date(java.sql.Date.valueOf(db).getTime()));
+		setDefaultSerializer(Date.class, d -> {
+			return new SimpleDateFormat(DATE_FORMAT).format(d);
+		});
+		
+		setDefaultDeserializer(Date.class, db -> {
+			try {
+				return new SimpleDateFormat(DATE_FORMAT).parse(db);
+			} catch (ParseException e) {
+				throw new RuntimeException(e);
+			}
+		});
 		
 		setDefaultSerializer(String.class, s -> s);
 		setDefaultDeserializer(String.class, s -> s);

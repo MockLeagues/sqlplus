@@ -7,8 +7,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,43 +27,47 @@ import com.tyler.sqlplus.mapping.ClassMetaData;
 import com.tyler.sqlplus.mapping.ResultStream;
 import com.tyler.sqlplus.serialization.Serlializers;
 import com.tyler.sqlplus.utility.ReflectionUtils;
-import com.tyler.sqlplus.utility.ResultSets;
 
 public class Query {
 
-	static final Pattern REGEX_PARAM = Pattern.compile(":\\w+");
+	private static final String REGEX_PARAM = ":\\w+";
 	
-	private final String sql;
-	private final Connection conn;
-	private Map<String, Object> paramMap;
-	private List<String> paramLabels;
-	
-	// This is a counter which is incremented each time a raw parameter is added to the query.
-	// It is then used as a key to store the parameter in the param map
-	private int rawParamCounter;
+	private PreparedStatement ps;
+	private Set<String> paramLabels;
+	private Map<String, Object> manualParamBatch;
+	private Deque<Map<String, Object>> paramBatches;
 	
 	public Query(String sql, Connection conn) {
 		
-		this.sql = sql.replaceAll(REGEX_PARAM.pattern(), "?");
-		this.conn = conn;
-		this.rawParamCounter = 0;
-		this.paramMap = new HashMap<>();
-		
-		// We parse out the parameters immediately so we don't constantly have to perform a string match
-		// each time a parameter is set to validate it exists
-		this.paramLabels = parseParamLabels(sql);
+		try {
+			this.ps = conn.prepareStatement(sql.replaceAll(REGEX_PARAM, "?"), Statement.RETURN_GENERATED_KEYS);
+			
+			this.paramBatches = new LinkedList<>();
+			this.manualParamBatch = new HashMap<>();
+			this.paramLabels = new LinkedHashSet<>();
+			
+			// We parse out the parameters immediately so we don't constantly have to perform a string match
+			// each time a parameter is set to validate it exists
+			Matcher paramsMatcher = Pattern.compile(REGEX_PARAM).matcher(sql);
+			while (paramsMatcher.find()) {
+				this.paramLabels.add(paramsMatcher.group().substring(1));
+			}
+			
+		} catch (SQLException e) {
+			throw new SQLSyntaxException(e);
+		}
 	}
 	
 	/**
-	 * Adds a raw ordinal parameter to this query. This method should be used to specify values for '?' params in your query
+	 * Adds a raw ordinal parameter to the current manual parameter batch for this query. This method should be used to specify values for '?' params in your query
 	 * 
 	 * Note that if you mix calls to addParameter() and setParameter() for any given query, the results will be undefined. It is
 	 * therefore highly recommended not to mix calls to these two methods within a single query
 	 */
 	public Query addParameter(Object param) {
-		String counter = rawParamCounter++ + "";
+		String counter = (manualParamBatch.size() + 1) + "";
 		this.paramLabels.add(counter);
-		this.paramMap.put(counter, param);
+		manualParamBatch.put(counter, param);
 		return this;
 	}
 	
@@ -69,13 +75,14 @@ public class Query {
 		if (!paramLabels.contains(key)) {
 			throw new SQLSyntaxException("Unknown query parameter: " + key);
 		}
-		this.paramMap.put(key, val);
+		manualParamBatch.put(key, val);
 		return this;
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
 		try {
-			ResultSet rs = prepareStatement(false).executeQuery();
+			applyBatches();
+			ResultSet rs = ps.executeQuery();
 			return new ResultStream<T>(rs, klass).stream();
 		} catch (SQLException e) {
 			throw new SQLSyntaxException(e);
@@ -103,7 +110,8 @@ public class Query {
 	 */
 	public <T> T fetchScalar(Class<T> scalarClass) {
 		try {
-			ResultSet rs = prepareStatement(false).executeQuery();
+			applyBatches();
+			ResultSet rs = ps.executeQuery();
 			if (!rs.next()) {
 				throw new NoResultsException();
 			}
@@ -129,26 +137,6 @@ public class Query {
 	}
 	
 	/**
-	 * Sets parameter values in this query using the given POJO class
-	 */
-	public Query bindParams(Object o) {
-		ClassMetaData meta = ClassMetaData.getMetaData(o.getClass());
-		paramLabels.forEach(label -> {
-			try {
-				Field mappedField = meta.getMappedField(label);
-				if (mappedField == null) {
-					throw new MappingException("No member exists in class " + o.getClass().getName() + " to bind a value for parameter '" + label + "'");
-				}
-				Object paramValue = ReflectionUtils.get(mappedField, o);
-				this.paramMap.put(label, paramValue);
-			} catch (IllegalArgumentException | IllegalAccessException e) {
-				throw new MappingException(e);
-			}
-		});
-		return this;
-	}
-	
-	/**
 	 * Execute this query's payload as an update statement
 	 */
 	public void executeUpdate() {
@@ -161,22 +149,16 @@ public class Query {
 	public <T> List<T> executeUpdate(Class<T> targetKeyClass) {
 		try {
 			boolean returnKeys = targetKeyClass != null;
-			PreparedStatement ps = prepareStatement(returnKeys);
-			int affectedRows = ps.executeUpdate();
-			if (returnKeys && affectedRows > 0) {
-				ResultSet autoKeys = ps.getGeneratedKeys();
-				return
-					ResultSets
-					.rowStream(autoKeys)
-					.map(rs -> {
-						try {
-							return rs.getString(1);
-						} catch (SQLException e) {
-							throw new RuntimeException(e);
-						}
-					})
-					.map(key -> Serlializers.deserialize(targetKeyClass, key))
-					.collect(Collectors.toList());
+			applyBatches();
+			int[] affectedRows = ps.executeBatch();
+			if (returnKeys && affectedRows[0] > 0) {
+				ResultSet rsKeys = ps.getGeneratedKeys();
+				List<T> keys = new ArrayList<>();
+				while (rsKeys.next()) {
+					String keyResult = rsKeys.getString(1);
+					keys.add(Serlializers.deserialize(targetKeyClass, keyResult));
+				}
+				return keys;
 			}
 			return null;
 		} catch (SQLException e) {
@@ -185,44 +167,75 @@ public class Query {
 	}
 
 	/**
-	 * Prepares a JDBC statement object for this query's payload using the given return auto-keys flag
+	 * Finish the current running manual parameter batch
 	 */
-	public PreparedStatement prepareStatement(boolean returnAutoKeys) throws SQLException {
-		
-		PreparedStatement ps = returnAutoKeys ?
-		                           conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) :
-		                           conn.prepareStatement(sql);
-
-		// Validate we have all parameters set
-		Set<String> missingParams = new LinkedHashSet<>(paramLabels);
-		missingParams.removeAll(paramMap.keySet());
-		if (!missingParams.isEmpty()) {
-			throw new SQLSyntaxException("Missing parameter values for the following parameters: " + missingParams);
-		}
-		
-		int p = 1;
-		for (String paramLabel : paramLabels) { // This will be correctly ordered since we use LinkedHashSet
-			Object value = paramMap.get(paramLabel);
-			if (value == null) {
-				ps.setString(p++, null);
-			}
-			else if (value instanceof Enum) {
-				ps.setString(p++, value.toString());
-			}
-			else {
-				ps.setObject(p++, value);
-			}
-		}
-		return ps;
+	public Query addBatch() {
+		this.paramBatches.add(manualParamBatch);
+		this.manualParamBatch.clear();
+		return this;
 	}
-
-	static List<String> parseParamLabels(String sql) {
-		List<String> params = new ArrayList<>();
-		Matcher paramsMatcher = REGEX_PARAM.matcher(sql);
-		while (paramsMatcher.find()) {
-			params.add(paramsMatcher.group().substring(1));
+	
+	/**
+	 * Adds a batch statement using the parameters in the given POJO class.
+	 */
+	public Query addBatch(Object o) {
+		
+		Map<String, Object> newBatch = new HashMap<>();
+		ClassMetaData meta = ClassMetaData.getMetaData(o.getClass());
+		
+		paramLabels.forEach(label -> {
+			try {
+				Field mappedField = meta.getMappedField(label);
+				if (mappedField == null) {
+					throw new MappingException("No member exists in class " + o.getClass().getName() + " to bind a value for parameter '" + label + "'");
+				}
+				
+				Object paramValue = ReflectionUtils.get(mappedField, o);
+				newBatch.put(label, paramValue);
+			}
+			catch (IllegalArgumentException | IllegalAccessException e) {
+				throw new MappingException(e);
+			}
+		});
+	
+		paramBatches.add(newBatch);
+		return this;
+	}
+	
+	/**
+	 * Applies all parameter batches stored in this query to its PreparedStatement object
+	 */
+	private void applyBatches() {
+		
+		if (!manualParamBatch.isEmpty()) {
+			paramBatches.add(manualParamBatch);
 		}
-		return params;
+		
+		if (paramBatches.isEmpty() && !paramLabels.isEmpty()) {
+			throw new RuntimeException("No parameters set");
+		}
+		
+		for (Map<String, Object> paramBatch : this.paramBatches) {
+			try {
+				
+				Set<String> missingParams = new LinkedHashSet<>(paramLabels);
+				missingParams.removeAll(paramBatch.keySet());
+				if (!missingParams.isEmpty()) {
+					throw new SQLSyntaxException("Missing parameter values for the following parameters: " + missingParams);
+				}
+				
+				int p = 1;
+				for (String paramLabel : paramLabels) { // This will be correctly ordered since we use LinkedHashSet
+					Object value = paramBatch.get(paramLabel);
+					ps.setString(p++, Serlializers.serialize(value));
+				}
+				
+				ps.addBatch();
+			}
+			catch (SQLException e) {
+				throw new SQLSyntaxException(e);
+			}
+		}
 	}
 	
 }
