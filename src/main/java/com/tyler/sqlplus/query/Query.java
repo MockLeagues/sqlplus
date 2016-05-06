@@ -83,9 +83,9 @@ public class Query {
 	public <T> Stream<T> streamAs(Class<T> mapClass) {
 		try {
 			ResultSet rs = prepareStatement(false).executeQuery();
-			ResultMapper mapper = new ResultMapper();
+			ResultMapper mapper = new ResultMapper(rs);
 			return ResultSets.rowStream(rs)
-	                         .map(row -> mapper.toPOJO(rs, mapClass))
+	                         .map(row -> mapper.mapPOJO(mapClass))
 			                 .distinct()
 			                 .map(MappedPOJO::getPOJO);
 		} catch (SQLException e) {
