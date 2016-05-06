@@ -9,7 +9,6 @@ import java.sql.Connection;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 import org.junit.Test;
@@ -265,23 +264,6 @@ public class QueryTest extends EmployeeDBTest {
 		try (Connection conn = getConnection()) {
 			Integer total = new Query("select sum(office_id) from office", conn).fetchScalar(Integer.class);
 			assertEquals(new Integer(6), total);
-		}
-	}
-	
-	@Test
-	public void queryMaps() throws Exception {
-		transact(
-			"insert into employee(type, name, salary, hired) values ('SALARY', 'Steve Jobs', '41000000', '1982-05-13')",
-			"insert into office(office_name, `primary`, employee_id) values ('Office A', 1, 1)",
-			"insert into office(office_name, `primary`, employee_id) values ('Office B', 0, 1)"
-		);
-		try (Connection conn = getConnection()) {
-			List<Map<String, Object>> maps = new Query("select office_name, `primary` from office", conn).fetchMaps();
-			assertEquals(2, maps.size());
-			assertEquals("Office A", maps.get(0).get("office_name"));
-			assertEquals(1, maps.get(0).get("primary"));
-			assertEquals("Office B", maps.get(1).get("office_name"));
-			assertEquals(0, maps.get(1).get("primary"));
 		}
 	}
 	

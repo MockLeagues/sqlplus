@@ -76,12 +76,6 @@ public class Query {
 		return this;
 	}
 	
-	@SuppressWarnings("unchecked")
-	public List<Map<String, Object>> fetchMaps() {
-		Object o = fetchAs(Map.class);
-		return (List<Map<String, Object>>) o;
-	}
-	
 	/**
 	 * Executes this query, mapping the results to the given POJO class. ResultSet columns will directly map
 	 * to the POJO's field names unless they are annoted with an @Column annotation to specify the mapped field.
