@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -60,6 +61,16 @@ public class SQLPlus {
 	 */
 	public <T> List<T> fetch(Class<T> pojoClass, String sql, Object... params) {
 		return query(conn -> conn.createDynamicQuery().query(sql, params).build().fetchAs(pojoClass));
+	}
+	
+	/**
+	 * Shortcut method for creating a query which immediately returns simple maps for each result row
+	 */
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> fetchMaps(String sql, Object... params) {
+		return (Map<String, Object>) query(conn -> {
+			return conn.createDynamicQuery().query(sql, params).build().fetchMaps();
+		});
 	}
 	
 	/**

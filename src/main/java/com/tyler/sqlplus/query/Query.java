@@ -76,6 +76,12 @@ public class Query {
 		return this;
 	}
 	
+	@SuppressWarnings("unchecked")
+	public List<Map<String, Object>> fetchMaps() {
+		Object o = fetchAs(Map.class);
+		return (List<Map<String, Object>>) o;
+	}
+	
 	/**
 	 * Executes this query, mapping the results to the given POJO class. ResultSet columns will directly map
 	 * to the POJO's field names unless they are annoted with an @Column annotation to specify the mapped field.
@@ -86,17 +92,37 @@ public class Query {
 		try {
 			ResultSet rs = prepareStatement(false).executeQuery();
 			ResultMapper mapper = new ResultMapper(rs);
-			List<T> uniqueResults = ResultSets.rowStream(rs)
-			                                  .map(row -> mapper.mapPOJO(resultClass))
-			                                  .distinct()
-			                                  .map(MappedPOJO::getPOJO)
-			                                  .collect(Collectors.toList());
-			if (uniqueResults.isEmpty()) {
+			List<T> results = ResultSets.rowStream(rs)
+			                            .map(row -> mapper.mapPOJO(resultClass))
+			                            .distinct()
+			                            .map(MappedPOJO::getPOJO)
+			                            .collect(Collectors.toList());
+			if (results.isEmpty()) {
 				throw new NoResultsException();
 			}
-			return uniqueResults;
+			return results;
 		} catch (SQLException e) {
 			throw new SQLSyntaxException("Error executing query", e);
+		}
+	}
+	
+	/**
+	 * Returns the result of this query as a 'scalar' (single) value of the given Java class type.
+	 * 
+	 * This method will throw a SQLSyntaxException if the produced result set has more than 1 column
+	 */
+	public <T> T fetchScalar(Class<T> scalarClass) {
+		try {
+			ResultSet rs = prepareStatement(false).executeQuery();
+			if (!rs.next()) {
+				throw new NoResultsException();
+			}
+			if (rs.getMetaData().getColumnCount() > 1) {
+				throw new SQLSyntaxException("Scalar query returned more than 1 column");
+			}
+			return Conversion.toJavaValue(scalarClass, rs.getObject(1));
+		} catch (SQLException e) {
+			throw new SQLSyntaxException("Error retrieving scalar value", e);
 		}
 	}
 	
@@ -165,26 +191,6 @@ public class Query {
 			return null;
 		} catch (SQLException e) {
 			throw new SQLSyntaxException(e);
-		}
-	}
-	
-	/**
-	 * Returns the result of this query as a 'scalar' (single) value of the given Java class type.
-	 * 
-	 * This method will throw a SQLSyntaxException if the produced result set has more than 1 column
-	 */
-	public <T> T fetchScalar(Class<T> scalarClass) {
-		try {
-			ResultSet rs = prepareStatement(false).executeQuery();
-			if (!rs.next()) {
-				throw new NoResultsException();
-			}
-			if (rs.getMetaData().getColumnCount() > 1) {
-				throw new SQLSyntaxException("Scalar query returned more than 1 column");
-			}
-			return Conversion.toJavaValue(scalarClass, rs.getObject(1));
-		} catch (SQLException e) {
-			throw new SQLSyntaxException("Error retrieving scalar value", e);
 		}
 	}
 

@@ -6,23 +6,20 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import org.junit.Test;
 
-import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.Column;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
-import com.tyler.utility.Tasks;
 
 import base.EmployeeDBTest;
 
@@ -151,7 +148,6 @@ public class QueryTest extends EmployeeDBTest {
 		}
 	}
 	
-	
 	public static class Employee {
 		public enum Type { HOURLY, SALARY; }
 		public Integer employeeId;
@@ -273,6 +269,23 @@ public class QueryTest extends EmployeeDBTest {
 	}
 	
 	@Test
+	public void queryMaps() throws Exception {
+		transact(
+			"insert into employee(type, name, salary, hired) values ('SALARY', 'Steve Jobs', '41000000', '1982-05-13')",
+			"insert into office(office_name, `primary`, employee_id) values ('Office A', 1, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office B', 0, 1)"
+		);
+		try (Connection conn = getConnection()) {
+			List<Map<String, Object>> maps = new Query("select office_name, `primary` from office", conn).fetchMaps();
+			assertEquals(2, maps.size());
+			assertEquals("Office A", maps.get(0).get("office_name"));
+			assertEquals(1, maps.get(0).get("primary"));
+			assertEquals("Office B", maps.get(1).get("office_name"));
+			assertEquals(0, maps.get(1).get("primary"));
+		}
+	}
+	
+	@Test
 	public void bindParamsNonNullForCreate() throws Exception {
 		Employee toCreate = new Employee();
 		toCreate.hired = new Date();
@@ -336,65 +349,5 @@ public class QueryTest extends EmployeeDBTest {
 			assertEquals(new Integer(2), key);
 		}
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	public static class Delivery {
-		
-		public String affiliate_id;
-		public char hidden, deleted;
-		
-		@Override
-		public String toString() {
-			return "Delivery [affiliateId=" + affiliate_id + ", hidden=" + hidden + ", deleted=" + deleted + "]";
-		}
-	}
-	
-	
-	
-	
-	public static void main(String[] args) throws Exception {
-	
-		SQLPlus DB = new SQLPlus("jdbc:mysql://localhost/track", "root", "TyDaWi@timpfmys1");
-		
-		String testQuery = "select * from delivery limit 100000";
-		
-		double sqlPlus = Tasks.timeSeconds(() -> {
-			DB.fetch(Delivery.class, testQuery).forEach(c -> System.out.println(c.affiliate_id));
-		});
-		
-		double rawJDBC = Tasks.timeSeconds(() -> {
-			try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/track", "root", "TyDaWi@timpfmys1")) {
-				ResultSet rs = conn.createStatement().executeQuery(testQuery);
-				while (rs.next()) {
-					rs.getString("hidden");
-					rs.getString("deleted");
-					System.out.println(rs.getString("affiliate_id"));
-				}
-			}
-		});
-		
-		System.out.println();
-		System.out.println("SQLPlus: " + sqlPlus);
-		System.out.println("Raw JDBC: " + rawJDBC);
-		
-	}
+
 }

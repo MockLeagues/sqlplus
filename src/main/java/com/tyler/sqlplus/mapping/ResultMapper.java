@@ -53,6 +53,10 @@ public class ResultMapper {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public <T> MappedPOJO<T> mapPOJO(Class<T> mapClass, Class<?> parentRef) {
 
+		if (Map.class.isAssignableFrom(mapClass)) {
+			return new MappedPOJO<T>((T) ResultSets.toMap(rs), null);
+		}
+		
 		ClassMetaData meta = ClassMetaData.getMetaData(mapClass);
 		
 		List<Field> mappableFieldsForType = null;
