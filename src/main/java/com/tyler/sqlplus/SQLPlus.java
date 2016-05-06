@@ -10,15 +10,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.sql.DataSource;
+
 import com.tyler.sqlplus.exception.ConfigurationException;
 
 public class SQLPlus {
 
 	private Supplier<Connection> connectionFactory;
-	
-	public SQLPlus(Supplier<Connection> factory) {
-		this.connectionFactory = factory;
-	}
 	
 	public SQLPlus(String url, String user, String pass) {
 		this(() -> {
@@ -29,6 +27,20 @@ public class SQLPlus {
 				throw new ConfigurationException("Failed to connect to database", ex);
 			}
 		});
+	}
+
+	public SQLPlus(DataSource src) {
+		this(() -> {
+			try {
+				return src.getConnection();
+			} catch (SQLException e) {
+				throw new RuntimeException(e);
+			}
+		});
+	}
+	
+	public SQLPlus(Supplier<Connection> factory) {
+		this.connectionFactory = factory;
 	}
 	
 	public void testConnection() {
