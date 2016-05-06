@@ -15,8 +15,6 @@ public @interface Column {
 
 	public String name() default "";
 	
-	public boolean key() default false;
-	
 	@SuppressWarnings("rawtypes")
 	public Class<? extends Function>[] converter() default {};
 	

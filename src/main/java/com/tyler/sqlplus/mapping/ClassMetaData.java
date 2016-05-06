@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.tyler.sqlplus.annotation.Column;
+import com.tyler.sqlplus.annotation.Key;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
 
@@ -48,7 +49,7 @@ public class ClassMetaData {
 			String mappedColName = annot != null && annot.name().length() > 0 ? annot.name() : field.getName();
 			meta.column_member.put(mappedColName, field);
 			meta.member_column.put(field, mappedColName);
-			if (annot != null && annot.key()) {
+			if (field.isAnnotationPresent(Key.class)) {
 				meta.keyField = field;
 			}
 		}

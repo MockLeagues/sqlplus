@@ -15,6 +15,7 @@ import java.util.List;
 import org.junit.Test;
 
 import com.tyler.sqlplus.annotation.Column;
+import com.tyler.sqlplus.annotation.Key;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.exception.MappingException;
@@ -222,7 +223,7 @@ public class QueryTest extends EmployeeDBTest {
 	
 	public static class EmployeeMultiRelation {
 		public enum Type { HOURLY, SALARY; }
-		public @Column(name = "employee_id", key = true) Integer employeeId;
+		public @Key @Column(name = "employee_id") Integer employeeId;
 		public Type type;
 		public String name;
 		public Integer salary;
@@ -230,7 +231,7 @@ public class QueryTest extends EmployeeDBTest {
 		public @MultiRelation List<Office> offices;
 		
 		public static class Office {
-			public @Column(name = "office_id", key = true) Integer officeKey;
+			public @Key @Column(name = "office_id") Integer officeKey;
 			public @Column(name = "office_name") String name;
 			public int primary;
 		}
