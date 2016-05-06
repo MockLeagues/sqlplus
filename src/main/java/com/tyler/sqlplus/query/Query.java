@@ -85,7 +85,7 @@ public class Query {
 			ResultSet rs = prepareStatement(false).executeQuery();
 			ResultMapper mapper = new ResultMapper(rs);
 			return ResultSets.rowStream(rs)
-	                         .map(row -> mapper.mapPOJO(mapClass))
+			                 .map(row -> mapper.mapPOJO(mapClass))
 			                 .distinct()
 			                 .map(MappedPOJO::getPOJO);
 		} catch (SQLException e) {
