@@ -196,7 +196,7 @@ public class Query {
 	}
 
 	/**
-	 * Executes and retrieves the raw ResultSet object from this query's payload using the given return auto-keys flag
+	 * Prepares a JDBC statement object for this query's payload using the given return auto-keys flag
 	 */
 	public PreparedStatement prepareStatement(boolean returnAutoKeys) throws SQLException {
 		
