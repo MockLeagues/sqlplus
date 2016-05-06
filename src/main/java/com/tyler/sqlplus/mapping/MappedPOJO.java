@@ -20,6 +20,11 @@ public class MappedPOJO<T> {
 	}
 	
 	@Override
+	public int hashCode() {
+		return dbKey == null ? super.hashCode() : dbKey.hashCode();
+	}
+	
+	@Override
 	public boolean equals(Object o) {
 		if (o instanceof MappedPOJO) {
 			return Objects.equals(((MappedPOJO<?>)o).dbKey, dbKey);
