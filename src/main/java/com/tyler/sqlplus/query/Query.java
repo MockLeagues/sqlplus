@@ -23,8 +23,7 @@ import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
 import com.tyler.sqlplus.mapping.ClassMetaData;
-import com.tyler.sqlplus.mapping.MappedPOJO;
-import com.tyler.sqlplus.mapping.ResultMapper;
+import com.tyler.sqlplus.mapping.ResultStream;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 import com.tyler.sqlplus.utility.ResultSets;
 
@@ -77,11 +76,7 @@ public class Query {
 	public <T> Stream<T> streamAs(Class<T> klass) {
 		try {
 			ResultSet rs = prepareStatement(false).executeQuery();
-			ResultMapper mapper = new ResultMapper(rs);
-			return ResultSets.rowStream(rs)
-			                 .map(row -> mapper.mapPOJO(klass))
-			                 .distinct()
-			                 .map(MappedPOJO::getPOJO);
+			return new ResultStream<T>(rs, klass).stream();
 		} catch (SQLException e) {
 			throw new SQLSyntaxException(e);
 		}

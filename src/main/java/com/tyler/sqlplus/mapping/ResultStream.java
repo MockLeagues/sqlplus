@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
@@ -23,7 +25,7 @@ import com.tyler.sqlplus.utility.ResultSets;
 /**
  * Executes the process of mapping result set rows to POJOs. Note that this class will NEVER advance the ResultSet object it encompasses
  */
-public class ResultMapper {
+public class ResultStream<T> implements Iterable<MappedPOJO<T>> {
 
 	// Used to track objects already created from the result set so we don't make duplicates
 	private Map<Class<?>, Map<Object, MappedPOJO<?>>> class_key_instance = new HashMap<>();
@@ -32,18 +34,45 @@ public class ResultMapper {
 	private Map<Class<?>, List<Field>> class_mappableFields = new HashMap<>();
 	
 	private ResultSet rs;
+	private Class<T> resultClass;
 	private Set<String> columnNames;
 	
-	public ResultMapper(ResultSet rs) throws SQLException {
+	public ResultStream(ResultSet rs, Class<T> resultClass) throws SQLException {
 		this.rs = rs;
+		this.resultClass = resultClass;
 		this.columnNames = ResultSets.getColumns(rs);
 	}
 	
 	/**
-	 * Maps the current row of this mapper's result set to the given POJO class
+	 * Returns a stream over the unique mapped objects of this mapper's result set
 	 */
-	public <T> MappedPOJO<T> mapPOJO(Class<T> mapClass) {
-		return mapPOJO(mapClass, null);
+	public Stream<T> stream() {
+		return StreamSupport.stream(this.spliterator(), false)
+		                    .distinct() // Ensures we don't get duplicate mapped entities if we have a one-to-many collection via a join
+		                    .map(MappedPOJO::getPOJO);
+	}
+	
+	@Override
+	public Iterator<MappedPOJO<T>> iterator() {
+		
+		return new Iterator<MappedPOJO<T>>() {
+
+			@Override
+			public boolean hasNext() {
+				try {
+					return rs.next();
+				} catch (SQLException e) {
+					throw new RuntimeException(e);
+				}
+			}
+
+			@Override
+			public MappedPOJO<T> next() {
+				return mapPOJO(resultClass, null);
+			}
+			
+		};
+		
 	}
 	
 	/**
@@ -51,25 +80,22 @@ public class ResultMapper {
 	 * call was made to map another child object on the same row. Tracking this class allows us to avoid circular references
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public <T> MappedPOJO<T> mapPOJO(Class<T> mapClass, Class<?> parentRef) {
+	private <E> MappedPOJO<E> mapPOJO(Class<E> mapClass, Class<?> parentRef) {
 		ClassMetaData meta = ClassMetaData.getMetaData(mapClass);
 		
-		List<Field> mappableFieldsForType = null;
+		List<Field> mappableFields = null;
 		if (class_mappableFields.containsKey(mapClass)) {
-			mappableFieldsForType = class_mappableFields.get(mapClass);
+			mappableFields = class_mappableFields.get(mapClass);
 		} else {
-			mappableFieldsForType = findMappableFields(mapClass);
-			class_mappableFields.put(mapClass, mappableFieldsForType);
+			mappableFields = findMappableFields(mapClass);
+			class_mappableFields.put(mapClass, mappableFields);
 		}
-		
-		if (mappableFieldsForType.isEmpty()) { // No work to do
-			return null;
-		}
+		if (mappableFields.isEmpty()) return null; // No work to do
 		
 		try {
-			MappedPOJO<T> mappedPOJO = assertInstance(mapClass, meta);
+			MappedPOJO<E> mappedPOJO = assertInstance(mapClass, meta);
 			
-			for (Iterator<Field> fieldIter = mappableFieldsForType.iterator(); fieldIter.hasNext();) {
+			for (Iterator<Field> fieldIter = mappableFields.iterator(); fieldIter.hasNext();) {
 				Field field = fieldIter.next();
 				
 				if (field.isAnnotationPresent(SingleRelation.class)) {
@@ -150,16 +176,17 @@ public class ResultMapper {
 	}
 	
 	/**
-	 * Makes a new instance of the given map class for the current row, if one does not exist within the currently processed rows of the result set, or else pulls the current one
+	 * Makes a new instance of the given map class for the current row, if one does not exist within the currently processed rows
+	 * of the result set, or else pulls the current one
 	 */
 	@SuppressWarnings("unchecked")
-	private <T> MappedPOJO<T> assertInstance(Class<T> mapClass, ClassMetaData meta) throws Exception {
+	private <E> MappedPOJO<E> assertInstance(Class<E> mapClass, ClassMetaData meta) throws Exception {
 		
 		// If the POJO does not have an ID field then we can't put it in our ID lookup table to re-retrieve it
 		// later, so we have no choice but to just return a new instance now
 		Field keyField = meta.getKeyField();
 		if (keyField == null) {
-			return new MappedPOJO<T>(mapClass.newInstance(), null);
+			return new MappedPOJO<>(mapClass.newInstance(), null);
 		}
 		
 		String keyColumnName = meta.getMappedColumnName(keyField);
@@ -167,7 +194,7 @@ public class ResultMapper {
 		// If we don't have the key column in our result set then we just return a new instance now since
 		// we can't track duplicate entities by key
 		if (!columnNames.contains(keyColumnName)) {
-			return new MappedPOJO<T>(mapClass.newInstance(), null);
+			return new MappedPOJO<>(mapClass.newInstance(), null);
 		}
 		
 		Object key = Conversion.toJavaValue(keyField, rs.getObject(keyColumnName));
@@ -179,16 +206,16 @@ public class ResultMapper {
 			class_key_instance.put(mapClass, key_pojo);
 		}
 		
-		MappedPOJO<T> mappedPojo = null;
+		MappedPOJO<E> mappedPojo = null;
 		if (key_pojo.containsKey(key)) {
-			mappedPojo = (MappedPOJO<T>) key_pojo.get(key);
+			mappedPojo = (MappedPOJO<E>) key_pojo.get(key);
 		}
 		else {
-			T pojo = mapClass.newInstance();
-			mappedPojo = new MappedPOJO<T>(pojo, key);
+			E pojo = mapClass.newInstance();
+			mappedPojo = new MappedPOJO<>(pojo, key);
 			key_pojo.put(key, mappedPojo);
 		}
 		return mappedPojo;
 	}
-	
+
 }
