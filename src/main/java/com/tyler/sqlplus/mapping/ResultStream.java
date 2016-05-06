@@ -11,6 +11,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -25,7 +27,7 @@ import com.tyler.sqlplus.utility.ResultSets;
 /**
  * Encapsulates iteration over a result set which maps each row to an instance of type <T>
  */
-public class ResultStream<T> implements Iterable<MappedPOJO<T>> {
+public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 
 	// Used to track objects already created from the result set so we don't make duplicates
 	private Map<Class<?>, Map<Object, MappedPOJO<?>>> class_key_instance = new HashMap<>();
@@ -47,32 +49,24 @@ public class ResultStream<T> implements Iterable<MappedPOJO<T>> {
 	 * Returns a stream over the unique mapped objects of this mapper's result set
 	 */
 	public Stream<T> stream() {
-		return StreamSupport.stream(this.spliterator(), false)
+		Spliterator<MappedPOJO<T>> spliterator = Spliterators.spliteratorUnknownSize(this, Spliterator.ORDERED); // Convert this iterator into an ordered spliterator
+		return StreamSupport.stream(spliterator, false)
 		                    .distinct() // Ensures we don't get duplicate mapped entities if we have a one-to-many collection via a join
 		                    .map(MappedPOJO::getPOJO);
 	}
 	
 	@Override
-	public Iterator<MappedPOJO<T>> iterator() {
-		
-		return new Iterator<MappedPOJO<T>>() {
+	public boolean hasNext() {
+		try {
+			return rs.next();
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-			@Override
-			public boolean hasNext() {
-				try {
-					return rs.next();
-				} catch (SQLException e) {
-					throw new RuntimeException(e);
-				}
-			}
-
-			@Override
-			public MappedPOJO<T> next() {
-				return mapPOJO(resultClass, null);
-			}
-			
-		};
-		
+	@Override
+	public MappedPOJO<T> next() {
+		return mapPOJO(resultClass, null);
 	}
 	
 	/**
