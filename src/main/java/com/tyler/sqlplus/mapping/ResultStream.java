@@ -2,18 +2,21 @@ package com.tyler.sqlplus.mapping;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -22,7 +25,6 @@ import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.serialization.Serlializers;
 import com.tyler.sqlplus.utility.ReflectionUtils;
-import com.tyler.sqlplus.utility.ResultSets;
 
 /**
  * Encapsulates iteration over a result set which maps each row to an instance of type <T>
@@ -42,7 +44,13 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	public ResultStream(ResultSet rs, Class<T> resultClass) throws SQLException {
 		this.rs = rs;
 		this.resultClass = resultClass;
-		this.columnNames = ResultSets.getColumns(rs);
+		
+		ResultSetMetaData meta = rs.getMetaData();
+		int count = meta.getColumnCount();
+		
+		this.columnNames = IntStream.rangeClosed(1, count)
+		                            .mapToObj(i -> { try { return meta.getColumnLabel(i); } catch (Exception e) { throw new RuntimeException(e); } })
+		                            .collect(Collectors.toCollection(LinkedHashSet::new));
 	}
 	
 	/**
