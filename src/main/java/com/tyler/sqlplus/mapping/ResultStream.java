@@ -23,7 +23,7 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
 import com.tyler.sqlplus.utility.ResultSets;
 
 /**
- * Executes the process of mapping result set rows to POJOs. Note that this class will NEVER advance the ResultSet object it encompasses
+ * Encapsulates iteration over a result set which maps each row to an instance of type <T>
  */
 public class ResultStream<T> implements Iterable<MappedPOJO<T>> {
 
