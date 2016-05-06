@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.tyler.sqlplus.conversion.Conversion;
 import com.tyler.sqlplus.exception.MappingException;
@@ -76,6 +77,15 @@ public class Query {
 		return this;
 	}
 	
+	public <T> Stream<T> streamAs(Class<T> klass) throws SQLException {
+		ResultSet rs = prepareStatement(false).executeQuery();
+		ResultMapper mapper = new ResultMapper(rs);
+		return ResultSets.rowStream(rs)
+		                 .map(row -> mapper.mapPOJO(klass))
+		                 .distinct()
+		                 .map(MappedPOJO::getPOJO);
+	}
+	
 	/**
 	 * Executes this query, mapping the results to the given POJO class. ResultSet columns will directly map
 	 * to the POJO's field names unless they are annoted with an @Column annotation to specify the mapped field.
@@ -84,13 +94,7 @@ public class Query {
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
 		try {
-			ResultSet rs = prepareStatement(false).executeQuery();
-			ResultMapper mapper = new ResultMapper(rs);
-			List<T> results = ResultSets.rowStream(rs)
-			                            .map(row -> mapper.mapPOJO(resultClass))
-			                            .distinct()
-			                            .map(MappedPOJO::getPOJO)
-			                            .collect(Collectors.toList());
+			List<T> results = streamAs(resultClass).collect(Collectors.toList());
 			if (results.isEmpty()) {
 				throw new NoResultsException();
 			}
