@@ -1,5 +1,6 @@
 package com.tyler.sqlplus.query;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -7,6 +8,7 @@ import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
@@ -49,11 +51,22 @@ public class QueryTest extends EmployeeDBTest {
 	}
 	
 	public static class Address {
+		
 		public Integer addressId;
 		public String street;
 		public String city;
 		public String state;
 		public String zip;
+		
+		public Address() {}
+		
+		public Address(String street, String city, String state, String zip) {
+			this.street = street;
+			this.city = city;
+			this.state = state;
+			this.zip = zip;
+		}
+		
 	}
 	
 	@Test
@@ -81,6 +94,50 @@ public class QueryTest extends EmployeeDBTest {
 			assertEquals("CA", second.state);
 			assertEquals("54321", second.zip);
 		}
+	}
+	
+	@Test
+	public void batchUpdate() throws Exception {
+		
+		List<Address> toInsert = Arrays.asList(
+			new Address("street1", "city1", "state1", "zip1"),
+			new Address("street2", "city2", "state2", "zip2"),
+			new Address("street3", "city3", "state3", "zip3"),
+			new Address("street4", "city4", "state4", "zip4")
+		);
+		
+		SQL_PLUS.batchUpdate("insert into address (street, city, state, zip) values (:street, :city, :state, :zip)", toInsert);
+		
+		String[][] results = query("select * from address");
+		String[][] expect = {
+			{"1", "street1", "city1", "state1", "zip1"},
+			{"2", "street2", "city2", "state2", "zip2"},
+			{"3", "street3", "city3", "state3", "zip3"},
+			{"4", "street4", "city4", "state4", "zip4"}
+		};
+		
+		assertArrayEquals(expect, results);
+	}
+	
+	@Test
+	public void batchExec() throws Exception {
+		
+		SQL_PLUS.batchExec(
+			"insert into address (street, city, state, zip) values ('street1', 'city1', 'state1', 'zip1')",
+			"insert into address (street, city, state, zip) values ('street2', 'city2', 'state2', 'zip2')",
+			"insert into address (street, city, state, zip) values ('street3', 'city3', 'state3', 'zip3')",
+			"insert into address (street, city, state, zip) values ('street4', 'city4', 'state4', 'zip4')"
+		);
+	
+		String[][] results = query("select * from address");
+		String[][] expect = {
+			{"1", "street1", "city1", "state1", "zip1"},
+			{"2", "street2", "city2", "state2", "zip2"},
+			{"3", "street3", "city3", "state3", "zip3"},
+			{"4", "street4", "city4", "state4", "zip4"}
+		};
+		
+		assertArrayEquals(expect, results);
 	}
 	
 	@Test

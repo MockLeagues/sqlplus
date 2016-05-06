@@ -6,6 +6,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,12 +30,12 @@ import com.tyler.sqlplus.utility.ResultSets;
 
 public class Query {
 
-	private static final Pattern REGEX_PARAM = Pattern.compile(":\\w+");
+	static final Pattern REGEX_PARAM = Pattern.compile(":\\w+");
 	
 	private final String sql;
 	private final Connection conn;
 	private Map<String, Object> paramMap;
-	private LinkedHashSet<String> paramLabels;
+	private List<String> paramLabels;
 	
 	// This is a counter which is incremented each time a raw parameter is added to the query.
 	// It is then used as a key to store the parameter in the param map
@@ -42,18 +43,14 @@ public class Query {
 	
 	public Query(String sql, Connection conn) {
 		
-		this.sql = sql.replaceAll(REGEX_PARAM.pattern(), "?");;
+		this.sql = sql.replaceAll(REGEX_PARAM.pattern(), "?");
 		this.conn = conn;
 		this.rawParamCounter = 0;
 		this.paramMap = new HashMap<>();
 		
 		// We parse out the parameters immediately so we don't constantly have to perform a string match
 		// each time a parameter is set to validate it exists
-		this.paramLabels = new LinkedHashSet<>();
-		Matcher paramsMatcher = REGEX_PARAM.matcher(sql);
-		while (paramsMatcher.find()) {
-			paramLabels.add(paramsMatcher.group().substring(1));
-		}
+		this.paramLabels = parseParamLabels(sql);
 	}
 	
 	/**
@@ -77,13 +74,17 @@ public class Query {
 		return this;
 	}
 	
-	public <T> Stream<T> streamAs(Class<T> klass) throws SQLException {
-		ResultSet rs = prepareStatement(false).executeQuery();
-		ResultMapper mapper = new ResultMapper(rs);
-		return ResultSets.rowStream(rs)
-		                 .map(row -> mapper.mapPOJO(klass))
-		                 .distinct()
-		                 .map(MappedPOJO::getPOJO);
+	public <T> Stream<T> streamAs(Class<T> klass) {
+		try {
+			ResultSet rs = prepareStatement(false).executeQuery();
+			ResultMapper mapper = new ResultMapper(rs);
+			return ResultSets.rowStream(rs)
+			                 .map(row -> mapper.mapPOJO(klass))
+			                 .distinct()
+			                 .map(MappedPOJO::getPOJO);
+		} catch (SQLException e) {
+			throw new SQLSyntaxException(e);
+		}
 	}
 	
 	/**
@@ -93,15 +94,11 @@ public class Query {
 	 * A NoResultsException is thrown if there are no results
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
-		try {
-			List<T> results = streamAs(resultClass).collect(Collectors.toList());
-			if (results.isEmpty()) {
-				throw new NoResultsException();
-			}
-			return results;
-		} catch (SQLException e) {
-			throw new SQLSyntaxException("Error executing query", e);
+		List<T> results = streamAs(resultClass).collect(Collectors.toList());
+		if (results.isEmpty()) {
+			throw new NoResultsException();
 		}
+		return results;
 	}
 	
 	/**
@@ -224,4 +221,13 @@ public class Query {
 		return ps;
 	}
 
+	static List<String> parseParamLabels(String sql) {
+		List<String> params = new ArrayList<>();
+		Matcher paramsMatcher = REGEX_PARAM.matcher(sql);
+		while (paramsMatcher.find()) {
+			params.add(paramsMatcher.group().substring(1));
+		}
+		return params;
+	}
+	
 }

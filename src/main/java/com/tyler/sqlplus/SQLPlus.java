@@ -3,6 +3,8 @@ package com.tyler.sqlplus;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -51,6 +53,22 @@ public class SQLPlus {
 		try (SQLPlusConnection conn = new SQLPlusConnection(connectionFactory.get())) {
 			return action.apply(conn);
 		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public <T> int[] batchUpdate(String sql, List<T> entities) {
+		return query(conn -> conn.prepareBatch(sql, entities).executeBatch());
+	}
+	
+	public int[] batchExec(String... stmts) {
+		try (Connection conn = connectionFactory.get()) {
+			Statement s = conn.createStatement();
+			for (String sql : stmts) {
+				s.addBatch(sql);
+			}
+			return s.executeBatch();
+		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
 	}

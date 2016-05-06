@@ -123,8 +123,11 @@ public class ResultMapper {
 			
 			return mappedPOJO;
 		}
-		catch (Exception e) {
-			throw new MappingException("Error mapping POJO from result set row", e);
+		catch (InstantiationException | IllegalAccessException e1) {
+			throw new MappingException("Could not construct instance of class " + mapClass.getName() + ", check that it has a public no-args constructor");
+		}
+		catch (Exception e2) {
+			throw new MappingException("Error mapping POJO from result set row", e2);
 		}
 	}
 	

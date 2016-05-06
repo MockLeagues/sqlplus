@@ -4,8 +4,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 import com.tyler.sqlplus.query.DynamicQuery;
+import com.tyler.sqlplus.query.PreparedBatch;
 import com.tyler.sqlplus.query.Query;
 import com.tyler.sqlplus.query.TypedQuery;
 
@@ -17,7 +19,7 @@ public class SQLPlusConnection implements Closeable {
 
 	private Connection conn;
 	
-	public SQLPlusConnection(Connection conn) {
+	SQLPlusConnection(Connection conn) {
 		this.conn = conn;
 	}
 
@@ -31,6 +33,10 @@ public class SQLPlusConnection implements Closeable {
 	
 	public DynamicQuery createDynamicQuery() {
 		return new DynamicQuery(conn);
+	}
+	
+	public <T> PreparedBatch<T> prepareBatch(String sql, List<T> entities) {
+		return new PreparedBatch<T>(conn, sql, entities);
 	}
 	
 	@Override

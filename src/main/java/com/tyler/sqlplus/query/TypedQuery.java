@@ -2,6 +2,7 @@ package com.tyler.sqlplus.query;
 
 import java.sql.Connection;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Tiny wrapper class over the main query class which contains a declared result type
@@ -22,6 +23,10 @@ public class TypedQuery<T> {
 	
 	public T fetchSingleResult() {
 		return q.findAs(type);
+	}
+	
+	public Stream<T> stream() {
+		return q.streamAs(type);
 	}
 	
 }

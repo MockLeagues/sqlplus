@@ -1,5 +1,7 @@
 package base;
 
+import static org.junit.Assert.fail;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -11,12 +13,13 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.utility.Tasks.Task;
-
-import static org.junit.Assert.*;
 
 public class EmployeeDBTest {
 
+	protected static SQLPlus SQL_PLUS = new SQLPlus(EmployeeDBTest::getConnection);
+	
 	protected static Connection getConnection() {
 		try {
 			return DriverManager.getConnection("jdbc:mysql://localhost:3306/tester", "tester", "tester");
