@@ -6,6 +6,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
@@ -13,12 +15,14 @@ import java.util.function.Function;
 
 import org.junit.Test;
 
+import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.Column;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
+import com.tyler.utility.Tasks;
 
 import base.EmployeeDBTest;
 
@@ -333,4 +337,64 @@ public class QueryTest extends EmployeeDBTest {
 		}
 	}
 	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	public static class Delivery {
+		
+		public String affiliate_id;
+		public char hidden, deleted;
+		
+		@Override
+		public String toString() {
+			return "Delivery [affiliateId=" + affiliate_id + ", hidden=" + hidden + ", deleted=" + deleted + "]";
+		}
+	}
+	
+	
+	
+	
+	public static void main(String[] args) throws Exception {
+	
+		SQLPlus DB = new SQLPlus("jdbc:mysql://localhost/track", "root", "TyDaWi@timpfmys1");
+		
+		String testQuery = "select * from delivery limit 100000";
+		
+		double sqlPlus = Tasks.timeSeconds(() -> {
+			DB.fetch(Delivery.class, testQuery).forEach(c -> System.out.println(c.affiliate_id));
+		});
+		
+		double rawJDBC = Tasks.timeSeconds(() -> {
+			try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/track", "root", "TyDaWi@timpfmys1")) {
+				ResultSet rs = conn.createStatement().executeQuery(testQuery);
+				while (rs.next()) {
+					rs.getString("hidden");
+					rs.getString("deleted");
+					System.out.println(rs.getString("affiliate_id"));
+				}
+			}
+		});
+		
+		System.out.println();
+		System.out.println("SQLPlus: " + sqlPlus);
+		System.out.println("Raw JDBC: " + rawJDBC);
+		
+	}
 }

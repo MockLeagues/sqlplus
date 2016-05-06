@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.tyler.sqlplus.conversion.Conversion;
 import com.tyler.sqlplus.exception.MappingException;
@@ -78,33 +77,27 @@ public class Query {
 	}
 	
 	/**
-	 * Returns a stream over the results of this query as mapped instances of the given POJO class
-	 */
-	public <T> Stream<T> streamAs(Class<T> mapClass) {
-		try {
-			ResultSet rs = prepareStatement(false).executeQuery();
-			ResultMapper mapper = new ResultMapper(rs);
-			return ResultSets.rowStream(rs)
-			                 .map(row -> mapper.mapPOJO(mapClass))
-			                 .distinct()
-			                 .map(MappedPOJO::getPOJO);
-		} catch (SQLException e) {
-			throw new SQLSyntaxException("Error executing query", e);
-		}
-	}
-	
-	/**
 	 * Executes this query, mapping the results to the given POJO class. ResultSet columns will directly map
 	 * to the POJO's field names unless they are annoted with an @Column annotation to specify the mapped field.
 	 * 
 	 * A NoResultsException is thrown if there are no results
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
-		List<T> uniqueResults = streamAs(resultClass).collect(Collectors.toList());
-		if (uniqueResults.isEmpty()) {
-			throw new NoResultsException();
+		try {
+			ResultSet rs = prepareStatement(false).executeQuery();
+			ResultMapper mapper = new ResultMapper(rs);
+			List<T> uniqueResults = ResultSets.rowStream(rs)
+			                                  .map(row -> mapper.mapPOJO(resultClass))
+			                                  .distinct()
+			                                  .map(MappedPOJO::getPOJO)
+			                                  .collect(Collectors.toList());
+			if (uniqueResults.isEmpty()) {
+				throw new NoResultsException();
+			}
+			return uniqueResults;
+		} catch (SQLException e) {
+			throw new SQLSyntaxException("Error executing query", e);
 		}
-		return uniqueResults;
 	}
 	
 	/**
