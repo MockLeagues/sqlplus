@@ -66,11 +66,8 @@ public class SQLPlus {
 	/**
 	 * Shortcut method for creating a query which immediately returns simple maps for each result row
 	 */
-	@SuppressWarnings("unchecked")
-	public Map<String, Object> fetchMaps(String sql, Object... params) {
-		return (Map<String, Object>) query(conn -> {
-			return conn.createDynamicQuery().query(sql, params).build().fetchMaps();
-		});
+	public List<Map<String, Object>> fetchMaps(String sql, Object... params) {
+		return query(conn -> conn.createDynamicQuery().query(sql, params).build().fetchMaps());
 	}
 	
 	/**
