@@ -2,6 +2,7 @@ package com.tyler.sqlplus.mapping;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -45,7 +46,6 @@ public class ResultMapper {
 			if (resultColumnNames == null) resultColumnNames = ResultSets.getColumns(rs);
 			
 			MappedPOJO<T> mappedPOJO = assertInstance(mapClass, rs);
-			Map<String, Object> columnLabel_value = ResultSets.toMap(rs);
 			
 			// Whether at least 1 field in this result set has a corresponding value in the map class
 			// If this remains false after our iteration, we will return null for the POJO
@@ -82,20 +82,18 @@ public class ResultMapper {
 					}
 				}
 				else {
-					String mappedCol = meta.getMappedColumnName(field);
-					if (columnLabel_value.containsKey(mappedCol)) {
+					try {
+						String mappedCol = meta.getMappedColumnName(field);
+						Object value = Conversion.toJavaValue(field, rs.getObject(mappedCol));
 						hasMappedField = true;
-						try {
-							Object value = columnLabel_value.get(mappedCol);
-							value = Conversion.toJavaValue(field, value);
-							ReflectionUtils.set(field, mappedPOJO.pojo, value);
-						}
-						catch (Exception e) {
-							throw new MappingException("Error setting field '" + field.getName() + "' in class " + mapClass.getName(), e);
-						}
+						ReflectionUtils.set(field, mappedPOJO.pojo, value);
+						
 					}
-					else { 
-						// System.err.println("Could not map pojo field '" + field.getName() + "' in class " + mapClass.getName() + " to any column in " + resultColumnNames + " from result set, leaving null");
+					catch (SQLException e) {
+						// Column not present in result set, continue to next one
+					}
+					catch (Exception e) {
+						throw new MappingException("Error setting field '" + field.getName() + "' in class " + mapClass.getName(), e);
 					}
 				}
 			}

@@ -13,14 +13,12 @@ import java.util.function.Function;
 
 import org.junit.Test;
 
-import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.Column;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
-import com.tyler.sqlplus.utility.Tasks;
 
 import base.EmployeeDBTest;
 
