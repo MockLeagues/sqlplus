@@ -120,10 +120,17 @@ public class ResultSets {
 	 */
 	public static Function<ResultSet, Map<String, Object>> toMap(Supplier<Map<String, Object>> impl) {
 		return rs -> {
-			return cellStream(rs).reduce(
-			                               impl.get(),
-			                               (map, cell) -> { map.put(cell.columnLabel, cell.objectValue); return map; },
-			                               (m1, m2) -> { m1.putAll(m2); return m2; });
+			try {
+				Map<String, Object> map = impl.get();
+				ResultSetMetaData meta = rs.getMetaData();
+				for (int c = 1, max = meta.getColumnCount(); c <= max; c++) {
+					map.put(meta.getColumnLabel(c), rs.getObject(c));
+				}
+				return map;
+			} catch (SQLException e) {
+				//throw new RuntimeException(e);
+				return new HashMap<>();
+			}
 		};
 	};
 	
