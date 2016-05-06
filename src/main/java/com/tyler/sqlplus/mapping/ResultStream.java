@@ -19,8 +19,8 @@ import java.util.stream.StreamSupport;
 
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
-import com.tyler.sqlplus.conversion.Conversion;
 import com.tyler.sqlplus.exception.MappingException;
+import com.tyler.sqlplus.serialization.Serlializers;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 import com.tyler.sqlplus.utility.ResultSets;
 
@@ -131,7 +131,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 				}
 				else {
 					String mappedCol = meta.getMappedColumnName(field);
-					Object value = Conversion.toJavaValue(field, rs.getObject(mappedCol));
+					Object value = Serlializers.deserialize(field, rs.getString(mappedCol));
 					ReflectionUtils.set(field, mappedPOJO.pojo, value);
 				}
 			}
@@ -191,7 +191,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 			return new MappedPOJO<>(mapClass.newInstance(), null);
 		}
 		
-		Object key = Conversion.toJavaValue(keyField, rs.getObject(keyColumnName));
+		Object key = Serlializers.deserialize(keyField, rs.getString(keyColumnName));
 		
 		// Assert we have a lookup table for the key -> instance for this type
 		Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);

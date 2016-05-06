@@ -17,13 +17,13 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.tyler.sqlplus.conversion.Conversion;
 import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
 import com.tyler.sqlplus.mapping.ClassMetaData;
 import com.tyler.sqlplus.mapping.ResultStream;
+import com.tyler.sqlplus.serialization.Serlializers;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 import com.tyler.sqlplus.utility.ResultSets;
 
@@ -110,7 +110,7 @@ public class Query {
 			if (rs.getMetaData().getColumnCount() > 1) {
 				throw new SQLSyntaxException("Scalar query returned more than 1 column");
 			}
-			return Conversion.toJavaValue(scalarClass, rs.getObject(1));
+			return Serlializers.deserialize(scalarClass, rs.getString(1));
 		} catch (SQLException e) {
 			throw new SQLSyntaxException("Error retrieving scalar value", e);
 		}
@@ -170,12 +170,12 @@ public class Query {
 					.rowStream(autoKeys)
 					.map(rs -> {
 						try {
-							return rs.getObject(1);
+							return rs.getString(1);
 						} catch (SQLException e) {
 							throw new RuntimeException(e);
 						}
 					})
-					.map(key -> Conversion.toJavaValue(targetKeyClass, key))
+					.map(key -> Serlializers.deserialize(targetKeyClass, key))
 					.collect(Collectors.toList());
 			}
 			return null;

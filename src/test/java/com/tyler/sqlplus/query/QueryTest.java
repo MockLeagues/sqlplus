@@ -7,11 +7,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
-import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.function.Function;
 
 import org.junit.Test;
 
@@ -218,28 +216,6 @@ public class QueryTest extends EmployeeDBTest {
 		try (Connection conn = getConnection()) {
 			List<Employee> es = new Query("select employee_id as employeeId, type as type, name as name, salary as salary, hired as hired from employee", conn).fetchAs(Employee.class);
 			assertEquals(Type.HOURLY, es.get(0).type);
-		}
-	}
-	
-	public static class LocalDateConverter implements Function<java.sql.Date, LocalDate> {
-		public LocalDate apply(java.sql.Date t) {
-			return t.toLocalDate();
-		}
-	}
-	public static class EmployeeLocalDate {
-		public enum Type { HOURLY, SALARY; }
-		public Integer employeeId;
-		public Type type;
-		public String name;
-		public Integer salary;
-		public @Column(name = "hired", converter = LocalDateConverter.class) LocalDate hired;
-	}
-	@Test
-	public void useCustomConverter() throws Exception {
-		transact("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
-		try (Connection conn = getConnection()) {
-			List<Employee> es = new Query("select employee_id as employeeId, type as type, name as name, salary as salary, hired as hired from employee", conn).fetchAs(Employee.class);
-			assertEquals("2015-01-01", es.get(0).hired.toString());
 		}
 	}
 	
