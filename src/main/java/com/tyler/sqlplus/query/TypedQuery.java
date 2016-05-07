@@ -21,8 +21,8 @@ public class TypedQuery<T> {
 		return q.fetchAs(type);
 	}
 	
-	public T fetchSingleResult() {
-		return q.findAs(type);
+	public T getUniqueResult() {
+		return q.getUniqueResultAs(type);
 	}
 	
 	public Stream<T> stream() {

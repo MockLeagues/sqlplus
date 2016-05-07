@@ -195,7 +195,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		                                	   } catch (SQLException e) {
 		                                		   return false;
 		                                	   }
-		                                	})
+		                                    })
 		                                    .collect(Collectors.toList());
 		
 		class_mappableFields.put(type, mappableFields);

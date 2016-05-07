@@ -40,7 +40,7 @@ public class QueryTest extends EmployeeDBTest {
 		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		try (Connection conn = getConnection()) {
 			try {
-				new Query("select address_id from address where state = :state and city = :city", conn).setParameter("state", "s").findAs(Address.class);
+				new Query("select address_id from address where state = :state and city = :city", conn).setParameter("state", "s").getUniqueResultAs(Address.class);
 				fail("Expected query to fail because no parameter was set");
 			} catch (SQLSyntaxException e) {
 				assertEquals("Missing parameter values for the following parameters: [city]", e.getMessage());
@@ -174,7 +174,7 @@ public class QueryTest extends EmployeeDBTest {
 				new Query("select address_id as addressId, street as street, state as state, city as city, zip as zip from address a where state = :state and city = :city", conn)
 				.setParameter("state", "CA")
 				.setParameter("city", "Othertown")
-				.findAs(Address.class);
+				.getUniqueResultAs(Address.class);
 			assertEquals("Elm Street", result.street);
 		}
 	}
@@ -218,7 +218,7 @@ public class QueryTest extends EmployeeDBTest {
 		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		
 		try (Connection conn = getConnection()) {
-			Address result = new Query("select street, city from address", conn).findAs(Address.class);
+			Address result = new Query("select street, city from address", conn).getUniqueResultAs(Address.class);
 			assertNull(result.state);
 			assertNull(result.zip);
 			assertNotNull(result.street);
@@ -305,7 +305,7 @@ public class QueryTest extends EmployeeDBTest {
 		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		transact("insert into employee(type, name, salary, hired, address_id) values('HOURLY', 'Billy Bob', '42000', '2015-01-01', 1)");
 		try (Connection conn = getConnection()) {
-			EmployeeSingleRelation emp = new Query("select * from employee", conn).findAs(EmployeeSingleRelation.class);
+			EmployeeSingleRelation emp = new Query("select * from employee", conn).getUniqueResultAs(EmployeeSingleRelation.class);
 			assertNull(emp.address);
 		}
 	}

@@ -144,7 +144,7 @@ public class Query {
 	 * Executes this query, mapping the single result to an instance of the given POJO class. If more than 1 result is returned,
 	 * a NonUniqueResultException will be thrown
 	 */
-	public <T> T findAs(Class<T> resultClass) {
+	public <T> T getUniqueResultAs(Class<T> resultClass) {
 		List<T> results = fetchAs(resultClass);
 		if (results.size() != 1) {
 			throw new NonUniqueResultException();

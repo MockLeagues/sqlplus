@@ -71,6 +71,9 @@ public class SQLPlus {
 		}
 	}
 	
+	/**
+	 * Shortcut for creating a query which applies batch updates using the given entity classes
+	 */
 	public <T> void batchUpdate(String sql, List<T> entities) {
 		transact(conn -> {
 			Query q = conn.createQuery(sql);
@@ -79,6 +82,9 @@ public class SQLPlus {
 		});
 	}
 	
+	/**
+	 * Shortcut method for executing multiple statements in batch
+	 */
 	public int[] batchExec(String... stmts) {
 		try (Connection conn = connectionFactory.get()) {
 			Statement s = conn.createStatement();
@@ -108,8 +114,8 @@ public class SQLPlus {
 	/**
 	 * Shortcut method for creating a query which immediately finds a single instance of a mapped POJO
 	 */
-	public <T> T find(Class<T> pojoClass, String sql, Object... params) {
-		return query(conn -> conn.createDynamicQuery().query(sql, params).build().findAs(pojoClass));
+	public <T> T findUnique(Class<T> pojoClass, String sql, Object... params) {
+		return query(conn -> conn.createDynamicQuery().query(sql, params).build().getUniqueResultAs(pojoClass));
 	}
 	
 	/**
