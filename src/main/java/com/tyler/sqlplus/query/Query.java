@@ -185,7 +185,7 @@ public class Query {
 	 * Finish the current running manual parameter batch
 	 */
 	public Query addBatch() {
-		this.paramBatches.add(manualParamBatch);
+		this.paramBatches.add(new HashMap<>(manualParamBatch));
 		this.manualParamBatch.clear();
 		return this;
 	}
