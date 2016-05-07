@@ -72,17 +72,6 @@ public class SQLPlus {
 	}
 	
 	/**
-	 * Shortcut for creating a query which applies batch updates using the given entity classes
-	 */
-	public <T> void batchUpdate(String sql, List<T> entities) {
-		transact(conn -> {
-			Query q = conn.createQuery(sql);
-			entities.forEach(q::addBatch);
-			q.executeUpdate();
-		});
-	}
-	
-	/**
 	 * Shortcut method for executing multiple statements in batch
 	 */
 	public int[] batchExec(String... stmts) {
@@ -95,6 +84,24 @@ public class SQLPlus {
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
+	}
+	
+	/**
+	 * Shortcut for creating a query which applies batch updates using the given entity classes
+	 */
+	public <T> void batchUpdate(String sql, List<T> entities) {
+		transact(conn -> {
+			Query q = conn.createQuery(sql);
+			entities.forEach(q::addBatch);
+			q.executeUpdate();
+		});
+	}
+	
+	/**
+	 * Shortcut method to create a query which applies a single update statement
+	 */
+	public void update(String string, Object... params) {
+		transact(conn -> conn.createDynamicQuery().query(string, params).build().executeUpdate());
 	}
 	
 	/**

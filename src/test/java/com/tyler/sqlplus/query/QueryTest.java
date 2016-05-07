@@ -1,6 +1,11 @@
 package com.tyler.sqlplus.query;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -136,6 +141,24 @@ public class QueryTest extends EmployeeDBTest {
 			{"2", "street2", "city2", "state2", "zip2"},
 			{"3", "street3", "city3", "state3", "zip3"},
 			{"4", "street4", "city4", "state4", "zip4"}
+		};
+		
+		assertArrayEquals(expect, results);
+	}
+	
+	@Test
+	public void update() throws Exception {
+		
+		transact(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+		);
+		
+		SQL_PLUS.update("delete from address where street = ?", "Maple Street");
+		
+		String[][] results = query("select * from address");
+		String[][] expect = {
+			{"2", "Elm Street", "Othertown", "CA", "54321"}
 		};
 		
 		assertArrayEquals(expect, results);
