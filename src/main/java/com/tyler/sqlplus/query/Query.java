@@ -7,13 +7,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -25,7 +24,7 @@ import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.SQLSyntaxException;
 import com.tyler.sqlplus.mapping.ClassMetaData;
 import com.tyler.sqlplus.mapping.ResultStream;
-import com.tyler.sqlplus.serialization.Serlializers;
+import com.tyler.sqlplus.serialization.Converter;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 
 public class Query {
@@ -35,16 +34,18 @@ public class Query {
 	private PreparedStatement ps;
 	private Set<String> paramLabels;
 	private Map<String, Object> manualParamBatch;
-	private Deque<Map<String, Object>> paramBatches;
+	private List<Map<String, Object>> paramBatches;
+	private Converter serializer;
 	
 	public Query(String sql, Connection conn) {
 		
 		try {
-			this.ps = conn.prepareStatement(sql.replaceAll(REGEX_PARAM, "?"), Statement.RETURN_GENERATED_KEYS);
 			
-			this.paramBatches = new LinkedList<>();
+			this.ps = conn.prepareStatement(sql.replaceAll(REGEX_PARAM, "?"), Statement.RETURN_GENERATED_KEYS);
+			this.paramBatches = new ArrayList<>();
 			this.manualParamBatch = new HashMap<>();
 			this.paramLabels = new LinkedHashSet<>();
+			this.serializer = new Converter();
 			
 			// We parse out the parameters immediately so we don't constantly have to perform a string match
 			// each time a parameter is set to validate it exists
@@ -56,6 +57,11 @@ public class Query {
 		} catch (SQLException e) {
 			throw new SQLSyntaxException(e);
 		}
+	}
+	
+	public <T> Query setConversion(Class<T> type, Function<T, String> serializer, Function<String, T> deserializer) {
+		this.serializer.setConversion(type, serializer, deserializer);
+		return this;
 	}
 	
 	/**
@@ -83,7 +89,7 @@ public class Query {
 		try {
 			applyBatches();
 			ResultSet rs = ps.executeQuery();
-			return new ResultStream<T>(rs, klass).stream();
+			return new ResultStream<T>(rs, klass, serializer).stream();
 		} catch (SQLException e) {
 			throw new SQLSyntaxException(e);
 		}
@@ -118,7 +124,7 @@ public class Query {
 			if (rs.getMetaData().getColumnCount() > 1) {
 				throw new SQLSyntaxException("Scalar query returned more than 1 column");
 			}
-			return Serlializers.deserialize(scalarClass, rs.getString(1));
+			return serializer.deserialize(scalarClass, rs.getString(1));
 		} catch (SQLException e) {
 			throw new SQLSyntaxException("Error retrieving scalar value", e);
 		}
@@ -156,7 +162,7 @@ public class Query {
 				List<T> keys = new ArrayList<>();
 				while (rsKeys.next()) {
 					String keyResult = rsKeys.getString(1);
-					keys.add(Serlializers.deserialize(targetKeyClass, keyResult));
+					keys.add(serializer.deserialize(targetKeyClass, keyResult));
 				}
 				return keys;
 			}
@@ -227,7 +233,7 @@ public class Query {
 				int p = 1;
 				for (String paramLabel : paramLabels) { // This will be correctly ordered since we use LinkedHashSet
 					Object value = paramBatch.get(paramLabel);
-					ps.setString(p++, Serlializers.serialize(value));
+					ps.setString(p++, serializer.serialize(value));
 				}
 				
 				ps.addBatch();

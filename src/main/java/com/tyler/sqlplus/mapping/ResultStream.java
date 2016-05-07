@@ -23,7 +23,7 @@ import java.util.stream.StreamSupport;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.exception.MappingException;
-import com.tyler.sqlplus.serialization.Serlializers;
+import com.tyler.sqlplus.serialization.Converter;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 
 /**
@@ -40,10 +40,13 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	private ResultSet rs;
 	private Class<T> resultClass;
 	private Set<String> columnNames;
+	private Converter serializer;
 	
-	public ResultStream(ResultSet rs, Class<T> resultClass) throws SQLException {
+	public ResultStream(ResultSet rs, Class<T> resultClass, Converter serializer) throws SQLException {
+		
 		this.rs = rs;
 		this.resultClass = resultClass;
+		this.serializer = serializer;
 		
 		ResultSetMetaData meta = rs.getMetaData();
 		int count = meta.getColumnCount();
@@ -139,7 +142,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 				}
 				else {
 					String mappedCol = meta.getMappedColumnName(field);
-					Object value = Serlializers.deserialize(field, rs.getString(mappedCol));
+					Object value = serializer.deserialize(field.getType(), rs.getString(mappedCol));
 					ReflectionUtils.set(field, mappedPOJO.pojo, value);
 				}
 			}
@@ -199,7 +202,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 			return new MappedPOJO<>(mapClass.newInstance(), null);
 		}
 		
-		Object key = Serlializers.deserialize(keyField, rs.getString(keyColumnName));
+		Object key = serializer.deserialize(keyField.getType(), rs.getString(keyColumnName));
 		
 		// Assert we have a lookup table for the key -> instance for this type
 		Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);
