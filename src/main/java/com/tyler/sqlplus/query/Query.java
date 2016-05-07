@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -161,69 +162,87 @@ public class Query {
 	/**
 	 * Executes this query's payload as an update statement, returning the generated keys as instances of the given class
 	 */
-	public <T> List<T> executeUpdate(Class<T> targetKeyClass) {
+	public <T> Optional<List<T>> executeUpdate(Class<T> targetKeyClass) {
+		
 		try {
+			
 			boolean returnKeys = targetKeyClass != null;
 			applyBatches();
-			int[] affectedRows = ps.executeBatch();
-			if (returnKeys && affectedRows[0] > 0) {
-				ResultSet rsKeys = ps.getGeneratedKeys();
+			
+			if (paramBatches.size() > 1) {
+				ps.executeBatch();
+			} else {
+				ps.executeUpdate();
+			}
+			
+			if (!returnKeys) {
+				return Optional.empty();
+			}
+			else {
 				List<T> keys = new ArrayList<>();
+				ResultSet rsKeys = ps.getGeneratedKeys();
+				
 				while (rsKeys.next()) {
 					String keyResult = rsKeys.getString(1);
 					keys.add(serializer.deserialize(targetKeyClass, keyResult));
 				}
-				return keys;
+				
+				return Optional.of(keys);
 			}
-			return null;
+					
 		} catch (SQLException e) {
 			throw new SQLSyntaxException(e);
 		}
+		
 	}
 
 	/**
-	 * Finish the current running manual parameter batch
+	 * Finishes and validates the current running manual parameter batch
 	 */
 	public Query addBatch() {
+		validateParamBatch(manualParamBatch, paramLabels);
 		this.paramBatches.add(new HashMap<>(manualParamBatch));
 		this.manualParamBatch.clear();
 		return this;
 	}
 	
 	/**
-	 * Adds a batch statement using the parameters in the given POJO class.
+	 * Adds and validates a batch statement using the parameters in the given POJO class.
 	 */
 	public Query addBatch(Object o) {
 		
-		Map<String, Object> newBatch = new HashMap<>();
 		ClassMetaData meta = ClassMetaData.getMetaData(o.getClass());
 		
-		paramLabels.forEach(label -> {
+		Map<String, Object> newBatch = paramLabels.stream().collect(Collectors.toMap(Function.identity(), label -> {
 			try {
 				Field mappedField = meta.getMappedField(label);
 				if (mappedField == null) {
 					throw new MappingException("No member exists in class " + o.getClass().getName() + " to bind a value for parameter '" + label + "'");
 				}
 				
-				Object paramValue = ReflectionUtils.get(mappedField, o);
-				newBatch.put(label, paramValue);
+				return ReflectionUtils.get(mappedField, o);
 			}
 			catch (IllegalArgumentException | IllegalAccessException e) {
 				throw new MappingException(e);
 			}
-		});
+		}));
 	
+		validateParamBatch(newBatch, paramLabels);
 		paramBatches.add(newBatch);
 		return this;
 	}
 	
 	/**
-	 * Applies all parameter batches stored in this query to its PreparedStatement object
+	 * Applies all parameter batches stored in this query to its PreparedStatement object. If there is a running manual parameter batch
+	 * that has not been queued yet, that will also be added to the batch queue.
+	 * 
+	 * Queries which have more than 1 parameter batch will result in a call to addBatch() on the underlying PreparedStatement object for each batch.
+	 * Queries with only 1 parameter batch will simply apply each parameter in the batch and then return
 	 */
 	private void applyBatches() {
 		
 		if (!manualParamBatch.isEmpty()) {
-			paramBatches.add(manualParamBatch);
+			addBatch();
 		}
 		
 		if (paramBatches.isEmpty() && !paramLabels.isEmpty()) {
@@ -231,13 +250,10 @@ public class Query {
 		}
 		
 		for (Map<String, Object> paramBatch : this.paramBatches) {
+			
+			/* Note that we don't need to run validation against each batch since that is done at the time it is added to the query */
+			
 			try {
-				
-				Set<String> missingParams = new LinkedHashSet<>(paramLabels);
-				missingParams.removeAll(paramBatch.keySet());
-				if (!missingParams.isEmpty()) {
-					throw new SQLSyntaxException("Missing parameter values for the following parameters: " + missingParams);
-				}
 				
 				int p = 1;
 				for (String paramLabel : paramLabels) { // This will be correctly ordered since we use LinkedHashSet
@@ -245,11 +261,24 @@ public class Query {
 					ps.setString(p++, serializer.serialize(value));
 				}
 				
-				ps.addBatch();
+				if (this.paramBatches.size() > 1) {
+					ps.addBatch();
+				}
 			}
 			catch (SQLException e) {
 				throw new SQLSyntaxException(e);
 			}
+		}
+	}
+	
+	/**
+	 * Verifies a parameter exists in the given batch for each given parameter label. If not, a SQLSyntaxException is thrown
+	 */
+	private static void validateParamBatch(Map<String, Object> paramBatch, Set<String> paramLabels) {
+		Set<String> missingParams = new LinkedHashSet<>(paramLabels);
+		missingParams.removeAll(paramBatch.keySet());
+		if (!missingParams.isEmpty()) {
+			throw new SQLSyntaxException("Missing parameter values for the following parameters: " + missingParams);
 		}
 	}
 	

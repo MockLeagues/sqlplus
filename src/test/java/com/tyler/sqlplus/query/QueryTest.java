@@ -1,10 +1,6 @@
 package com.tyler.sqlplus.query;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -12,6 +8,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.Test;
 
@@ -380,15 +377,14 @@ public class QueryTest extends EmployeeDBTest {
 	public void returnGeneratedKeys() throws Exception {
 		transact("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
 		try (Connection conn = getConnection()) {
-			Integer key =
-				new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
-				.setParameter("type", "HOURLY")
-				.setParameter("name", "tester-2")
-				.setParameter("hired", "2015-01-01")
-				.setParameter("salary", "10000")
-				.executeUpdate(Integer.class)
-				.get(0);
-			assertEquals(new Integer(2), key);
+			Optional<List<Integer>> keys = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+			                                   .setParameter("type", "HOURLY")
+			                                   .setParameter("name", "tester-2")
+			                                   .setParameter("hired", "2015-01-01")
+			                                   .setParameter("salary", "10000")
+			                                   .executeUpdate(Integer.class);
+			assertTrue(keys.isPresent());
+			assertEquals(new Integer(2), keys.get().get(0));
 		}
 	}
 
