@@ -108,13 +108,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	private <E> MappedPOJO<E> mapPOJO(Class<E> mapClass, Class<?> parentRef) {
 		ClassMetaData meta = ClassMetaData.getMetaData(mapClass);
 		
-		List<Field> mappableFields = null;
-		if (class_mappableFields.containsKey(mapClass)) {
-			mappableFields = class_mappableFields.get(mapClass);
-		} else {
-			mappableFields = findMappableFields(mapClass);
-			class_mappableFields.put(mapClass, mappableFields);
-		}
+		List<Field> mappableFields = getMappableFields(mapClass);
 		if (mappableFields.isEmpty()) return null; // No work to do
 		
 		try {
@@ -180,24 +174,29 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	/**
 	 * Detects which fields are mappable for the given type from this mapper's result set
 	 */
-	private List<Field> findMappableFields(Class<?> type) {
-		ClassMetaData meta = ClassMetaData.getMetaData(type);
+	private List<Field> getMappableFields(Class<?> type) {
 		
-		return
-		Arrays
-		.stream(type.getDeclaredFields())
-		.filter(f -> {
-			if (f.isAnnotationPresent(SingleRelation.class) || f.isAnnotationPresent(MultiRelation.class)) {
-				return true;
-			}
-			try {
-				rs.getObject(meta.getMappedColumnName(f));
-				return true;
-			} catch (SQLException e) {
-				return false;
-			}
-		})
-		.collect(Collectors.toList());
+		if (class_mappableFields.containsKey(type)) {
+			return class_mappableFields.get(type);
+		}
+		
+		ClassMetaData meta = ClassMetaData.getMetaData(type);
+		List<Field> mappableFields = Arrays.stream(type.getDeclaredFields())
+		                                   .filter(f -> {
+		                                	   if (f.isAnnotationPresent(SingleRelation.class) || f.isAnnotationPresent(MultiRelation.class)) {
+		                                		   return true;
+		                                		   }
+		                                	   try {
+		                                		   rs.getObject(meta.getMappedColumnName(f));
+		                                		   return true;
+		                                	   } catch (SQLException e) {
+		                                		   return false;
+		                                	   }
+		                                	})
+		                                    .collect(Collectors.toList());
+		
+		class_mappableFields.put(type, mappableFields);
+		return mappableFields;
 	}
 	
 	/**
