@@ -215,12 +215,12 @@ public class Query {
 		
 		Map<String, Object> newBatch = paramLabels.stream().collect(Collectors.toMap(Function.identity(), label -> {
 			try {
-				Field mappedField = meta.getMappedField(label);
-				if (mappedField == null) {
+				Optional<Field> mappedField = meta.getMappedField(label);
+				if (!mappedField.isPresent()) {
 					throw new MappingException("No member exists in class " + o.getClass().getName() + " to bind a value for parameter '" + label + "'");
 				}
 				
-				return ReflectionUtils.get(mappedField, o);
+				return ReflectionUtils.get(mappedField.get(), o);
 			}
 			catch (IllegalArgumentException | IllegalAccessException e) {
 				throw new MappingException(e);

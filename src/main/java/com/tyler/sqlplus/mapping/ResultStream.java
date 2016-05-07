@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -155,7 +156,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 					}
 				}
 				else {
-					String mappedCol = meta.getMappedColumnName(field);
+					String mappedCol = meta.getMappedColumnName(field).get(); // Will always be present since we are iterating over only mappable columns
 					Object value = serializer.deserialize(field.getType(), rs.getString(mappedCol));
 					ReflectionUtils.set(field, mappedPOJO.pojo, value);
 				}
@@ -187,7 +188,9 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		                                		   return true;
 		                                	   }
 		                                	   try {
-		                                		   rs.getObject(meta.getMappedColumnName(f));
+		                                		   Optional<String> colName = meta.getMappedColumnName(f);
+		                                		   if (!colName.isPresent()) return false;
+		                                		   rs.getObject(colName.get());
 		                                		   return true;
 		                                	   } catch (SQLException e) {
 		                                		   return false;
@@ -210,20 +213,20 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		
 		// If the POJO does not have an ID field then we can't put it in our ID lookup table to re-retrieve it
 		// later, so we have no choice but to just return a new instance now
-		Field keyField = meta.getKeyField();
-		if (keyField == null) {
+		Optional<Field> keyField = meta.getKeyField();
+		if (!keyField.isPresent()) {
 			return new MappedPOJO<>(mapClass.newInstance(), null);
 		}
 		
-		String keyColumnName = meta.getMappedColumnName(keyField);
+		Optional<String> keyColumnName = meta.getMappedColumnName(keyField.get());
 		
 		// If we don't have the key column in our result set then we just return a new instance now since
 		// we can't track duplicate entities by key
-		if (!columnNames.contains(keyColumnName)) {
+		if (!keyColumnName.isPresent() || !columnNames.contains(keyColumnName.get())) {
 			return new MappedPOJO<>(mapClass.newInstance(), null);
 		}
 		
-		Object key = serializer.deserialize(keyField.getType(), rs.getString(keyColumnName));
+		Object key = serializer.deserialize(keyField.get().getType(), rs.getString(keyColumnName.get()));
 		
 		// Assert we have a lookup table for the key -> instance for this type
 		Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);

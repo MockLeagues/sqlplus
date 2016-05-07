@@ -3,6 +3,7 @@ package com.tyler.sqlplus.mapping;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import com.tyler.sqlplus.annotation.Column;
 import com.tyler.sqlplus.annotation.Key;
@@ -14,22 +15,21 @@ public class ClassMetaData {
 	// Master cache of meta data for each type
 	private static final Map<Class<?>, ClassMetaData> TYPE_META = new HashMap<>();
 	
-	// Can remains null if the class does not have a key field
-	private Field keyField;
+	private Optional<Field> keyField;
 	
 	// Maintains a mapping of mapped result set column names fields and vice-versa
 	private Map<String, Field> column_member = new HashMap<>();
 	private Map<Field, String> member_column = new HashMap<>();
 
-	public String getMappedColumnName(Field f) {
-		return member_column.get(f);
+	public Optional<String> getMappedColumnName(Field f) {
+		return Optional.ofNullable(member_column.get(f));
 	}
 	
-	public Field getMappedField(String columnLabel) {
-		return column_member.get(columnLabel);
+	public Optional<Field> getMappedField(String columnLabel) {
+		return Optional.ofNullable(column_member.get(columnLabel));
 	}
 	
-	public Field getKeyField() {
+	public Optional<Field> getKeyField() {
 		return keyField;
 	}
 	
@@ -42,18 +42,25 @@ public class ClassMetaData {
 		ClassMetaData meta = new ClassMetaData();
 		
 		for (Field field : type.getDeclaredFields()) {
+			
 			if (field.isAnnotationPresent(SingleRelation.class) || field.isAnnotationPresent(MultiRelation.class)) {
 				continue;
 			}
+			
 			Column annot = field.getDeclaredAnnotation(Column.class);
 			String mappedColName = annot != null && annot.name().length() > 0 ? annot.name() : field.getName();
+			
 			meta.column_member.put(mappedColName, field);
 			meta.member_column.put(field, mappedColName);
+			
 			if (field.isAnnotationPresent(Key.class)) {
-				meta.keyField = field;
+				meta.keyField = Optional.of(field);
 			}
 		}
 		
+		if (meta.keyField == null) {
+			meta.keyField = Optional.empty();
+		}
 		TYPE_META.put(type, meta);
 		return meta;
 	}
