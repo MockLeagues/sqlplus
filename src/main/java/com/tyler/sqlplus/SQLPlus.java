@@ -6,6 +6,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -88,6 +89,13 @@ public class SQLPlus {
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
 		}
+	}
+	
+	/**
+	 * Shortcut method for creating a query which immediately returns a list of maps
+	 */
+	public List<Map<String, String>> fetch(String sql, Object... params) {
+		return query(conn -> conn.createDynamicQuery().query(sql, params).build().fetch());
 	}
 	
 	/**

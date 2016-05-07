@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -76,8 +77,27 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public MappedPOJO<T> next() {
-		return mapPOJO(resultClass, null);
+		if (Map.class == resultClass) {
+			T row = (T) toMap();
+			return new MappedPOJO<T>(row, null);
+		} else {
+			return mapPOJO(resultClass, null);
+		}
+	}
+	
+	/**
+	 * Converts the current row of this result stream to a map
+	 */
+	public Map<String, String> toMap() {
+		return columnNames.stream().collect(Collectors.toMap(Function.identity(), col -> {
+			try {
+				return serializer.deserialize(String.class, rs.getString(col));
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}));
 	}
 	
 	/**

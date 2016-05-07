@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
 
@@ -94,6 +95,30 @@ public class QueryTest extends EmployeeDBTest {
 			assertEquals("CA", second.state);
 			assertEquals("54321", second.zip);
 		}
+	}
+	
+	@Test
+	public void queryMaps() throws Exception {
+		transact(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+		);
+		
+		List<Map<String, String>> rows = SQL_PLUS.fetch("select * from address");
+		
+		assertEquals(2, rows.size());
+		
+		Map<String, String> first = rows.get(0);
+		assertEquals("Maple Street", first.get("street"));
+		assertEquals("Anytown", first.get("city"));
+		assertEquals("MN", first.get("state"));
+		assertEquals("12345", first.get("zip"));
+		
+		Map<String, String> second = rows.get(1);
+		assertEquals("Elm Street", second.get("street"));
+		assertEquals("Othertown", second.get("city"));
+		assertEquals("CA", second.get("state"));
+		assertEquals("54321", second.get("zip"));
 	}
 	
 	@Test
