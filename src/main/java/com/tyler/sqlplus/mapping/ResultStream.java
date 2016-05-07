@@ -112,7 +112,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		if (mappableFields.isEmpty()) return null; // No work to do
 		
 		try {
-			MappedPOJO<E> mappedPOJO = assertInstance(mapClass, meta);
+			MappedPOJO<E> mappedPOJO = assertInstance(mapClass);
 			
 			for (Iterator<Field> fieldIter = mappableFields.iterator(); fieldIter.hasNext();) {
 				Field field = fieldIter.next();
@@ -185,7 +185,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		                                   .filter(f -> {
 		                                	   if (f.isAnnotationPresent(SingleRelation.class) || f.isAnnotationPresent(MultiRelation.class)) {
 		                                		   return true;
-		                                		   }
+		                                	   }
 		                                	   try {
 		                                		   rs.getObject(meta.getMappedColumnName(f));
 		                                		   return true;
@@ -204,7 +204,9 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	 * of the result set, or else pulls the current one
 	 */
 	@SuppressWarnings("unchecked")
-	private <E> MappedPOJO<E> assertInstance(Class<E> mapClass, ClassMetaData meta) throws Exception {
+	private <E> MappedPOJO<E> assertInstance(Class<E> mapClass) throws Exception {
+		
+		ClassMetaData meta = ClassMetaData.getMetaData(mapClass);
 		
 		// If the POJO does not have an ID field then we can't put it in our ID lookup table to re-retrieve it
 		// later, so we have no choice but to just return a new instance now
