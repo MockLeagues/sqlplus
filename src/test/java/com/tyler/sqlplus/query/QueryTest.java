@@ -79,24 +79,22 @@ public class QueryTest extends EmployeeDBTest {
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
 		);
 		
-		try (Connection conn = getConnection()) {
-			List<Address> results = new Query("select address_id as addressId, street as street, state as state, city as city, zip as zip from address", conn).fetchAs(Address.class);
-			assertEquals(2, results.size());
-			
-			Address first = results.get(0);
-			assertEquals(new Integer(1), first.addressId);
-			assertEquals("Maple Street", first.street);
-			assertEquals("Anytown", first.city);
-			assertEquals("MN", first.state);
-			assertEquals("12345", first.zip);
-			
-			Address second = results.get(1);
-			assertEquals(new Integer(2), second.addressId);
-			assertEquals("Elm Street", second.street);
-			assertEquals("Othertown", second.city);
-			assertEquals("CA", second.state);
-			assertEquals("54321", second.zip);
-		}
+		List<Address> results = SQL_PLUS.fetch(Address.class, "select address_id as addressId, street as street, state as state, city as city, zip as zip from address");
+		assertEquals(2, results.size());
+		
+		Address first = results.get(0);
+		assertEquals(new Integer(1), first.addressId);
+		assertEquals("Maple Street", first.street);
+		assertEquals("Anytown", first.city);
+		assertEquals("MN", first.state);
+		assertEquals("12345", first.zip);
+		
+		Address second = results.get(1);
+		assertEquals(new Integer(2), second.addressId);
+		assertEquals("Elm Street", second.street);
+		assertEquals("Othertown", second.city);
+		assertEquals("CA", second.state);
+		assertEquals("54321", second.zip);
 	}
 	
 	@Test
@@ -192,14 +190,13 @@ public class QueryTest extends EmployeeDBTest {
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
-		try (Connection conn = getConnection()) {
-			Address result =
-				new Query("select address_id as addressId, street as street, state as state, city as city, zip as zip from address a where state = :state and city = :city", conn)
-				.setParameter("state", "CA")
-				.setParameter("city", "Othertown")
-				.getUniqueResultAs(Address.class);
+		SQL_PLUS.transact(conn -> {
+			Address result = conn.createQuery("select address_id as addressId, street as street, state as state, city as city, zip as zip from address a where state = :state and city = :city")
+			                     .setParameter("state", "CA")
+			                     .setParameter("city", "Othertown")
+			                     .getUniqueResultAs(Address.class);
 			assertEquals("Elm Street", result.street);
-		}
+		});
 	}
 	
 	public static class AddressWithAnnot {
@@ -216,37 +213,33 @@ public class QueryTest extends EmployeeDBTest {
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
 		);
 		
-		try (Connection conn = getConnection()) {
-			List<AddressWithAnnot> results = new Query("select * from address", conn).fetchAs(AddressWithAnnot.class);
-			assertEquals(2, results.size());
-			
-			AddressWithAnnot first = results.get(0);
-			assertEquals(new Integer(1), first.addressId);
-			assertEquals("Maple Street", first.street);
-			assertEquals("Anytown", first.city);
-			assertEquals("MN", first.state);
-			assertEquals("12345", first.zip);
-			
-			AddressWithAnnot second = results.get(1);
-			assertEquals(new Integer(2), second.addressId);
-			assertEquals("Elm Street", second.street);
-			assertEquals("Othertown", second.city);
-			assertEquals("CA", second.state);
-			assertEquals("54321", second.zip);
-		}
+		List<AddressWithAnnot> results = SQL_PLUS.fetch(AddressWithAnnot.class, "select * from address");
+		assertEquals(2, results.size());
+		
+		AddressWithAnnot first = results.get(0);
+		assertEquals(new Integer(1), first.addressId);
+		assertEquals("Maple Street", first.street);
+		assertEquals("Anytown", first.city);
+		assertEquals("MN", first.state);
+		assertEquals("12345", first.zip);
+		
+		AddressWithAnnot second = results.get(1);
+		assertEquals(new Integer(2), second.addressId);
+		assertEquals("Elm Street", second.street);
+		assertEquals("Othertown", second.city);
+		assertEquals("CA", second.state);
+		assertEquals("54321", second.zip);
 	}
 	
 	@Test
 	public void leavesNullValuesIfCertainFieldsNotPresentInResults() throws Exception {
 		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		
-		try (Connection conn = getConnection()) {
-			Address result = new Query("select street, city from address", conn).getUniqueResultAs(Address.class);
-			assertNull(result.state);
-			assertNull(result.zip);
-			assertNotNull(result.street);
-			assertNotNull(result.city);
-		}
+		Address result = SQL_PLUS.findUnique(Address.class, "select street, city from address");
+		assertNull(result.state);
+		assertNull(result.zip);
+		assertNotNull(result.street);
+		assertNotNull(result.city);
 	}
 	
 	public static class Employee {
@@ -260,10 +253,8 @@ public class QueryTest extends EmployeeDBTest {
 	@Test
 	public void mapEnumTypes() throws Exception {
 		transact("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
-		try (Connection conn = getConnection()) {
-			List<Employee> es = new Query("select employee_id as employeeId, type as type, name as name, salary as salary, hired as hired from employee", conn).fetchAs(Employee.class);
-			assertEquals(Type.HOURLY, es.get(0).type);
-		}
+		List<Employee> es = SQL_PLUS.fetch(Employee.class, "select employee_id as employeeId, type as type, name as name, salary as salary, hired as hired from employee");
+		assertEquals(Type.HOURLY, es.get(0).type);
 	}
 	
 	public static class EmployeeMultiRelation {
@@ -289,14 +280,12 @@ public class QueryTest extends EmployeeDBTest {
 			"insert into office(office_name, `primary`, employee_id) values ('Office B', 0, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
-		try (Connection conn= getConnection()) {
-			List<EmployeeMultiRelation> es = new Query("select * from employee e join office o on e.employee_id = o.employee_id", conn).fetchAs(EmployeeMultiRelation.class);
-			assertEquals(1, es.size());
-			assertEquals(3, es.get(0).offices.size());
-			assertEquals("Office A", es.get(0).offices.get(0).name);
-			assertEquals("Office B", es.get(0).offices.get(1).name);
-			assertEquals("Office C", es.get(0).offices.get(2).name);
-		}
+		List<EmployeeMultiRelation> es = SQL_PLUS.fetch(EmployeeMultiRelation.class, "select * from employee e join office o on e.employee_id = o.employee_id");
+		assertEquals(1, es.size());
+		assertEquals(3, es.get(0).offices.size());
+		assertEquals("Office A", es.get(0).offices.get(0).name);
+		assertEquals("Office B", es.get(0).offices.get(1).name);
+		assertEquals("Office C", es.get(0).offices.get(2).name);
 	}
 	
 	@Test
@@ -307,11 +296,9 @@ public class QueryTest extends EmployeeDBTest {
 			"insert into office(office_name, `primary`, employee_id) values ('Office B', 0, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
-		try (Connection conn= getConnection()) {
-			List<EmployeeMultiRelation> es = new Query("select * from employee e", conn).fetchAs(EmployeeMultiRelation.class);
-			assertEquals(1, es.size());
-			assertNull(es.get(0).offices);
-		}
+		List<EmployeeMultiRelation> es = SQL_PLUS.fetch(EmployeeMultiRelation.class, "select * from employee e");
+		assertEquals(1, es.size());
+		assertNull(es.get(0).offices);
 	}
 	
 	public static class EmployeeSingleRelation {
@@ -327,10 +314,8 @@ public class QueryTest extends EmployeeDBTest {
 	public void leavesSingleRelationNullIfNoFieldsForIt() throws Exception {
 		transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		transact("insert into employee(type, name, salary, hired, address_id) values('HOURLY', 'Billy Bob', '42000', '2015-01-01', 1)");
-		try (Connection conn = getConnection()) {
-			EmployeeSingleRelation emp = new Query("select * from employee", conn).getUniqueResultAs(EmployeeSingleRelation.class);
-			assertNull(emp.address);
-		}
+		EmployeeSingleRelation emp = SQL_PLUS.findUnique(EmployeeSingleRelation.class, "select * from employee");
+		assertNull(emp.address);
 	}
 	
 	@Test
@@ -341,40 +326,113 @@ public class QueryTest extends EmployeeDBTest {
 			"insert into office(office_name, `primary`, employee_id) values ('Office B', 0, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
-		try (Connection conn = getConnection()) {
-			Integer total = new Query("select sum(office_id) from office", conn).fetchScalar(Integer.class);
-			assertEquals(new Integer(6), total);
-		}
+		Integer total = SQL_PLUS.queryInt("select sum(office_id) from office");
+		assertEquals(new Integer(6), total);
 	}
 	
 	@Test
-	public void bindParamsNonNullForCreate() throws Exception {
+	public void manualInsertBatchValid() throws Exception {
+		
+		SQL_PLUS.transact(conn -> {
+			
+			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			    .setParameter("type", Type.SALARY)
+			    .setParameter("name", "test1")
+			    .setParameter("hired", "2015-01-01")
+			    .setParameter("salary", "100")
+			    .addBatch()
+			    .setParameter("type", Type.SALARY)
+			    .setParameter("name", "test2")
+			    .setParameter("hired", "2015-01-02")
+			    .setParameter("salary", "200")
+			    .addBatch()
+			    .executeUpdate();
+			
+			String[][] expect = {
+				{"1", "SALARY", "test1", "2015-01-01", "100", null},
+				{"2", "SALARY", "test2", "2015-01-02", "200", null}
+			};
+			
+			String[][] actual = query("select employee_id, type, name, hired, salary, address_id from employee");
+			assertArrayEquals(expect, actual);
+		});
+		
+	}
+	
+	@Test
+	public void manualInsertBatchFinalBatchNotAdded() throws Exception {
+		
+		SQL_PLUS.transact(conn -> {
+			
+			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			    .setParameter("type", Type.SALARY)
+			    .setParameter("name", "test1")
+			    .setParameter("hired", "2015-01-01")
+			    .setParameter("salary", "100")
+			    .addBatch()
+			    .setParameter("type", Type.SALARY)
+			    .setParameter("name", "test2")
+			    .setParameter("hired", "2015-01-02")
+			    .setParameter("salary", "200")
+			    // Don't manually add last batch, query should auto-add it
+			    .executeUpdate();
+			
+			String[][] expect = {
+				{"1", "SALARY", "test1", "2015-01-01", "100", null},
+				{"2", "SALARY", "test2", "2015-01-02", "200", null}
+			};
+			
+			String[][] actual = query("select employee_id, type, name, hired, salary, address_id from employee");
+			assertArrayEquals(expect, actual);
+		});
+	}
+	
+	@Test
+	public void manualInsertBatchMissingParamsValid() throws Exception {
+		SQL_PLUS.transact(conn -> {
+			Query q = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			    .setParameter("type", Type.SALARY)
+			    .setParameter("name", "test1")
+			    .setParameter("hired", "2015-01-01");
+			
+			assertThrows(() -> q.addBatch(), SQLSyntaxException.class);
+		});
+	}
+	
+	@Test
+	public void objectInsertBatch() throws Exception {
 		Employee toCreate = new Employee();
 		toCreate.hired = new Date();
 		toCreate.name = "tester-pojo";
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
-		try (Connection conn = getConnection()) {
-			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn).addBatch(toCreate);
-			q.executeUpdate();
+		SQL_PLUS.transact(conn -> {
+			
+			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			    .addBatch(toCreate)
+			    .executeUpdate();
+			
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
 			assertEquals(new Integer(1), actual);
-		}
+		});
 	}
 	
 	@Test
-	public void bindParamsNonNullForCreateIfParamsOutOfDeclaredOrder() throws Exception {
+	public void objectInsertBatchParamsOutOfOrder() throws Exception {
 		Employee toCreate = new Employee();
 		toCreate.hired = new Date();
 		toCreate.name = "tester-pojo";
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
-		try (Connection conn = getConnection()) {
-			Query q = new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).addBatch(toCreate);
-			q.executeUpdate();
+		SQL_PLUS.transact(conn -> {
+			
+			conn.createQuery("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)")
+			    .addBatch(toCreate)
+			    .executeUpdate();
+			
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
 			assertEquals(new Integer(1), actual);
-		}
+		});
 	}
 	
 	public static class EmployeeMissingBindParam {
@@ -389,18 +447,20 @@ public class QueryTest extends EmployeeDBTest {
 		toCreate.name = "tester-pojo";
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
-		try (Connection conn = getConnection()) {
+		
+		SQL_PLUS.transact(conn -> {
 			assertThrows(() -> {
-				new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).addBatch(toCreate);
+				conn.createQuery("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)").addBatch(toCreate);
 			}, MappingException.class);
-		}
+		});
 	}
 	
 	@Test
 	public void returnGeneratedKeys() throws Exception {
 		transact("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
-		try (Connection conn = getConnection()) {
-			Optional<List<Integer>> keys = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+		
+		SQL_PLUS.transact(conn -> {
+			Optional<List<Integer>> keys = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			                                   .setParameter("type", "HOURLY")
 			                                   .setParameter("name", "tester-2")
 			                                   .setParameter("hired", "2015-01-01")
@@ -408,7 +468,7 @@ public class QueryTest extends EmployeeDBTest {
 			                                   .executeUpdate(Integer.class);
 			assertTrue(keys.isPresent());
 			assertEquals(new Integer(2), keys.get().get(0));
-		}
+		});
 	}
 
 }

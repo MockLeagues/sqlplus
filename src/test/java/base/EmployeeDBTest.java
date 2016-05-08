@@ -145,7 +145,7 @@ public class EmployeeDBTest {
 		}
 	}
 	
-	protected static String[][] query(String sql) throws Exception {
+	protected static String[][] query(String sql) {
 		try (Connection conn = getConnection()) {
 			List<String[]> rows = new ArrayList<>();
 			ResultSet rs = conn.createStatement().executeQuery(sql);
@@ -158,6 +158,8 @@ public class EmployeeDBTest {
 				rows.add(row.toArray(new String[row.size()]));
 			}
 			return rows.toArray(new String[rows.size()][cols]);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 	
