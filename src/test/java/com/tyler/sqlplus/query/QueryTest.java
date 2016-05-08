@@ -395,7 +395,7 @@ public class QueryTest extends EmployeeDBTest {
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01");
 			
-			assertThrows(() -> q.addBatch(), SQLSyntaxException.class);
+			assertThrows(q::addBatch, SQLSyntaxException.class);
 		});
 	}
 	

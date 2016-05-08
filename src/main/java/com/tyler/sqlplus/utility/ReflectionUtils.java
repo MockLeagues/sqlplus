@@ -28,62 +28,57 @@ public final class ReflectionUtils {
 		}
 	}
 	
-	public static Object get(String fieldName, Object o) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
-		return get(o.getClass().getDeclaredField(fieldName), o);
+	public static Object get(String fieldName, Object instance) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+		return get(instance.getClass().getDeclaredField(fieldName), instance);
 	}
 	
-	public static Object get(Field field, Object o) throws IllegalArgumentException, IllegalAccessException, SecurityException {
+	public static Object get(Field field, Object instance) throws IllegalArgumentException, IllegalAccessException, SecurityException {
 		
-		// See if we can pull a getter from our cache first
 		if (FIELD_GETTER.containsKey(field)) {
-			return FIELD_GETTER.get(field).apply(o);
+			return FIELD_GETTER.get(field).apply(instance);
 		}
 		
 		Function<Object, Object> getValue = null;
 		String capFieldName = capitalize(field.getName());
 		try {
-			Method getter = o.getClass().getDeclaredMethod("get" + capFieldName);
+			Method getter = instance.getClass().getDeclaredMethod("get" + capFieldName);
 			getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new RuntimeException(e); } }; 
 		}
 		catch (NoSuchMethodException e1) {
 			try {
-				Method getter = o.getClass().getDeclaredMethod("is" + capFieldName);
+				Method getter = instance.getClass().getDeclaredMethod("is" + capFieldName);
 				getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new RuntimeException(e); } };
 			}
 			catch (NoSuchMethodException e2) {
-				getValue = (obj) -> {
-					field.setAccessible(true);
-					try { return field.get(obj); } catch (Exception e3) { throw new RuntimeException(e3); }
-				};
+				field.setAccessible(true);
+				getValue = (obj) -> { try { return field.get(obj); } catch (Exception e3) { throw new RuntimeException(e3); } };
 			}
 		}
 		FIELD_GETTER.put(field, getValue);
-		return getValue.apply(o);
+		return getValue.apply(instance);
 	}
 
-	public static void set(String member, Object o, Object value) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
-		set(o.getClass().getDeclaredField(member), o, value);
+	public static void set(String member, Object instance, Object value) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+		set(instance.getClass().getDeclaredField(member), instance, value);
 	}
 
-	public static void set(Field field, Object o, Object value) throws IllegalArgumentException, IllegalAccessException {
+	public static void set(Field field, Object instance, Object value) throws IllegalArgumentException, IllegalAccessException {
 		
 		if (FIELD_SETTER.containsKey(field)) {
-			FIELD_SETTER.get(field).accept(o, value);
+			FIELD_SETTER.get(field).accept(instance, value);
 		}
 		else {
 			BiConsumer<Object, Object> setValue = null;
 			try {
-				Method setter = o.getClass().getDeclaredMethod("set" + capitalize(field.getName()));
+				Method setter = instance.getClass().getDeclaredMethod("set" + capitalize(field.getName()));
 				setValue = (obj, val) -> { try { setter.invoke(obj, val); } catch (Exception e) { throw new RuntimeException(e); } }; 
 			}
 			catch (NoSuchMethodException e) {
-				setValue = (obj, val) -> {
-					field.setAccessible(true);
-					try { field.set(obj, val); } catch (Exception e1) { throw new RuntimeException(e1); }
-				};
+				field.setAccessible(true);
+				setValue = (obj, val) -> { try { field.set(obj, val); } catch (Exception e1) { throw new RuntimeException(e1); } };
 			}
 			FIELD_SETTER.put(field, setValue);
-			setValue.accept(o, value);
+			setValue.accept(instance, value);
 		}
 	}
 	
