@@ -167,8 +167,8 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		catch (InstantiationException | IllegalAccessException e1) {
 			throw new MappingException("Could not construct instance of class " + mapClass.getName() + ", check that it has a public no-args constructor");
 		}
-		catch (Exception e2) {
-			throw new MappingException("Error mapping POJO from result set row", e2);
+		catch (Exception e) {
+			throw new MappingException(e);
 		}
 	}
 	
@@ -226,8 +226,6 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 			return new MappedPOJO<>(mapClass.newInstance(), null);
 		}
 		
-		Object key = serializer.deserialize(keyField.get().getType(), rs.getString(keyColumnName.get()));
-		
 		// Assert we have a lookup table for the key -> instance for this type
 		Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);
 		if (key_pojo == null) {
@@ -236,6 +234,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		}
 		
 		MappedPOJO<E> mappedPojo = null;
+		Object key = serializer.deserialize(keyField.get().getType(), rs.getString(keyColumnName.get()));
 		if (key_pojo.containsKey(key)) {
 			mappedPojo = (MappedPOJO<E>) key_pojo.get(key);
 		}

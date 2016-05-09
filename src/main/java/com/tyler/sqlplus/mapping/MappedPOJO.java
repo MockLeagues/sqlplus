@@ -3,7 +3,7 @@ package com.tyler.sqlplus.mapping;
 import java.util.Objects;
 
 /**
- * Wrapper over entities mapped from database rows so we can use the entity key for the equals method, ensuring we do not map duplicates
+ * Wrapper over entities mapped from database rows so we can use the entity key for the equals / hashcode methods, ensuring we do not map duplicates
  */
 public class MappedPOJO<T> {
 
