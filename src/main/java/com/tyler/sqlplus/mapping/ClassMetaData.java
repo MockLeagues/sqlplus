@@ -18,15 +18,15 @@ public class ClassMetaData {
 	private Optional<Field> keyField;
 	
 	// Maintains a mapping of mapped result set column names fields and vice-versa
-	private Map<String, Field> column_member = new HashMap<>();
-	private Map<Field, String> member_column = new HashMap<>();
+	private Map<String, Field> columnName_field = new HashMap<>();
+	private Map<Field, String> field_columnName = new HashMap<>();
 
 	public Optional<String> getMappedColumnName(Field f) {
-		return Optional.ofNullable(member_column.get(f));
+		return Optional.ofNullable(field_columnName.get(f));
 	}
 	
 	public Optional<Field> getMappedField(String columnLabel) {
-		return Optional.ofNullable(column_member.get(columnLabel));
+		return Optional.ofNullable(columnName_field.get(columnLabel));
 	}
 	
 	public Optional<Field> getKeyField() {
@@ -44,14 +44,14 @@ public class ClassMetaData {
 		for (Field field : type.getDeclaredFields()) {
 			
 			if (field.isAnnotationPresent(SingleRelation.class) || field.isAnnotationPresent(MultiRelation.class)) {
-				continue;
+				continue; // We can't map an object relation as a single field; the related class will have its own meta data
 			}
 			
-			Column annot = field.getDeclaredAnnotation(Column.class);
-			String mappedColName = annot != null && annot.name().length() > 0 ? annot.name() : field.getName();
+			Column columnAnnot = field.getDeclaredAnnotation(Column.class);
+			String mappedColName = columnAnnot != null && columnAnnot.name().length() > 0 ? columnAnnot.name() : field.getName();
 			
-			meta.column_member.put(mappedColName, field);
-			meta.member_column.put(field, mappedColName);
+			meta.columnName_field.put(mappedColName, field);
+			meta.field_columnName.put(field, mappedColName);
 			
 			if (field.isAnnotationPresent(Key.class)) {
 				meta.keyField = Optional.of(field);

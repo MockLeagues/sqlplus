@@ -29,7 +29,7 @@ import com.tyler.sqlplus.serialization.Converter;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 
 /**
- * Encapsulates iteration over a result set which maps each row to an instance of type <T>
+ * Encapsulates iteration / functional streaming over a result set
  */
 public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 
@@ -51,9 +51,9 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		this.serializer = serializer;
 		
 		ResultSetMetaData meta = rs.getMetaData();
-		int count = meta.getColumnCount();
+		int columnCount = meta.getColumnCount();
 		
-		this.columnNames = IntStream.rangeClosed(1, count)
+		this.columnNames = IntStream.rangeClosed(1, columnCount)
 		                            .mapToObj(i -> { try { return meta.getColumnLabel(i); } catch (Exception e) { throw new RuntimeException(e); } })
 		                            .collect(Collectors.toCollection(LinkedHashSet::new));
 	}

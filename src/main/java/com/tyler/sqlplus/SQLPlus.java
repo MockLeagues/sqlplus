@@ -16,6 +16,11 @@ import javax.sql.DataSource;
 import com.tyler.sqlplus.exception.ConfigurationException;
 import com.tyler.sqlplus.query.Query;
 
+/**
+ * This class is the primary entry point to the SQLPlus API.
+ * 
+ * An instance of a SQLPLus object provides an interface for executing actions against a database connection
+ */
 public class SQLPlus {
 
 	private Supplier<Connection> connectionFactory;
@@ -50,7 +55,7 @@ public class SQLPlus {
 	}
 	
 	/**
-	 * Executes an action against a new database connection
+	 * Executes an action against a database connection obtained from this instance's connection factory
 	 */
 	public void transact(Consumer<SQLPlusConnection> action) {
 		try (SQLPlusConnection conn = new SQLPlusConnection(connectionFactory.get())) {
@@ -61,7 +66,7 @@ public class SQLPlus {
 	}
 	
 	/**
-	 * Executes a value-returning action against a new database connection
+	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 */
 	public <T> T query(Function<SQLPlusConnection, T> action) {
 		try (SQLPlusConnection conn = new SQLPlusConnection(connectionFactory.get())) {
@@ -71,9 +76,6 @@ public class SQLPlus {
 		}
 	}
 	
-	/**
-	 * Shortcut method for executing multiple statements in batch
-	 */
 	public int[] batchExec(String... stmts) {
 		try (Connection conn = connectionFactory.get()) {
 			Statement s = conn.createStatement();

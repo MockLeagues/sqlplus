@@ -25,7 +25,7 @@ public class SQLPlusConnection implements Closeable {
 		return new Query(sql, conn);
 	}
 	
-	public <T> TypedQuery<T> createQuery(String sql, Class<T> type) {
+	public <T> TypedQuery<T> createTypedQuery(String sql, Class<T> type) {
 		return new TypedQuery<>(type, sql, conn);
 	}
 	
@@ -38,7 +38,7 @@ public class SQLPlusConnection implements Closeable {
 		try {
 			this.conn.close();
 		} catch (SQLException e) {
-			throw new RuntimeException(e);
+			throw new IOException(e);
 		}
 	}
 	
