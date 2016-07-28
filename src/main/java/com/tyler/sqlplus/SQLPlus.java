@@ -1,19 +1,18 @@
 package com.tyler.sqlplus;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.sql.DataSource;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.query.DynamicQuery;
 import com.tyler.sqlplus.query.Query;
 
 /**
@@ -41,7 +40,7 @@ public class SQLPlus {
 			try {
 				return src.getConnection();
 			} catch (SQLException e) {
-				throw new RuntimeException(e);
+				throw new SQLRuntimeException(e);
 			}
 		});
 	}
@@ -55,25 +54,26 @@ public class SQLPlus {
 	}
 	
 	/**
-	 * Executes an action against a database connection obtained from this instance's connection factory
+	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 */
-	public void transact(Consumer<SQLPlusConnection> action) {
-		try (SQLPlusConnection conn = new SQLPlusConnection(connectionFactory.get())) {
-			action.accept(conn);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
+	public <T> T query(ReturningDBWork<T> action) {
+		try {
+			try (Connection conn = connectionFactory.get()) {
+				return action.query(conn);
+			}
+		} catch (Exception e) {
+			throw new SQLRuntimeException(e);
 		}
 	}
 	
 	/**
-	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
+	 * Executes an action against a database connection obtained from this instance's connection factory
 	 */
-	public <T> T query(Function<SQLPlusConnection, T> action) {
-		try (SQLPlusConnection conn = new SQLPlusConnection(connectionFactory.get())) {
-			return action.apply(conn);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+	public void transact(DBWork action) {
+		query(conn -> {
+			action.transact(conn);
+			return null;
+		});
 	}
 	
 	public int[] batchExec(String... stmts) {
@@ -93,7 +93,7 @@ public class SQLPlus {
 	 */
 	public <T> void batchUpdate(String sql, List<T> entities) {
 		transact(conn -> {
-			Query q = conn.createQuery(sql);
+			Query q = new Query(sql, conn);
 			entities.forEach(q::addBatch);
 			q.executeUpdate();
 		});
@@ -103,28 +103,28 @@ public class SQLPlus {
 	 * Shortcut method to create a query which applies a single update statement
 	 */
 	public void update(String string, Object... params) {
-		transact(conn -> conn.createDynamicQuery().query(string, params).build().executeUpdate());
+		transact(conn -> new DynamicQuery(conn).query(string, params).build().executeUpdate());
 	}
 	
 	/**
 	 * Shortcut method for creating a query which immediately returns a list of maps
 	 */
 	public List<Map<String, String>> fetch(String sql, Object... params) {
-		return query(conn -> conn.createDynamicQuery().query(sql, params).build().fetch());
+		return query(conn -> new DynamicQuery(conn).query(sql, params).build().fetch());
 	}
 	
 	/**
 	 * Shortcut method for creating a query which immediately returns a list of mapped POJOs
 	 */
 	public <T> List<T> fetch(Class<T> pojoClass, String sql, Object... params) {
-		return query(conn -> conn.createDynamicQuery().query(sql, params).build().fetchAs(pojoClass));
+		return query(conn -> new DynamicQuery(conn).query(sql, params).build().fetchAs(pojoClass));
 	}
 	
 	/**
 	 * Shortcut method for creating a query which immediately finds a single instance of a mapped POJO
 	 */
 	public <T> T findUnique(Class<T> pojoClass, String sql, Object... params) {
-		return query(conn -> conn.createDynamicQuery().query(sql, params).build().getUniqueResultAs(pojoClass));
+		return query(conn -> new DynamicQuery(conn).query(sql, params).build().getUniqueResultAs(pojoClass));
 	}
 	
 	/**
@@ -166,7 +166,7 @@ public class SQLPlus {
 	 * Shortcut method for pulling a scalar value from a query
 	 */
 	private <T> T queryScalar(Class<T> scalarClass, String sql) {
-		return query(conn -> conn.createQuery(sql).fetchScalar(scalarClass));
+		return query(conn -> new Query(sql, conn).fetchScalar(scalarClass));
 	}
 	
 }

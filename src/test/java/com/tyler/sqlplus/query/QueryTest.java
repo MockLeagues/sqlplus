@@ -22,7 +22,7 @@ import com.tyler.sqlplus.annotation.Key;
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
 import com.tyler.sqlplus.exception.MappingException;
-import com.tyler.sqlplus.exception.SQLSyntaxException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
 
 import base.EmployeeDBTest;
@@ -35,7 +35,7 @@ public class QueryTest extends EmployeeDBTest {
 			Query q = new Query("select * from myTable where id = :id", conn);
 			q.setParameter("idx", "123");
 			fail("Excepted failure setting unknown parameter");
-		} catch (SQLSyntaxException e) {
+		} catch (SQLRuntimeException e) {
 			assertEquals("Unknown query parameter: idx", e.getMessage());
 		}
 	}
@@ -47,7 +47,7 @@ public class QueryTest extends EmployeeDBTest {
 			try {
 				new Query("select address_id from address where state = :state and city = :city", conn).setParameter("state", "s").getUniqueResultAs(Address.class);
 				fail("Expected query to fail because no parameter was set");
-			} catch (SQLSyntaxException e) {
+			} catch (SQLRuntimeException e) {
 				assertEquals("Missing parameter values for the following parameters: [city]", e.getMessage());
 			}
 		}
@@ -191,7 +191,7 @@ public class QueryTest extends EmployeeDBTest {
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
 		SQL_PLUS.transact(conn -> {
-			Address result = conn.createQuery("select address_id as addressId, street as street, state as state, city as city, zip as zip from address a where state = :state and city = :city")
+			Address result = new Query("select address_id as addressId, street as street, state as state, city as city, zip as zip from address a where state = :state and city = :city", conn)
 			                     .setParameter("state", "CA")
 			                     .setParameter("city", "Othertown")
 			                     .getUniqueResultAs(Address.class);
@@ -335,7 +335,7 @@ public class QueryTest extends EmployeeDBTest {
 		
 		SQL_PLUS.transact(conn -> {
 			
-			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01")
@@ -364,7 +364,7 @@ public class QueryTest extends EmployeeDBTest {
 		
 		SQL_PLUS.transact(conn -> {
 			
-			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01")
@@ -390,12 +390,12 @@ public class QueryTest extends EmployeeDBTest {
 	@Test
 	public void manualInsertBatchMissingParamsValid() throws Exception {
 		SQL_PLUS.transact(conn -> {
-			Query q = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01");
 			
-			assertThrows(q::addBatch, SQLSyntaxException.class);
+			assertThrows(q::addBatch, SQLRuntimeException.class);
 		});
 	}
 	
@@ -408,7 +408,7 @@ public class QueryTest extends EmployeeDBTest {
 		toCreate.type = Type.HOURLY;
 		SQL_PLUS.transact(conn -> {
 			
-			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
 			    .addBatch(toCreate)
 			    .executeUpdate();
 			
@@ -426,7 +426,7 @@ public class QueryTest extends EmployeeDBTest {
 		toCreate.type = Type.HOURLY;
 		SQL_PLUS.transact(conn -> {
 			
-			conn.createQuery("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)")
+			new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn)
 			    .addBatch(toCreate)
 			    .executeUpdate();
 			
@@ -450,7 +450,7 @@ public class QueryTest extends EmployeeDBTest {
 		
 		SQL_PLUS.transact(conn -> {
 			assertThrows(() -> {
-				conn.createQuery("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)").addBatch(toCreate);
+				new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).addBatch(toCreate);
 			}, MappingException.class);
 		});
 	}
@@ -460,7 +460,7 @@ public class QueryTest extends EmployeeDBTest {
 		transact("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
 		
 		SQL_PLUS.transact(conn -> {
-			Optional<List<Integer>> keys = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			Optional<List<Integer>> keys = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
 			                                   .setParameter("type", "HOURLY")
 			                                   .setParameter("name", "tester-2")
 			                                   .setParameter("hired", "2015-01-01")

@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
-import com.tyler.sqlplus.exception.SQLSyntaxException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.mapping.ClassMetaData;
 import com.tyler.sqlplus.mapping.ResultStream;
 import com.tyler.sqlplus.serialization.Converter;
@@ -56,7 +56,7 @@ public class Query {
 			}
 			
 		} catch (SQLException e) {
-			throw new SQLSyntaxException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 	
@@ -80,7 +80,7 @@ public class Query {
 	
 	public Query setParameter(String key, Object val) {
 		if (!paramLabels.contains(key)) {
-			throw new SQLSyntaxException("Unknown query parameter: " + key);
+			throw new SQLRuntimeException("Unknown query parameter: " + key);
 		}
 		manualParamBatch.put(key, val);
 		return this;
@@ -92,7 +92,7 @@ public class Query {
 			ResultSet rs = ps.executeQuery();
 			return new ResultStream<T>(rs, klass, serializer).stream();
 		} catch (SQLException e) {
-			throw new SQLSyntaxException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 	
@@ -132,11 +132,11 @@ public class Query {
 				throw new NoResultsException();
 			}
 			if (rs.getMetaData().getColumnCount() > 1) {
-				throw new SQLSyntaxException("Scalar query returned more than 1 column");
+				throw new SQLRuntimeException("Scalar query returned more than 1 column");
 			}
 			return serializer.deserialize(scalarClass, rs.getString(1));
 		} catch (SQLException e) {
-			throw new SQLSyntaxException("Error retrieving scalar value", e);
+			throw new SQLRuntimeException("Error retrieving scalar value", e);
 		}
 	}
 	
@@ -191,7 +191,7 @@ public class Query {
 			}
 					
 		} catch (SQLException e) {
-			throw new SQLSyntaxException(e);
+			throw new SQLRuntimeException(e);
 		}
 		
 	}
@@ -266,7 +266,7 @@ public class Query {
 				}
 			}
 			catch (SQLException e) {
-				throw new SQLSyntaxException(e);
+				throw new SQLRuntimeException(e);
 			}
 		}
 	}
@@ -278,7 +278,7 @@ public class Query {
 		Set<String> missingParams = new LinkedHashSet<>(paramLabels);
 		missingParams.removeAll(paramBatch.keySet());
 		if (!missingParams.isEmpty()) {
-			throw new SQLSyntaxException("Missing parameter values for the following parameters: " + missingParams);
+			throw new SQLRuntimeException("Missing parameter values for the following parameters: " + missingParams);
 		}
 	}
 	
