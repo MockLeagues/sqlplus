@@ -43,8 +43,9 @@ public class DynamicQuery {
 	
 	public Query build() {
 		Query q = new Query(stmts.stream().collect(Collectors.joining(" ")), conn);
+		int i = 1;
 		for (Object o : params) {
-			q.addParameter(o);
+			q.setParameter(i++, o);
 		}
 		return q;
 	}

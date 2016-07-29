@@ -94,7 +94,7 @@ public class SQLPlus {
 	public <T> void batchUpdate(String sql, List<T> entities) {
 		transact(conn -> {
 			Query q = new Query(sql, conn);
-			entities.forEach(q::addBatch);
+			entities.forEach(q::bind);
 			q.executeUpdate();
 		});
 	}

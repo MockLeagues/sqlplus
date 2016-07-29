@@ -9,23 +9,23 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.tyler.sqlplus.annotation.MultiRelation;
 import com.tyler.sqlplus.annotation.SingleRelation;
+import com.tyler.sqlplus.conversion.AttributeConverter;
+import com.tyler.sqlplus.conversion.ConversionPolicy;
 import com.tyler.sqlplus.exception.MappingException;
-import com.tyler.sqlplus.serialization.Converter;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 
 /**
@@ -40,22 +40,24 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	private Map<Class<?>, List<Field>> class_mappableFields = new HashMap<>();
 	
 	private ResultSet rs;
+	private ResultSetMetaData meta;
 	private Class<T> resultClass;
-	private Set<String> columnNames;
-	private Converter serializer;
+	private ConversionPolicy conversionPolicy;
+	private LinkedHashMap<String, Integer> colName_colIndex;
 	
-	public ResultStream(ResultSet rs, Class<T> resultClass, Converter serializer) throws SQLException {
+	public ResultStream(ResultSet rs, Class<T> resultClass, ConversionPolicy serializer) throws SQLException {
 		
 		this.rs = rs;
 		this.resultClass = resultClass;
-		this.serializer = serializer;
+		this.conversionPolicy = serializer;
 		
-		ResultSetMetaData meta = rs.getMetaData();
+		this.meta = rs.getMetaData();
 		int columnCount = meta.getColumnCount();
 		
-		this.columnNames = IntStream.rangeClosed(1, columnCount)
-		                            .mapToObj(i -> { try { return meta.getColumnLabel(i); } catch (Exception e) { throw new RuntimeException(e); } })
-		                            .collect(Collectors.toCollection(LinkedHashSet::new));
+		this.colName_colIndex = new LinkedHashMap<>();
+		for (int col = 1; col <= columnCount; col++) {
+			colName_colIndex.put(meta.getColumnLabel(col), col);
+		}
 	}
 	
 	/**
@@ -92,11 +94,11 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	 * Converts the current row of this result stream to a map
 	 */
 	public Map<String, String> toMap() {
-		return columnNames.stream().collect(Collectors.toMap(Function.identity(), col -> {
+		return colName_colIndex.keySet().stream().collect(Collectors.toMap(Function.identity(), col -> {
 			try {
-				return serializer.deserialize(String.class, rs.getString(col));
+				return rs.getString(col);
 			} catch (Exception e) {
-				throw new RuntimeException(e);
+				throw new SQLRuntimeException(e);
 			}
 		}));
 	}
@@ -157,7 +159,9 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 				}
 				else {
 					String mappedCol = meta.getMappedColumnName(field).get(); // Will always be present since we are iterating over only mappable columns
-					Object value = serializer.deserialize(field.getType(), rs.getString(mappedCol));
+					Integer resultSetIndex = colName_colIndex.get(mappedCol);
+					AttributeConverter converter = conversionPolicy.findConverter(field.getType());
+					Object value = converter.get(rs, resultSetIndex);
 					ReflectionUtils.set(field, mappedPOJO.pojo, value);
 				}
 			}
@@ -206,7 +210,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	 * Makes a new instance of the given map class for the current row, if one does not exist within the currently processed rows
 	 * of the result set, or else pulls the current one
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private <E> MappedPOJO<E> assertInstance(Class<E> mapClass) throws Exception {
 		
 		ClassMetaData meta = ClassMetaData.getMetaData(mapClass);
@@ -222,7 +226,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		
 		// If we don't have the key column in our result set then we just return a new instance now since
 		// we can't track duplicate entities by key
-		if (!keyColumnName.isPresent() || !columnNames.contains(keyColumnName.get())) {
+		if (!keyColumnName.isPresent() || !colName_colIndex.containsKey(keyColumnName.get())) {
 			return new MappedPOJO<>(mapClass.newInstance(), null);
 		}
 		
@@ -234,7 +238,9 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		}
 		
 		MappedPOJO<E> mappedPojo = null;
-		Object key = serializer.deserialize(keyField.get().getType(), rs.getString(keyColumnName.get()));
+		AttributeConverter converter = conversionPolicy.findConverter(keyField.get().getType());
+		Integer resultSetIndex = colName_colIndex.get(keyColumnName.get());
+		Object key = converter.get(rs, resultSetIndex);
 		if (key_pojo.containsKey(key)) {
 			mappedPojo = (MappedPOJO<E>) key_pojo.get(key);
 		}

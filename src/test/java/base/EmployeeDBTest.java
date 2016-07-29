@@ -10,102 +10,105 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import com.tyler.sqlplus.SQLPlus;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.utility.Tasks.Task;
 
 public class EmployeeDBTest {
 
 	protected static SQLPlus SQL_PLUS = new SQLPlus(EmployeeDBTest::getConnection);
+	static {
+		try {
+			Class.forName("org.h2.Driver");
+		} catch (ClassNotFoundException e) {
+			throw new ExceptionInInitializerError(e);
+		}
+	}
 	
 	protected static Connection getConnection() {
 		try {
-			return DriverManager.getConnection("jdbc:mysql://localhost:3306/tester", "tester", "tester");
+			return DriverManager.getConnection("jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1", "sa", "sa");
 		} catch (SQLException e) {
-			throw new RuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 	
 	@BeforeClass
 	public static void setupDB() throws Exception {
 
-		try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/mysql", "tester", "tester")) {
-			
-			// Create the database
-			conn.createStatement().executeUpdate("CREATE DATABASE tester");
-			conn.createStatement().executeUpdate("USE tester");
+		try (Connection conn = getConnection()) {
 			
 			// Table structure
 			conn.createStatement().executeUpdate(
-				"CREATE TABLE `address` (" +
-					"`address_id` int(11) NOT NULL AUTO_INCREMENT," +
-					"`street` varchar(45) DEFAULT NULL," +
-					"`city` varchar(45) DEFAULT NULL," +
-					"`state` varchar(45) DEFAULT NULL," +
-					"`zip` varchar(45) DEFAULT NULL," +
-					"PRIMARY KEY (`address_id`)" +
+				"create table `address` (" +
+					"`address_id` int(11) not null auto_increment," +
+					"`street` varchar(45) default null," +
+					"`city` varchar(45) default null," +
+					"`state` varchar(45) default null," +
+					"`zip` varchar(45) default null," +
+					"primary key (`address_id`)" +
 				")"
 			);
 			
 			conn.createStatement().executeUpdate(
-				"CREATE TABLE `meeting` (" +
-					"`meeting_id` int(11) NOT NULL AUTO_INCREMENT," +
-					"`office_id` int(11) NOT NULL," +
-					"`start_time` int(11) NOT NULL," +
-					"`end_time` int(11) NOT NULL," +
-					"`topic` varchar(45) NOT NULL," +
-					"PRIMARY KEY (`meeting_id`)" +
+				"create table `meeting` (" +
+					"`meeting_id` int(11) not null auto_increment," +
+					"`office_id` int(11) not null," +
+					"`start_time` int(11) not null," +
+					"`end_time` int(11) not null," +
+					"`topic` varchar(45) not null," +
+					"primary key (`meeting_id`)" +
 				")"
 			);
 			
 			conn.createStatement().executeUpdate(
-				"CREATE TABLE `employee` (" +
-					"`employee_id` int(11) NOT NULL AUTO_INCREMENT," +
-					"`type` varchar(45) NOT NULL," +
-					"`name` varchar(45) NOT NULL," +
-					"`salary` int(11) NOT NULL," +
-					"`hired` date NOT NULL," +
-					"`address_id` int(11) DEFAULT NULL," +
-					"PRIMARY KEY (`employee_id`)" +
+				"create table `employee` (" +
+					"`employee_id` int(11) not null auto_increment," +
+					"`type` varchar(45) not null," +
+					"`name` varchar(45) not null," +
+					"`salary` int(11) not null," +
+					"`hired` date not null," +
+					"`address_id` int(11) default null," +
+					"primary key (`employee_id`)" +
 				")"
 			);
 			
 			conn.createStatement().executeUpdate(
-				"CREATE TABLE `office` (" +
-					"`office_id` int(11) NOT NULL AUTO_INCREMENT," +
-					"`office_name` varchar(45) NOT NULL," +
-					"`primary` tinyint(4) NOT NULL," +
-					"`employee_id` int(11) DEFAULT NULL," +
-					"PRIMARY KEY (`office_id`)" +
+				"create table `office` (" +
+					"`office_id` int(11) not null auto_increment," +
+					"`office_name` varchar(45) not null," +
+					"`primary` tinyint(4) not null," +
+					"`employee_id` int(11) default null," +
+					"primary key (`office_id`)" +
 				")"
 			);
 			
 			conn.createStatement().executeUpdate(
-				"CREATE TABLE `order` (" +
-					"`order_id` int(11) NOT NULL AUTO_INCREMENT," +
-					"`date_submitted` date NULL," +
-					"`submitter` varchar(45) NULL," +
-					"PRIMARY KEY (`order_id`)" +
+				"create table `order` (" +
+					"`order_id` int(11) not null auto_increment," +
+					"`date_submitted` date null," +
+					"`submitter` varchar(45) null," +
+					"primary key (`order_id`)" +
 				")"
 			);
 			
 			conn.createStatement().executeUpdate(
-				"CREATE TABLE `product` (" +
-					"`product_id` int(11) NOT NULL AUTO_INCREMENT," +
-					"`price` decimal(10,2) NOT NULL," +
-					"`uom` varchar(45) NULL," +
-					"PRIMARY KEY (`product_id`)" +
+				"create table `product` (" +
+					"`product_id` int(11) not null auto_increment," +
+					"`price` decimal(10,2) not null," +
+					"`uom` varchar(45) null," +
+					"primary key (`product_id`)" +
 				")"
 			);
 			
 			conn.createStatement().executeUpdate(
-				"CREATE TABLE `order_product_map` (" +
-					"`order_product_id` int(11) NOT NULL AUTO_INCREMENT," +
-					"`order_id` int(11) NOT NULL," +
-					"`product_id` int(11) NOT NULL," +
-					"PRIMARY KEY (`order_product_id`)" +
+				"create table `order_product_map` (" +
+					"`order_product_id` int(11) not null auto_increment," +
+					"`order_id` int(11) not null," +
+					"`product_id` int(11) not null," +
+					"primary key (`order_product_id`)" +
 				")"
 			);
 		}
@@ -115,33 +118,19 @@ public class EmployeeDBTest {
 	public void flushTables() throws Exception {
 		try (Connection conn = getConnection()) {
 			conn.createStatement().executeUpdate("delete from address where address_id is not null");
-			conn.createStatement().executeUpdate("alter table address AUTO_INCREMENT = 1");
-			
+			conn.createStatement().executeUpdate("alter table address auto_increment = 1");
 			conn.createStatement().executeUpdate("delete from meeting where meeting_id is not null");
-			conn.createStatement().executeUpdate("alter table meeting AUTO_INCREMENT = 1");
-			
+			conn.createStatement().executeUpdate("alter table meeting auto_increment = 1");
 			conn.createStatement().executeUpdate("delete from employee where employee_id is not null");
-			conn.createStatement().executeUpdate("alter table employee AUTO_INCREMENT = 1");
-			
+			conn.createStatement().executeUpdate("alter table employee auto_increment = 1");
 			conn.createStatement().executeUpdate("delete from office where office_id is not null");
-			conn.createStatement().executeUpdate("alter table office AUTO_INCREMENT = 1");
-			
+			conn.createStatement().executeUpdate("alter table office auto_increment = 1");
 			conn.createStatement().executeUpdate("delete from product where product_id is not null");
-			conn.createStatement().executeUpdate("alter table product AUTO_INCREMENT = 1");
-			
+			conn.createStatement().executeUpdate("alter table product auto_increment = 1");
 			conn.createStatement().executeUpdate("delete from `order` where order_id is not null");
-			conn.createStatement().executeUpdate("alter table `order` AUTO_INCREMENT = 1");
-			
+			conn.createStatement().executeUpdate("alter table `order` auto_increment = 1");
 			conn.createStatement().executeUpdate("delete from order_product_map where order_product_id is not null");
-			conn.createStatement().executeUpdate("alter table order_product_map AUTO_INCREMENT = 1");
-		}
-	}
-	
-	@AfterClass
-	public static void deleteDB() throws Exception {
-		try (Connection conn = getConnection()) {
-			conn.createStatement().executeUpdate("DROP DATABASE tester");
-			conn.close();
+			conn.createStatement().executeUpdate("alter table order_product_map auto_increment = 1");
 		}
 	}
 	

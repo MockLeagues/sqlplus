@@ -409,7 +409,7 @@ public class QueryTest extends EmployeeDBTest {
 		SQL_PLUS.transact(conn -> {
 			
 			new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
-			    .addBatch(toCreate)
+			    .bind(toCreate)
 			    .executeUpdate();
 			
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
@@ -427,7 +427,7 @@ public class QueryTest extends EmployeeDBTest {
 		SQL_PLUS.transact(conn -> {
 			
 			new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn)
-			    .addBatch(toCreate)
+			    .bind(toCreate)
 			    .executeUpdate();
 			
 			Integer actual = Integer.parseInt(query("select count(*) from employee")[0][0]);
@@ -450,7 +450,7 @@ public class QueryTest extends EmployeeDBTest {
 		
 		SQL_PLUS.transact(conn -> {
 			assertThrows(() -> {
-				new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).addBatch(toCreate);
+				new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).bind(toCreate);
 			}, MappingException.class);
 		});
 	}
