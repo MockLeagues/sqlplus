@@ -189,8 +189,8 @@ public class ConversionPolicy {
 			
 			try {
 				
-				Method valueOf = targetType.getDeclaredMethod("valueOf", String.class);
-				Method name = targetType.getDeclaredMethod("name");
+				Method valueOf = targetType.getMethod("valueOf", String.class);
+				Method name = targetType.getMethod("name");
 				
 				AttributeConverter<T> enumConverter = new AttributeConverter<T>() {
 					

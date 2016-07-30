@@ -29,34 +29,19 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
 
 public class Query {
 
-	private static final String REGEX_PARAM = "[^ ]:\\w+[$ ]|\\?";
+	private static final String REGEX_PARAM = ":\\w+|\\?";
 	
 	private PreparedStatement ps;
-	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();;
-	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();;
+	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
+	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
-	private Map<Integer, String> paramIndex_paramLabel = new HashMap<>();
 	private ConversionPolicy conversionPolicy;
 	
 	public Query(String sql, Connection conn) {
-		
 		try {
-			
-			// Parse out which index each parameter label corresponds to
-			int paramIndex = 0;
-			Matcher paramsMatcher = Pattern.compile(REGEX_PARAM).matcher(sql);
-			while (paramsMatcher.find()) {
-				paramIndex++;
-				String paramLabel = paramsMatcher.group();
-				if (!paramLabel.equals("?")) {
-					paramLabel_paramIndex.put(paramLabel.substring(1), paramIndex);
-					paramIndex_paramLabel.put(paramIndex, paramLabel.substring(1));
-				}
-			}
-			
+			this.paramLabel_paramIndex = parseParams(sql);
 			this.ps = conn.prepareStatement(sql.replaceAll(REGEX_PARAM, "?"), Statement.RETURN_GENERATED_KEYS);
 			this.conversionPolicy = new ConversionPolicy();
-			
 		} catch (SQLException e) {
 			throw new SQLRuntimeException(e);
 		}
@@ -67,16 +52,19 @@ public class Query {
 		return this;
 	}
 	
+	public Query setParameter(Integer index, Object val) {
+		if (index > paramLabel_paramIndex.size()) {
+			throw new SQLRuntimeException("Parameter index " + index + " is out of range of this query's parameters");
+		}
+		return setParameter(index + "", val);
+	}
+	
 	public Query setParameter(String key, Object val) {
 		if (!paramLabel_paramIndex.containsKey(key)) {
 			throw new SQLRuntimeException("Unknown query parameter: " + key);
 		}
 		Integer paramIndex = paramLabel_paramIndex.get(key);
-		return setParameter(paramIndex, val);
-	}
-	
-	public Query setParameter(Integer index, Object val) {
-		manualParamBatch.put(index, val);
+		manualParamBatch.put(paramIndex, val);
 		return this;
 	}
 	
@@ -195,7 +183,7 @@ public class Query {
 	 */
 	public Query addBatch() {
 		addBatch(manualParamBatch);
-		this.manualParamBatch.clear();
+		manualParamBatch = new LinkedHashMap<>();
 		return this;
 	}
 	
@@ -274,11 +262,38 @@ public class Query {
 		// See if we are missing any labeled parameters
 		paramLabel_paramIndex.forEach((label, index) -> {
 			if (!newBatch.containsKey(index)) {
-				throw new SQLRuntimeException("No value set for parameter " + label);
+				throw new SQLRuntimeException("No value set for parameter '" + label + "'");
 			}
 		});
 		
 		paramBatches.add(newBatch);
+	}
+
+	/**
+	 * Produces a mapping of parameter labels to the 1-based index at which they appear in the given query string.
+	 * 
+	 * For any '?' params, the key will be equal to the string value of the index. For example, for the query
+	 * 'select fieldA from table1 where fieldA = ? and fieldB = ?', a mapping would be produced with the keys
+	 * "1" and "2" and the values 1 and 2.
+	 */
+	private static Map<String, Integer> parseParams(String sql) {
+		
+		Map<String, Integer> paramLabel_index = new HashMap<>();
+		
+		int paramIndex = 0;
+		Matcher paramsMatcher = Pattern.compile(REGEX_PARAM).matcher(sql);
+		while (paramsMatcher.find()) {
+			paramIndex++;
+			String paramLabel = paramsMatcher.group();
+			if (paramLabel.equals("?")) {
+				paramLabel_index.put(paramIndex + "", paramIndex);
+			}
+			else {
+				paramLabel_index.put(paramLabel.substring(1), paramIndex);
+			}
+		}
+		
+		return paramLabel_index;
 	}
 	
 }

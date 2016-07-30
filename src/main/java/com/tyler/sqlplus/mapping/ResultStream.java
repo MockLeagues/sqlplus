@@ -34,7 +34,7 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
 public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 
 	// Used to track objects already created from the result set so we don't make duplicates
-	private Map<Class<?>, Map<Object, MappedPOJO<?>>> class_key_instance = new HashMap<>();
+	private Map<Class<?>, Map<Object, MappedPOJO<?>>> type_key_instance = new HashMap<>();
 
 	// Used to keep track of which fields are mappable for different class types so we can skip them if we already know they aren't present
 	private Map<Class<?>, List<Field>> class_mappableFields = new HashMap<>();
@@ -56,7 +56,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		
 		this.colName_colIndex = new LinkedHashMap<>();
 		for (int col = 1; col <= columnCount; col++) {
-			colName_colIndex.put(meta.getColumnLabel(col), col);
+			colName_colIndex.put(meta.getColumnLabel(col).toUpperCase(), col);
 		}
 	}
 	
@@ -109,10 +109,13 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private <E> MappedPOJO<E> mapPOJO(Class<E> mapClass, Class<?> parentRef) {
+		
 		ClassMetaData meta = ClassMetaData.getMetaData(mapClass);
 		
 		List<Field> mappableFields = getMappableFields(mapClass);
-		if (mappableFields.isEmpty()) return null; // No work to do
+		if (mappableFields.isEmpty()) {
+			return null; // No work to do
+		}
 		
 		try {
 			MappedPOJO<E> mappedPOJO = assertInstance(mapClass);
@@ -159,9 +162,9 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 				}
 				else {
 					String mappedCol = meta.getMappedColumnName(field).get(); // Will always be present since we are iterating over only mappable columns
-					Integer resultSetIndex = colName_colIndex.get(mappedCol);
+					Integer resultSetIndex = colName_colIndex.get(mappedCol.toUpperCase());
 					AttributeConverter converter = conversionPolicy.findConverter(field.getType());
-					Object value = converter.get(rs, resultSetIndex);
+					Object value = rs.getObject(resultSetIndex) == null ? null : converter.get(rs, resultSetIndex);
 					ReflectionUtils.set(field, mappedPOJO.pojo, value);
 				}
 			}
@@ -230,11 +233,10 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 			return new MappedPOJO<>(mapClass.newInstance(), null);
 		}
 		
-		// Assert we have a lookup table for the key -> instance for this type
-		Map<Object, MappedPOJO<?>> key_pojo = class_key_instance.get(mapClass);
+		Map<Object, MappedPOJO<?>> key_pojo = type_key_instance.get(mapClass);
 		if (key_pojo == null) {
 			key_pojo = new HashMap<>();
-			class_key_instance.put(mapClass, key_pojo);
+			type_key_instance.put(mapClass, key_pojo);
 		}
 		
 		MappedPOJO<E> mappedPojo = null;
