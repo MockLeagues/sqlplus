@@ -12,7 +12,7 @@ import javax.sql.DataSource;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.query.DynamicQuery;
+import com.tyler.sqlplus.query.QueryBuilder;
 import com.tyler.sqlplus.query.Query;
 
 /**
@@ -103,28 +103,28 @@ public class SQLPlus {
 	 * Shortcut method to create a query which applies a single update statement
 	 */
 	public void update(String string, Object... params) {
-		transact(conn -> new DynamicQuery(conn).query(string, params).build().executeUpdate());
+		transact(conn -> new QueryBuilder(conn).query(string, params).build().executeUpdate());
 	}
 	
 	/**
 	 * Shortcut method for creating a query which immediately returns a list of maps
 	 */
 	public List<Map<String, String>> fetch(String sql, Object... params) {
-		return query(conn -> new DynamicQuery(conn).query(sql, params).build().fetch());
+		return query(conn -> new QueryBuilder(conn).query(sql, params).build().fetch());
 	}
 	
 	/**
 	 * Shortcut method for creating a query which immediately returns a list of mapped POJOs
 	 */
 	public <T> List<T> fetch(Class<T> pojoClass, String sql, Object... params) {
-		return query(conn -> new DynamicQuery(conn).query(sql, params).build().fetchAs(pojoClass));
+		return query(conn -> new QueryBuilder(conn).query(sql, params).build().fetchAs(pojoClass));
 	}
 	
 	/**
 	 * Shortcut method for creating a query which immediately finds a single instance of a mapped POJO
 	 */
 	public <T> T findUnique(Class<T> pojoClass, String sql, Object... params) {
-		return query(conn -> new DynamicQuery(conn).query(sql, params).build().getUniqueResultAs(pojoClass));
+		return query(conn -> new QueryBuilder(conn).query(sql, params).build().getUniqueResultAs(pojoClass));
 	}
 	
 	/**

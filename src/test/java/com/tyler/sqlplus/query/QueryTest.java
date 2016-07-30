@@ -310,7 +310,6 @@ public class QueryTest {
 		);
 		
 		List<EmployeeMultiRelation> es = dbRule.getSQLPlus().fetch(EmployeeMultiRelation.class, "select * from employee e join office o on e.employee_id = o.employee_id");
-		System.out.println(es);
 		assertEquals(1, es.size());
 		assertEquals(3, es.get(0).offices.size());
 		assertEquals("Office A", es.get(0).offices.get(0).name);

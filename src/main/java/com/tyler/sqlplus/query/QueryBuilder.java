@@ -9,31 +9,31 @@ import java.util.stream.Collectors;
 /**
  * This is a builder-like class which allow dynamic queries to be easily be constructed
  */
-public class DynamicQuery {
+public class QueryBuilder {
 
 	private List<String> stmts = new ArrayList<>();
 	private List<Object> params = new ArrayList<>();
 	private Connection conn;
 	
-	public DynamicQuery(Connection conn) {
+	public QueryBuilder(Connection conn) {
 		this.conn = conn;
 	}
 	
-	public DynamicQuery query(String sql, Object... params) {
+	public QueryBuilder query(String sql, Object... params) {
 		this.stmts.add(sql);
 		addParameters(params);
 		return this;
 	}
 	
-	public DynamicQuery queryIf(boolean test, String sql, Object... params) {
+	public QueryBuilder queryIf(boolean test, String sql, Object... params) {
 		return test ? query(sql, params) : this;
 	}
 	
-	public DynamicQuery queryIfNotNull(Object param, String sql) {
+	public QueryBuilder queryIfNotNull(Object param, String sql) {
 		return queryIf(param != null, sql, param);
 	}
 	
-	public DynamicQuery addParameters(Object... params) {
+	public QueryBuilder addParameters(Object... params) {
 		if (params.length == 0 || params == null) {
 			return this;
 		}
