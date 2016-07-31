@@ -6,8 +6,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
+import com.tyler.sqlplus.exception.ConversionException;
 
 /**
  * Container for a series of attribute converters which allows retrieval of an appropriate converter
@@ -162,22 +165,6 @@ public class ConversionPolicy {
 		}
 		
 		{
-			setDefaultConverter(LocalDate.class, new AttributeConverter<LocalDate>() {
-				
-				@Override
-				public LocalDate get(ResultSet rs, String column) throws SQLException {
-					return LocalDate.parse(rs.getString(column));
-				}
-				
-				@Override
-				public void set(PreparedStatement ps, int parameterIndex, LocalDate obj) throws SQLException {
-					ps.setString(parameterIndex, obj.toString());
-				}
-				
-			});
-		}
-		
-		{
 			setDefaultConverter(String.class, new AttributeConverter<String>() {
 				
 				@Override
@@ -188,6 +175,38 @@ public class ConversionPolicy {
 				@Override
 				public void set(PreparedStatement ps, int parameterIndex, String obj) throws SQLException {
 					ps.setString(parameterIndex, obj);
+				}
+				
+			});
+		}
+		
+		{
+			setDefaultConverter(Date.class, new AttributeConverter<Date>() {
+				
+				@Override
+				public Date get(ResultSet rs, String column) throws SQLException {
+					return rs.getDate(column);
+				}
+				
+				@Override
+				public void set(PreparedStatement ps, int parameterIndex, Date obj) throws SQLException {
+					ps.setDate(parameterIndex, new java.sql.Date(obj.getTime()));
+				}
+				
+			});
+		}
+		
+		{
+			setDefaultConverter(LocalDate.class, new AttributeConverter<LocalDate>() {
+				
+				@Override
+				public LocalDate get(ResultSet rs, String column) throws SQLException {
+					return LocalDate.parse(rs.getString(column));
+				}
+				
+				@Override
+				public void set(PreparedStatement ps, int parameterIndex, LocalDate obj) throws SQLException {
+					ps.setString(parameterIndex, obj.toString());
 				}
 				
 			});
@@ -266,6 +285,11 @@ public class ConversionPolicy {
 			}
 		}
 	
+		if (converter == null) {
+			throw new ConversionException(
+				"No suitable attribute converter found for type " + targetType.getName());
+		}
+		
 		return converter;
 	}
 	

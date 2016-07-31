@@ -1,4 +1,4 @@
-package com.tyler.sqlplus.mapping;
+package com.tyler.sqlplus;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
@@ -9,7 +9,7 @@ import java.util.Set;
 
 import com.tyler.sqlplus.conversion.AttributeConverter;
 import com.tyler.sqlplus.conversion.ConversionPolicy;
-import com.tyler.sqlplus.exception.MappingException;
+import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 
 public interface ResultMapper<T> {
@@ -41,7 +41,7 @@ public interface ResultMapper<T> {
 				try {
 					instance = type.newInstance();
 				} catch (InstantiationException | IllegalAccessException e) {
-					throw new MappingException(
+					throw new POJOBindException(
 						"Could not construct instance of class " + type.getName() + ", verify it has a public no-args constructor");
 				}
 				
@@ -52,7 +52,7 @@ public interface ResultMapper<T> {
 						try {
 							ReflectionUtils.set(mappableField, instance, fieldValue);
 						} catch (IllegalArgumentException | IllegalAccessException e) {
-							throw new MappingException("Unable to set field value for field " + mappableField + " in class " + type.getName(), e);
+							throw new POJOBindException("Unable to set field value for field " + mappableField + " in class " + type.getName(), e);
 						}
 					}
 				}
@@ -69,12 +69,13 @@ public interface ResultMapper<T> {
 	 * mappable if its name is present as a column label (as pulled via 'getColumnLabel()')
 	 */
 	public static Set<Field> findMappableFields(ResultSet rs, Class<?> type) throws SQLException {
-		ResultSetMetaData meta = rs.getMetaData();
 		Set<Field> mappableFields = new HashSet<>();
+		ResultSetMetaData meta = rs.getMetaData();
 		for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
+			String label = meta.getColumnLabel(col);
 			try {
-				Field field = type.getDeclaredField(meta.getColumnLabel(col));
-				mappableFields.add(field);
+				Field mappableField = type.getDeclaredField(label);
+				mappableFields.add(mappableField);
 			} catch (NoSuchFieldException | SecurityException e) {
 				// Not mappable
 			}

@@ -15,6 +15,7 @@ import java.util.Set;
 
 import org.junit.Test;
 
+import com.tyler.sqlplus.ResultMapper;
 import com.tyler.sqlplus.mapping.ResultMapperTest.MyPOJO.Size;
 
 public class ResultMapperTest {
@@ -40,8 +41,29 @@ public class ResultMapperTest {
 	@Test
 	public void testMapRowToPOJO() throws Exception {
 		
+		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
+		when(rsMeta.getColumnCount()).thenReturn(17);
+		when(rsMeta.getColumnLabel(1)).thenReturn("intField");
+		when(rsMeta.getColumnLabel(2)).thenReturn("bigIntField");
+		when(rsMeta.getColumnLabel(3)).thenReturn("floatField");
+		when(rsMeta.getColumnLabel(4)).thenReturn("bigFloatField");
+		when(rsMeta.getColumnLabel(5)).thenReturn("shortField");
+		when(rsMeta.getColumnLabel(6)).thenReturn("bigShortField");
+		when(rsMeta.getColumnLabel(7)).thenReturn("longField");
+		when(rsMeta.getColumnLabel(8)).thenReturn("bigLongField");
+		when(rsMeta.getColumnLabel(9)).thenReturn("doubleField");
+		when(rsMeta.getColumnLabel(10)).thenReturn("bigDoubleField");
+		when(rsMeta.getColumnLabel(11)).thenReturn("boolField");
+		when(rsMeta.getColumnLabel(12)).thenReturn("bigBoolField");
+		when(rsMeta.getColumnLabel(13)).thenReturn("charField");
+		when(rsMeta.getColumnLabel(14)).thenReturn("bigCharField");
+		when(rsMeta.getColumnLabel(15)).thenReturn("stringField");
+		when(rsMeta.getColumnLabel(16)).thenReturn("enumField");
+		when(rsMeta.getColumnLabel(17)).thenReturn("localDateField");
+		
 		ResultSet rsToMap = mock(ResultSet.class);
 		
+		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		when(rsToMap.getInt("intField")).thenReturn(1);
 		when(rsToMap.getFloat("floatField")).thenReturn(1.5f);
 		when(rsToMap.getShort("shortField")).thenReturn((short) 2);
@@ -93,8 +115,12 @@ public class ResultMapperTest {
 	@Test
 	public void testFieldsNotPresentInResultSetRemainNull() throws Exception {
 		
-		ResultSet rsToMap = mock(ResultSet.class);
+		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
+		when(rsMeta.getColumnCount()).thenReturn(1);
+		when(rsMeta.getColumnLabel(1)).thenReturn("presentField");
 		
+		ResultSet rsToMap = mock(ResultSet.class);
+		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		when(rsToMap.getInt("presentField")).thenReturn(1);
 		
 		POJOWithNullFields pojo = ResultMapper.forType(POJOWithNullFields.class).map(rsToMap);
@@ -113,7 +139,7 @@ public class ResultMapperTest {
 		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
 		when(rsMeta.getColumnCount()).thenReturn(2);
 		when(rsMeta.getColumnLabel(1)).thenReturn("mappableA");
-		when(rsMeta.getColumnLabel(2)).thenReturn("mappableBA");
+		when(rsMeta.getColumnLabel(2)).thenReturn("notMappable");
 		
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);

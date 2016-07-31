@@ -12,17 +12,12 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.tyler.sqlplus.annotation.Column;
-import com.tyler.sqlplus.annotation.Key;
-import com.tyler.sqlplus.annotation.MultiRelation;
-import com.tyler.sqlplus.annotation.SingleRelation;
-import com.tyler.sqlplus.exception.MappingException;
+import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
 import com.tyler.sqlplus.utility.Tasks.Task;
@@ -96,7 +91,7 @@ public class QueryTest {
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
 		);
 		
-		List<Address> results = dbRule.getSQLPlus().fetch(Address.class, "select address_id as addressId, street as street, state as state, city as city, zip as zip from address");
+		List<Address> results = dbRule.getSQLPlus().fetch(Address.class, "select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address");
 		assertEquals(2, results.size());
 		
 		Address first = results.get(0);
@@ -112,31 +107,6 @@ public class QueryTest {
 		assertEquals("Othertown", second.city);
 		assertEquals("CA", second.state);
 		assertEquals("54321", second.zip);
-	}
-	
-	@Test
-	public void queryMaps() throws Exception {
-		
-		dbRule.transact(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
-		);
-		
-		List<Map<String, String>> rows = dbRule.getSQLPlus().fetch("select * from address");
-		
-		assertEquals(2, rows.size());
-		
-		Map<String, String> first = rows.get(0);
-		assertEquals("Maple Street", first.get("STREET"));
-		assertEquals("Anytown", first.get("CITY"));
-		assertEquals("MN", first.get("STATE"));
-		assertEquals("12345", first.get("ZIP"));
-		
-		Map<String, String> second = rows.get(1);
-		assertEquals("Elm Street", second.get("STREET"));
-		assertEquals("Othertown", second.get("CITY"));
-		assertEquals("CA", second.get("STATE"));
-		assertEquals("54321", second.get("ZIP"));
 	}
 	
 	@Test
@@ -209,7 +179,7 @@ public class QueryTest {
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
 		dbRule.getSQLPlus().transact(conn -> {
-			Address result = new Query("select address_id as addressId, street as street, state as state, city as city, zip as zip from address a where state = :state and city = :city", conn)
+			Address result = new Query("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a where state = :state and city = :city", conn)
 			                     .setParameter("state", "CA")
 			                     .setParameter("city", "Othertown")
 			                     .getUniqueResultAs(Address.class);
@@ -217,43 +187,11 @@ public class QueryTest {
 		});
 	}
 	
-	public static class AddressWithAnnot {
-		public @Column(name = "address_id") Integer addressId;
-		public @Column(name = "street") String street;
-		public @Column(name = "city") String city;
-		public @Column(name = "state") String state;
-		public @Column(name = "zip") String zip;
-	}
-	@Test
-	public void mapResultsToNonRelationPOJOUsingAnnotations() throws Exception {
-		dbRule.transact(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
-		);
-		
-		List<AddressWithAnnot> results = dbRule.getSQLPlus().fetch(AddressWithAnnot.class, "select * from address");
-		assertEquals(2, results.size());
-		
-		AddressWithAnnot first = results.get(0);
-		assertEquals(new Integer(1), first.addressId);
-		assertEquals("Maple Street", first.street);
-		assertEquals("Anytown", first.city);
-		assertEquals("MN", first.state);
-		assertEquals("12345", first.zip);
-		
-		AddressWithAnnot second = results.get(1);
-		assertEquals(new Integer(2), second.addressId);
-		assertEquals("Elm Street", second.street);
-		assertEquals("Othertown", second.city);
-		assertEquals("CA", second.state);
-		assertEquals("54321", second.zip);
-	}
-	
 	@Test
 	public void leavesNullValuesIfCertainFieldsNotPresentInResults() throws Exception {
 		dbRule.transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		
-		Address result = dbRule.getSQLPlus().findUnique(Address.class, "select street, city from address");
+		Address result = dbRule.getSQLPlus().findUnique(Address.class, "select street as \"street\", city as \"city\" from address");
 		assertNull(result.state);
 		assertNull(result.zip);
 		assertNotNull(result.street);
@@ -271,80 +209,8 @@ public class QueryTest {
 	@Test
 	public void mapEnumTypes() throws Exception {
 		dbRule.transact("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
-		List<Employee> es = dbRule.getSQLPlus().fetch(Employee.class, "select employee_id as employeeId, type as type, name as name, salary as salary, hired as hired from employee");
+		List<Employee> es = dbRule.getSQLPlus().fetch(Employee.class, "select employee_id as \"employeeId\", type as \"type\", name as \"name\", salary as \"salary\", hired as \"hired\" from employee");
 		assertEquals(Type.HOURLY, es.get(0).type);
-	}
-	
-	public static class EmployeeMultiRelation {
-		public enum Type { HOURLY, SALARY; }
-		public @Key @Column(name = "employee_id") Integer employeeId;
-		public Type type;
-		public String name;
-		public Integer salary;
-		public Date hired;
-		public @MultiRelation List<Office> offices;
-		
-		public static class Office {
-			public @Key @Column(name = "office_id") Integer officeKey;
-			public @Column(name = "office_name") String name;
-			public int primary;
-		}
-
-		@Override
-		public String toString() {
-			return "EmployeeMultiRelation [employeeId=" + employeeId + ", type=" + type + ", name=" + name + ", salary="
-					+ salary + ", hired=" + hired + ", offices=" + offices + "]";
-		}
-		
-		
-		
-	}
-	@Test
-	public void mapRelations() throws Exception {
-		
-		dbRule.transact(
-			"insert into employee(type, name, salary, hired) values ('SALARY', 'Steve Jobs', '41000000', '1982-05-13')",
-			"insert into office(office_name, `primary`, employee_id) values ('Office A', 1, 1)",
-			"insert into office(office_name, `primary`, employee_id) values ('Office B', 0, 1)",
-			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
-		);
-		
-		List<EmployeeMultiRelation> es = dbRule.getSQLPlus().fetch(EmployeeMultiRelation.class, "select * from employee e join office o on e.employee_id = o.employee_id");
-		assertEquals(1, es.size());
-		assertEquals(3, es.get(0).offices.size());
-		assertEquals("Office A", es.get(0).offices.get(0).name);
-		assertEquals("Office B", es.get(0).offices.get(1).name);
-		assertEquals("Office C", es.get(0).offices.get(2).name);
-	}
-	
-	@Test
-	public void leavesMultiRelationNullIfNoFieldsForIt() throws Exception {
-		dbRule.transact(
-			"insert into employee(type, name, salary, hired) values ('SALARY', 'Steve Jobs', '41000000', '1982-05-13')",
-			"insert into office(office_name, `primary`, employee_id) values ('Office A', 1, 1)",
-			"insert into office(office_name, `primary`, employee_id) values ('Office B', 0, 1)",
-			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
-		);
-		List<EmployeeMultiRelation> es = dbRule.getSQLPlus().fetch(EmployeeMultiRelation.class, "select * from employee e");
-		assertEquals(1, es.size());
-		assertNull(es.get(0).offices);
-	}
-	
-	public static class EmployeeSingleRelation {
-		public enum Type { HOURLY, SALARY; }
-		public Integer employeeId;
-		public Type type;
-		public String name;
-		public Integer salary;
-		public Date hired;
-		public @SingleRelation Address address;
-	}
-	@Test
-	public void leavesSingleRelationNullIfNoFieldsForIt() throws Exception {
-		dbRule.transact("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
-		dbRule.transact("insert into employee(type, name, salary, hired, address_id) values('HOURLY', 'Billy Bob', '42000', '2015-01-01', 1)");
-		EmployeeSingleRelation emp = dbRule.getSQLPlus().findUnique(EmployeeSingleRelation.class, "select * from employee");
-		assertNull(emp.address);
 	}
 	
 	@Test
@@ -480,7 +346,7 @@ public class QueryTest {
 		dbRule.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).bind(toCreate);
-			}, MappingException.class);
+			}, POJOBindException.class);
 		});
 	}
 	

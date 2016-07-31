@@ -17,15 +17,15 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.tyler.sqlplus.ResultMapper;
 import com.tyler.sqlplus.conversion.AttributeConverter;
 import com.tyler.sqlplus.conversion.ConversionPolicy;
-import com.tyler.sqlplus.exception.MappingException;
 import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
+import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.mapping.ClassMetaData;
-import com.tyler.sqlplus.mapping.ResultStream;
 import com.tyler.sqlplus.utility.ReflectionUtils;
+import com.tyler.sqlplus.utility.ResultStream;
 
 public class Query {
 
@@ -71,8 +71,14 @@ public class Query {
 	public <T> Stream<T> streamAs(Class<T> klass) {
 		try {
 			applyBatches();
-			ResultSet rs = ps.executeQuery();
-			return new ResultStream<T>(rs, klass, conversionPolicy).stream();
+			ResultMapper<T> pojoMapper = ResultMapper.forType(klass);
+			return ResultStream.stream(ps.executeQuery()).map(rs -> {
+				try {
+					return pojoMapper.map(rs);
+				} catch (SQLException e) {
+					throw new RuntimeException();
+				}
+			});
 		} catch (SQLException e) {
 			throw new SQLRuntimeException(e);
 		}
@@ -116,8 +122,7 @@ public class Query {
 			if (rs.getMetaData().getColumnCount() > 1) {
 				throw new SQLRuntimeException("Scalar query returned more than 1 column");
 			}
-			//return conversionPolicy.findConverter(scalarClass).get(rs, 1);
-			return null;
+			return conversionPolicy.findConverter(scalarClass).get(rs, 1);
 		} catch (SQLException e) {
 			throw new SQLRuntimeException("Error retrieving scalar value", e);
 		}
@@ -166,8 +171,8 @@ public class Query {
 				ResultSet rsKeys = ps.getGeneratedKeys();
 				
 				while (rsKeys.next()) {
-					//T key = conversionPolicy.findConverter(targetKeyClass).get(rsKeys, 1);
-					keys.add(null);
+					T key = conversionPolicy.findConverter(targetKeyClass).get(rsKeys, 1);
+					keys.add(key);
 				}
 				
 				return Optional.of(keys);
@@ -193,22 +198,23 @@ public class Query {
 	 */
 	public Query bind(Object o) {
 		
-		ClassMetaData meta = ClassMetaData.getMetaData(o.getClass());
-		
+		Class<?> klass = o.getClass();
 		LinkedHashMap<Integer, Object> bindParams = new LinkedHashMap<>();
 		for (String paramLabel : paramLabel_paramIndex.keySet()) {
 			
-			Optional<Field> mappedField = meta.getMappedField(paramLabel);
-			if (!mappedField.isPresent()) {
-				throw new MappingException("No member exists in class " + o.getClass().getName() + " to bind a value for parameter '" + paramLabel + "'");
+			Field mappedField;
+			try {
+				mappedField = klass.getDeclaredField(paramLabel);
+			} catch (NoSuchFieldException | SecurityException e1) {
+				throw new POJOBindException("No member exists in class " + o.getClass().getName() + " to bind a value for parameter '" + paramLabel + "'");
 			}
 			
 			Object member = null;
 			try {
-				member = ReflectionUtils.get(mappedField.get(), o);
+				member = ReflectionUtils.get(mappedField, o);
 			}
 			catch (IllegalArgumentException | IllegalAccessException e) {
-				throw new MappingException(e);
+				throw new POJOBindException(e);
 			}
 			
 			Integer paramIndex = paramLabel_paramIndex.get(paramLabel);
