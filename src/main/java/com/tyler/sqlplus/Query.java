@@ -108,7 +108,7 @@ public class Query {
 				try {
 					return pojoMapper.map(rs);
 				} catch (SQLException e) {
-					throw new RuntimeException();
+					throw new SQLRuntimeException(e);
 				}
 			});
 		} catch (SQLException e) {
