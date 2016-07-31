@@ -4,7 +4,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
@@ -12,7 +11,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,7 +58,7 @@ public class QueryTest {
 				new Query("select address_id from address where state = :state and city = :city", conn).setParameter("state", "s").getUniqueResultAs(Address.class);
 				fail("Expected query to fail because no parameter was set");
 			} catch (SQLRuntimeException e) {
-				assertEquals("No value set for parameter 'city'", e.getMessage());
+				assertEquals("Missing parameter values for the following parameters: [city]", e.getMessage());
 			}
 		}
 	}
@@ -337,14 +335,13 @@ public class QueryTest {
 		h2.batch("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
 		
 		h2.getSQLPlus().transact(conn -> {
-			Optional<List<Integer>> keys = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+			List<Integer> keys = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
 			                                   .setParameter("type", "HOURLY")
 			                                   .setParameter("name", "tester-2")
 			                                   .setParameter("hired", "2015-01-01")
 			                                   .setParameter("salary", "10000")
 			                                   .executeUpdate(Integer.class);
-			assertTrue(keys.isPresent());
-			assertEquals(new Integer(2), keys.get().get(0));
+			assertEquals(new Integer(2), keys.get(0));
 		});
 	}
 
