@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
@@ -145,7 +146,7 @@ public class ResultMapperTest {
 	}
 	
 	@Test
-	public void testFindMappableFieldsNoCustomMappings() throws Exception {
+	public void testDetermineMappableFieldsWithNoCustomMappingsOrRelationClasses() throws Exception {
 		
 		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
 		when(rsMeta.getColumnCount()).thenReturn(2);
@@ -161,6 +162,27 @@ public class ResultMapperTest {
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertFalse(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
+	}
+	
+	@Test
+	public void testDetermineMappableFieldsWhenCustomMappingsArePresent() throws Exception {
+		
+		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
+		when(rsMeta.getColumnCount()).thenReturn(2);
+		when(rsMeta.getColumnLabel(1)).thenReturn("mappableA");
+		when(rsMeta.getColumnLabel(2)).thenReturn("customField");
+		
+		ResultSet rsToMap = mock(ResultSet.class);
+		when(rsToMap.getMetaData()).thenReturn(rsMeta);
+		when(rsToMap.getString("mappableA")).thenReturn("valA");
+		when(rsToMap.getString("customField")).thenReturn("valB");
+		
+		Map<String, String> customMappings = new HashMap<>();
+		customMappings.put("customField", "mappableB");
+		Set<Field> mappableFields = ResultMapper.determineMappableFields(rsToMap, POJOMappableFields.class, customMappings);
+		
+		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
+		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
 	}
 	
 	@Test
