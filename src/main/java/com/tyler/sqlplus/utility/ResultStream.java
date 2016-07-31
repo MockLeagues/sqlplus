@@ -39,9 +39,6 @@ public class ResultStream {
 		
 	};
 	
-	/**
-	 * Returns a stream over the given ResultSet
-	 */
 	public static Stream<ResultSet> stream(ResultSet rs) throws SQLException {
 		Iterator<ResultSet> rsIter = new ResultIterator(rs);
 		Spliterator<ResultSet> rsSpliterator = Spliterators.spliteratorUnknownSize(rsIter, Spliterator.ORDERED);
