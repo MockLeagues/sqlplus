@@ -1,19 +1,12 @@
-package base;
+package com.tyler.sqlplus.rule;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
 
-import org.junit.rules.ExternalResource;
-
-import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 
-public class EmployeeDBRule extends ExternalResource {
+public class H2EmployeeDBRule extends AbstractDBRule {
 
 	static {
 		try {
@@ -23,16 +16,7 @@ public class EmployeeDBRule extends ExternalResource {
 		}
 	}
 	
-	private SQLPlus sqlPlus;
-	
-	public EmployeeDBRule() {
-		this.sqlPlus = new SQLPlus(this::getConnection);
-	}
-	
-	public SQLPlus getSQLPlus() {
-		return sqlPlus;
-	}
-	
+	@Override
 	public Connection getConnection() {
 		try {
 			return DriverManager.getConnection("jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1", "sa", "sa");
@@ -42,7 +26,7 @@ public class EmployeeDBRule extends ExternalResource {
 	}
 	
 	@Override
-	public void before() {
+	public void setupSchema() {
 		
 		try {
 			
@@ -124,36 +108,8 @@ public class EmployeeDBRule extends ExternalResource {
 		}
 	}
 	
-	public String[][] query(String sql) {
-		try (Connection conn = getConnection()) {
-			List<String[]> rows = new ArrayList<>();
-			ResultSet rs = conn.createStatement().executeQuery(sql);
-			int cols = rs.getMetaData().getColumnCount();
-			while (rs.next()) {
-				List<String> row = new ArrayList<>();
-				for (int i = 1; i <= cols; i++) {
-					row.add(rs.getString(i));
-				}
-				rows.add(row.toArray(new String[row.size()]));
-			}
-			return rows.toArray(new String[rows.size()][cols]);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	public void transact(String... cmds) throws SQLException {
-		try (Connection conn = getConnection()) {
-			Statement st = conn.createStatement();
-			for (String cmd : cmds) {
-				st.addBatch(cmd);
-			}
-			st.executeBatch();
-		}
-	}
-	
 	@Override
-	public void after() {
+	public void destroySchema() {
 		try {
 			try (Connection conn = getConnection()) {
 				conn.createStatement().executeUpdate("drop table address");
