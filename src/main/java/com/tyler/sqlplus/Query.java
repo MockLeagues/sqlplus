@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -67,22 +66,6 @@ public class Query {
 		return this;
 	}
 	
-	public <T> Stream<T> streamAs(Class<T> klass) {
-		try {
-			applyBatches();
-			ResultMapper<T> pojoMapper = ResultMapper.forType(klass);
-			return ResultStream.stream(ps.executeQuery()).map(rs -> {
-				try {
-					return pojoMapper.map(rs);
-				} catch (SQLException e) {
-					throw new RuntimeException();
-				}
-			});
-		} catch (SQLException e) {
-			throw new SQLRuntimeException(e);
-		}
-	}
-	
 	/**
 	 * Executes this query, mapping results to a simple list of maps
 	 */
@@ -90,6 +73,17 @@ public class Query {
 	public List<Map<String, String>> fetch() {
 		Object result = fetchAs(Map.class);
 		return (List<Map<String, String>>) result;
+	}
+	/**
+	 * Executes this query, mapping the single result to an instance of the given POJO class. If more than 1 result is returned,
+	 * a NonUniqueResultException will be thrown
+	 */
+	public <T> T getUniqueResultAs(Class<T> resultClass) {
+		List<T> results = fetchAs(resultClass);
+		if (results.size() != 1) {
+			throw new NonUniqueResultException();
+		}
+		return results.get(0);
 	}
 	
 	/**
@@ -106,6 +100,22 @@ public class Query {
 		return results;
 	}
 	
+	public <T> Stream<T> streamAs(Class<T> klass) {
+		try {
+			applyParameterBatches();
+			ResultMapper<T> pojoMapper = ResultMapper.forType(klass);
+			return ResultStream.stream(ps.executeQuery()).map(rs -> {
+				try {
+					return pojoMapper.map(rs);
+				} catch (SQLException e) {
+					throw new RuntimeException();
+				}
+			});
+		} catch (SQLException e) {
+			throw new SQLRuntimeException(e);
+		}
+	}
+	
 	/**
 	 * Returns the result of this query as a 'scalar' (single) value of the given Java class type.
 	 * 
@@ -113,7 +123,7 @@ public class Query {
 	 */
 	public <T> T fetchScalar(Class<T> scalarClass) {
 		try {
-			applyBatches();
+			applyParameterBatches();
 			ResultSet rs = ps.executeQuery();
 			if (!rs.next()) {
 				throw new NoResultsException();
@@ -128,33 +138,19 @@ public class Query {
 	}
 	
 	/**
-	 * Executes this query, mapping the single result to an instance of the given POJO class. If more than 1 result is returned,
-	 * a NonUniqueResultException will be thrown
-	 */
-	public <T> T getUniqueResultAs(Class<T> resultClass) {
-		List<T> results = fetchAs(resultClass);
-		if (results.size() != 1) {
-			throw new NonUniqueResultException();
-		}
-		return results.get(0);
-	}
-	
-	/**
 	 * Execute this query's payload as an update statement
 	 */
 	public void executeUpdate() {
-		executeUpdate(null);
+		executeUpdate(Object.class);
 	}
 	
 	/**
 	 * Executes this query's payload as an update statement, returning the generated keys as instances of the given class
 	 */
-	public <T> Optional<List<T>> executeUpdate(Class<T> targetKeyClass) {
+	public <T> List<T> executeUpdate(Class<T> targetKeyClass) {
 		
 		try {
-			
-			boolean returnKeys = targetKeyClass != null;
-			applyBatches();
+			applyParameterBatches();
 			
 			if (paramBatches.size() > 1) {
 				ps.executeBatch();
@@ -162,34 +158,57 @@ public class Query {
 				ps.executeUpdate();
 			}
 			
-			if (!returnKeys) {
-				return Optional.empty();
+			List<T> keys = new ArrayList<>();
+			ResultSet rsKeys = ps.getGeneratedKeys();
+			
+			AttributeConverter<T> keyConverter = conversionPolicy.findConverter(targetKeyClass);
+			while (rsKeys.next()) {
+				keys.add(keyConverter.get(rsKeys, 1));
 			}
-			else {
-				List<T> keys = new ArrayList<>();
-				ResultSet rsKeys = ps.getGeneratedKeys();
-				
-				while (rsKeys.next()) {
-					T key = conversionPolicy.findConverter(targetKeyClass).get(rsKeys, 1);
-					keys.add(key);
-				}
-				
-				return Optional.of(keys);
-			}
+			return keys;
 					
 		} catch (SQLException e) {
 			throw new SQLRuntimeException(e);
 		}
-		
 	}
 
 	/**
-	 * Finishes and validates the current running manual parameter batch
+	 * Applies all parameter batches stored in this query to its PreparedStatement object. If there is a running manual parameter batch
+	 * that has not been queued yet, that will also be added to the batch queue.
+	 * 
+	 * Queries which have more than 1 parameter batch will result in a call to addBatch() on the underlying PreparedStatement object for each batch.
+	 * Queries with only 1 parameter batch will simply apply each parameter in the batch and then return
 	 */
-	public Query addBatch() {
-		addBatch(manualParamBatch);
-		manualParamBatch = new LinkedHashMap<>();
-		return this;
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private void applyParameterBatches() {
+		
+		if (!manualParamBatch.isEmpty()) {
+			finishBatch();
+		}
+		
+		if (this.paramBatches.isEmpty() && !paramLabel_paramIndex.isEmpty()) {
+			throw new SQLRuntimeException("No parameters set");
+		}
+		
+		try {
+			
+			for (Map<Integer, Object> paramBatch : this.paramBatches) {
+			
+				for (Map.Entry<Integer, Object> e : paramBatch.entrySet()) {
+					Object objParam = e.getValue();
+					Integer paramIndex = e.getKey();
+					AttributeConverter converter = conversionPolicy.findConverter(objParam.getClass());
+					converter.set(ps, paramIndex, objParam);
+				}
+				
+				if (this.paramBatches.size() > 1) {
+					ps.addBatch();
+				}
+			}
+		}
+		catch (SQLException e) {
+			throw new SQLRuntimeException(e);
+		}
 	}
 	
 	/**
@@ -223,40 +242,14 @@ public class Query {
 		addBatch(bindParams);
 		return this;
 	}
-	
+
 	/**
-	 * Applies all parameter batches stored in this query to its PreparedStatement object. If there is a running manual parameter batch
-	 * that has not been queued yet, that will also be added to the batch queue.
-	 * 
-	 * Queries which have more than 1 parameter batch will result in a call to addBatch() on the underlying PreparedStatement object for each batch.
-	 * Queries with only 1 parameter batch will simply apply each parameter in the batch and then return
+	 * Finishes and validates the current running manual parameter batch
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private void applyBatches() {
-		
-		if (!manualParamBatch.isEmpty()) {
-			addBatch();
-		}
-		
-		try {
-			
-			for (Map<Integer, Object> paramBatch : this.paramBatches) {
-			
-				for (Map.Entry<Integer, Object> e : paramBatch.entrySet()) {
-					Object objParam = e.getValue();
-					Integer paramIndex = e.getKey();
-					AttributeConverter converter = conversionPolicy.findConverter(objParam.getClass());
-					converter.set(ps, paramIndex, objParam);
-				}
-				
-				if (this.paramBatches.size() > 1) {
-					ps.addBatch();
-				}
-			}
-		}
-		catch (SQLException e) {
-			throw new SQLRuntimeException(e);
-		}
+	public Query finishBatch() {
+		addBatch(manualParamBatch);
+		manualParamBatch = new LinkedHashMap<>();
+		return this;
 	}
 	
 	/**
@@ -266,11 +259,15 @@ public class Query {
 	private void addBatch(LinkedHashMap<Integer, Object> newBatch) {
 		
 		// See if we are missing any labeled parameters
-		paramLabel_paramIndex.forEach((label, index) -> {
+		List<String> missingParams = new ArrayList<>();
+		paramLabel_paramIndex.forEach((param, index) -> {
 			if (!newBatch.containsKey(index)) {
-				throw new SQLRuntimeException("No value set for parameter '" + label + "'");
+				missingParams.add(param);
 			}
 		});
+		if (!missingParams.isEmpty()) {
+			throw new SQLRuntimeException("Missing parameter values for the following parameters: " + missingParams);
+		}
 		
 		paramBatches.add(newBatch);
 	}

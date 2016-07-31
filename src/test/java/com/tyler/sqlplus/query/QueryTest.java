@@ -217,12 +217,12 @@ public class QueryTest {
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01")
 			    .setParameter("salary", "100")
-			    .addBatch()
+			    .finishBatch()
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test2")
 			    .setParameter("hired", "2015-01-02")
 			    .setParameter("salary", "200")
-			    .addBatch()
+			    .finishBatch()
 			    .executeUpdate();
 			
 			String[][] expect = {
@@ -246,7 +246,7 @@ public class QueryTest {
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01")
 			    .setParameter("salary", "100")
-			    .addBatch()
+			    .finishBatch()
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test2")
 			    .setParameter("hired", "2015-01-02")
@@ -272,7 +272,7 @@ public class QueryTest {
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01");
 			
-			assertThrows(q::addBatch, SQLRuntimeException.class);
+			assertThrows(q::finishBatch, SQLRuntimeException.class);
 		});
 	}
 	
