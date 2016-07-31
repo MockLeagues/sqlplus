@@ -197,8 +197,13 @@ public class Query {
 				for (Map.Entry<Integer, Object> e : paramBatch.entrySet()) {
 					Object objParam = e.getValue();
 					Integer paramIndex = e.getKey();
-					AttributeConverter converter = conversionPolicy.findConverter(objParam.getClass());
-					converter.set(ps, paramIndex, objParam);
+					if (objParam == null) {
+						ps.setObject(paramIndex, null);
+					}
+					else {
+						AttributeConverter converter = conversionPolicy.findConverter(objParam.getClass());
+						converter.set(ps, paramIndex, objParam);
+					}
 				}
 				
 				if (this.paramBatches.size() > 1) {

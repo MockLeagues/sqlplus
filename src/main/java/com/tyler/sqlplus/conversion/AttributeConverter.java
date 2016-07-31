@@ -3,8 +3,11 @@ package com.tyler.sqlplus.conversion;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 /**
  * Manages conversion of java objects to (if being set on a {@link PreparedStatement}) and from (if being read from a {@link ResultSet}) database values
@@ -33,6 +36,31 @@ public interface AttributeConverter<T> {
 
 			@Override
 			public void set(PreparedStatement ps, int parameterIndex, LocalDate date) throws SQLException {
+				String stringDate = format.format(date);
+				ps.setString(parameterIndex, stringDate);
+			}
+			
+		};
+		
+	}
+	
+	public static AttributeConverter<Date> forDatePattern(String pattern) {
+		
+		final SimpleDateFormat format = new SimpleDateFormat(pattern);
+		
+		return new AttributeConverter<Date>() {
+
+			@Override
+			public Date get(ResultSet rs, String column) throws SQLException {
+				try {
+					return format.parse(rs.getString(column));
+				} catch (ParseException e) {
+					throw new SQLException(e);
+				}
+			}
+
+			@Override
+			public void set(PreparedStatement ps, int parameterIndex, Date date) throws SQLException {
 				String stringDate = format.format(date);
 				ps.setString(parameterIndex, stringDate);
 			}

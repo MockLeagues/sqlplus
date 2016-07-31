@@ -8,8 +8,8 @@ import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 
 import org.junit.Rule;
@@ -39,6 +39,34 @@ public class QueryTest {
 		}
 	}
 	
+	public static class Employee {
+		public enum Type { HOURLY, SALARY; }
+		public Integer employeeId;
+		public Type type;
+		public String name;
+		public LocalDate hired;
+		public Integer salary;
+	}
+	
+	public static class Address {
+		
+		public Integer addressId;
+		public String street;
+		public String city;
+		public String state;
+		public String zip;
+		
+		public Address() {}
+		
+		public Address(String street, String city, String state, String zip) {
+			this.street = street;
+			this.city = city;
+			this.state = state;
+			this.zip = zip;
+		}
+		
+	}
+	
 	@Test
 	public void syntaxErrorIfUnkownParamAdded() throws SQLException {
 		try (Connection conn = h2.getConnection()) {
@@ -61,25 +89,6 @@ public class QueryTest {
 				assertEquals("Missing parameter values for the following parameters: [city]", e.getMessage());
 			}
 		}
-	}
-	
-	public static class Address {
-		
-		public Integer addressId;
-		public String street;
-		public String city;
-		public String state;
-		public String zip;
-		
-		public Address() {}
-		
-		public Address(String street, String city, String state, String zip) {
-			this.street = street;
-			this.city = city;
-			this.state = state;
-			this.zip = zip;
-		}
-		
 	}
 	
 	@Test
@@ -178,14 +187,6 @@ public class QueryTest {
 		assertNotNull(result.city);
 	}
 	
-	public static class Employee {
-		public enum Type { HOURLY, SALARY; }
-		public Integer employeeId;
-		public Type type;
-		public String name;
-		public Date hired;
-		public Integer salary;
-	}
 	@Test
 	public void mapEnumTypes() throws Exception {
 		h2.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
@@ -275,9 +276,11 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void objectInsertBatch() throws Exception {
+	public void objectBind() throws Exception {
+		
 		Employee toCreate = new Employee();
-		toCreate.hired = new Date();
+		LocalDate hiredAt = LocalDate.now();
+		toCreate.hired = hiredAt;
 		toCreate.name = "tester-pojo";
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
@@ -287,37 +290,42 @@ public class QueryTest {
 			    .bind(toCreate)
 			    .executeUpdate();
 			
-			Integer actual = Integer.parseInt(h2.query("select count(*) from employee")[0][0]);
-			assertEquals(new Integer(1), actual);
+			String[] actualRow = h2.query("select type, name, hired, salary from employee")[0];
+			String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  hiredAt.toString(), "20000" };
+			assertArrayEquals(expectRow, actualRow);
 		});
 	}
 	
 	@Test
-	public void objectInsertBatchParamsOutOfOrder() throws Exception {
+	public void objectBindWithNullParams() throws Exception {
+		
 		Employee toCreate = new Employee();
-		toCreate.hired = new Date();
-		toCreate.name = "tester-pojo";
-		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
+		toCreate.name = "tester-pojo";
+		
 		h2.getSQLPlus().transact(conn -> {
 			
-			new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn)
+			new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
 			    .bind(toCreate)
 			    .executeUpdate();
 			
-			Integer actual = Integer.parseInt(h2.query("select count(*) from employee")[0][0]);
-			assertEquals(new Integer(1), actual);
+			String[] actualRow = h2.query("select type, name, hired, salary from employee")[0];
+			String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  null, null };
+			assertArrayEquals(expectRow, actualRow);
+			assertArrayEquals(expectRow, actualRow);
 		});
+		
 	}
 	
 	public static class EmployeeMissingBindParam {
-		public enum Type { HOURLY, SALARY; }
 		public com.tyler.sqlplus.query.QueryTest.Employee.Type type;
 		public String name;
 		public Integer salary;
 	}
+	
 	@Test
 	public void bindParamsFailsIfNoMemberForParam() throws Exception {
+		
 		EmployeeMissingBindParam toCreate = new EmployeeMissingBindParam();
 		toCreate.name = "tester-pojo";
 		toCreate.salary = 20000;

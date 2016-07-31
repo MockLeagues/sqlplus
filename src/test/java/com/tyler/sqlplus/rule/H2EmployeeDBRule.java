@@ -59,8 +59,8 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 						"`employee_id` int(11) not null auto_increment," +
 						"`type` varchar(45) not null," +
 						"`name` varchar(45) not null," +
-						"`salary` int(11) not null," +
-						"`hired` date not null," +
+						"`salary` int(11) null," +
+						"`hired` date null," +
 						"`address_id` int(11) default null," +
 						"primary key (`employee_id`)" +
 					")"
