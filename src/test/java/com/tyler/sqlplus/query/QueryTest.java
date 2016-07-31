@@ -6,17 +6,18 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import org.junit.Rule;
 import org.junit.Test;
 
 import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.exception.POJOBindException;
+import com.tyler.sqlplus.exception.QuerySyntaxException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
@@ -28,6 +29,10 @@ public class QueryTest {
 	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
 	
 	protected static void assertThrows(Task t, Class<? extends Throwable> expectType) {
+		assertThrows(t, expectType, null);
+	}
+	
+	protected static void assertThrows(Task t, Class<? extends Throwable> expectType, String expectMsg) {
 		try {
 			t.run();
 			fail("Expected test to throw instance of " + expectType.getName() + " but no error was thrown");
@@ -35,6 +40,11 @@ public class QueryTest {
 		catch (Throwable thrownError) {
 			if (!expectType.equals(thrownError.getClass())) {
 				fail("Expected test to throw instance of " + expectType.getName() + " but no instead got error of type " + thrownError.getClass().getName());
+			}
+			if (expectMsg != null) {
+				if (!Objects.equals(thrownError.getMessage(), expectMsg)) {
+					fail("Expected error with message " + expectMsg + ", instead got message " + thrownError.getMessage());
+				}
 			}
 		}
 	}
@@ -68,31 +78,68 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void syntaxErrorIfUnkownParamAdded() throws SQLException {
-		try (Connection conn = h2.getConnection()) {
-			Query q = new Query("select * from employee where employee_id = :id", conn);
-			q.setParameter("idx", "123");
-			fail("Excepted failure setting unknown parameter");
-		} catch (SQLRuntimeException e) {
-			assertEquals("Unknown query parameter: idx", e.getMessage());
-		}
+	public void testErrorThrownIfUnkownParamAdded() throws SQLException {
+		h2.getSQLPlus().transact(conn -> {
+			assertThrows(() -> {
+				Query q = new Query("select * from employee where employee_id = :id", conn);
+				q.setParameter("idx", "123");
+			}, QuerySyntaxException.class, "Unknown query parameter: idx");
+		});
 	}
 	
 	@Test
-	public void throwsErrorIfParamValueNotSet() throws Exception {
+	public void testErrorThrownIfParamValueNotSet() throws Exception {
 		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
-		try (Connection conn = h2.getConnection()) {
-			try {
+		h2.getSQLPlus().transact(conn -> {
+			assertThrows(() -> {
 				new Query("select address_id from address where state = :state and city = :city", conn).setParameter("state", "s").getUniqueResultAs(Address.class);
-				fail("Expected query to fail because no parameter was set");
-			} catch (SQLRuntimeException e) {
-				assertEquals("Missing parameter values for the following parameters: [city]", e.getMessage());
-			}
-		}
+			}, QuerySyntaxException.class, "Missing parameter values for the following parameters: [city]");
+		});
 	}
 	
 	@Test
-	public void mapResultsToNonRelationalPOJO() throws Exception {
+	public void testThrowsIfParamIndexOutOfRange() throws Exception {
+		h2.getSQLPlus().transact(conn -> {
+			assertThrows(() -> {
+				new Query("select address_id from address where city = ?", conn).setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
+			}, QuerySyntaxException.class, "Parameter index 2 is out of range of this query's parameters (max parameters: 1)");
+		});
+	}
+	
+	@Test
+	public void testErrorThrownIfNoParamsSet() throws Exception {
+		h2.getSQLPlus().transact(conn -> {
+			assertThrows(() -> {
+				new Query("select * from employee where name = :name", conn).fetch();
+			}, QuerySyntaxException.class, "No parameters set");
+		});
+	}
+	
+	@Test
+	public void testSetParamsWithMixtureOfLabelsAndQuestionMarks() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+		);
+		
+		h2.getSQLPlus().transact(conn -> {
+			
+			String sql =
+				"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
+				"from address a " +
+				"where a.city = ? and a.state = :state";
+			
+			Address addr = new Query(sql, conn).setParameter(1, "Anytown").setParameter("state", "MN").getUniqueResultAs(Address.class);
+			assertEquals("Maple Street", addr.street);
+			assertEquals("Anytown", addr.city);
+			assertEquals("MN", addr.state);
+			assertEquals("12345", addr.zip);
+		});
+	}
+	
+	@Test
+	public void testMapResultsToNonRelationalPOJO() throws Exception {
 		h2.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
@@ -271,7 +318,7 @@ public class QueryTest {
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01");
 			
-			assertThrows(q::finishBatch, SQLRuntimeException.class);
+			assertThrows(q::finishBatch, QuerySyntaxException.class);
 		});
 	}
 	
@@ -324,7 +371,7 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void bindParamsFailsIfNoMemberForParam() throws Exception {
+	public void testBindParamsFailsIfNoMemberForParam() throws Exception {
 		
 		EmployeeMissingBindParam toCreate = new EmployeeMissingBindParam();
 		toCreate.name = "tester-pojo";

@@ -21,10 +21,16 @@ import com.tyler.sqlplus.conversion.ConversionPolicy;
 import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.POJOBindException;
+import com.tyler.sqlplus.exception.QuerySyntaxException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 import com.tyler.sqlplus.utility.ResultStream;
 
+/**
+ * Provides encapsulation for an SQL query, allowing results to be retrieved and streamed as POJOs
+ * @author Tyler
+ *
+ */
 public class Query {
 
 	private static final String REGEX_PARAM = ":\\w+|\\?";
@@ -52,14 +58,15 @@ public class Query {
 	
 	public Query setParameter(Integer index, Object val) {
 		if (index > paramLabel_paramIndex.size()) {
-			throw new SQLRuntimeException("Parameter index " + index + " is out of range of this query's parameters");
+			throw new QuerySyntaxException(
+				"Parameter index " + index + " is out of range of this query's parameters (max parameters: " + paramLabel_paramIndex.size() + ")");
 		}
 		return setParameter(index + "", val);
 	}
 	
 	public Query setParameter(String key, Object val) {
 		if (!paramLabel_paramIndex.containsKey(key)) {
-			throw new SQLRuntimeException("Unknown query parameter: " + key);
+			throw new QuerySyntaxException("Unknown query parameter: " + key);
 		}
 		Integer paramIndex = paramLabel_paramIndex.get(key);
 		manualParamBatch.put(paramIndex, val);
@@ -108,7 +115,7 @@ public class Query {
 				try {
 					return pojoMapper.map(rs);
 				} catch (SQLException e) {
-					throw new SQLRuntimeException(e);
+					throw new POJOBindException(e);
 				}
 			});
 		} catch (SQLException e) {
@@ -187,7 +194,7 @@ public class Query {
 		}
 		
 		if (this.paramBatches.isEmpty() && !paramLabel_paramIndex.isEmpty()) {
-			throw new SQLRuntimeException("No parameters set");
+			throw new QuerySyntaxException("No parameters set");
 		}
 		
 		try {
@@ -271,7 +278,7 @@ public class Query {
 			}
 		});
 		if (!missingParams.isEmpty()) {
-			throw new SQLRuntimeException("Missing parameter values for the following parameters: " + missingParams);
+			throw new QuerySyntaxException("Missing parameter values for the following parameters: " + missingParams);
 		}
 		
 		paramBatches.add(newBatch);
