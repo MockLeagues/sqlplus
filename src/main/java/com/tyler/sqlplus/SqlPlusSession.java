@@ -6,13 +6,13 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
- * Middle-man class to provide a clean interface for producing query objects from a raw JDBC connection
+ * Represents an individual unit of work within the SqlPlus environment
  */
-public class SqlPlusConnection implements Closeable {
+public class SqlPlusSession implements Closeable {
 
 	private Connection conn;
 	
-	public SqlPlusConnection(Connection conn) {
+	public SqlPlusSession(Connection conn) {
 		this.conn = conn;
 	}
 	

@@ -58,7 +58,7 @@ public class SqlPlus {
 	/**
 	 * Executes an action against a database connection obtained from this instance's connection factory
 	 */
-	public void open(Work<SqlPlusConnection> action) {
+	public void open(Work<SqlPlusSession> action) {
 		query(conn -> {
 			action.doWork(conn);
 			return null;
@@ -68,9 +68,9 @@ public class SqlPlus {
 	/**
 	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 */
-	public <T> T query(ReturningWork<SqlPlusConnection, T> action) {
+	public <T> T query(ReturningWork<SqlPlusSession, T> action) {
 		try (Connection conn = connectionFactory.get()) {
-			return action.doReturningWork(new SqlPlusConnection(conn));
+			return action.doReturningWork(new SqlPlusSession(conn));
 		} catch (Exception e) {
 			throw new SqlRuntimeException(e);
 		}
@@ -94,14 +94,14 @@ public class SqlPlus {
 	 * 
 	 * If any exceptions are thrown, the transaction is immediately rolled back
 	 */
-	public void transact(Work<SqlPlusConnection> action) {
+	public void transact(Work<SqlPlusSession> action) {
 
 		Connection conn = null;
 
 		try {
 			conn = connectionFactory.get();
 			conn.setAutoCommit(false);
-			action.doWork(new SqlPlusConnection(conn));
+			action.doWork(new SqlPlusSession(conn));
 			conn.commit();
 		}
 		catch (Exception e) {
