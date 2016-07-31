@@ -20,11 +20,11 @@ import com.tyler.sqlplus.functional.ReturningDBWork;
  * 
  * An instance of a SQLPLus object provides an interface for executing actions against a database connection
  */
-public class SQLPlus {
+public class SqlPlus {
 
 	private Supplier<Connection> connectionFactory;
 	
-	public SQLPlus(String url, String user, String pass) {
+	public SqlPlus(String url, String user, String pass) {
 		this(() -> {
 			try {
 				return DriverManager.getConnection(url, user, pass);
@@ -35,7 +35,7 @@ public class SQLPlus {
 		});
 	}
 
-	public SQLPlus(DataSource src) {
+	public SqlPlus(DataSource src) {
 		this(() -> {
 			try {
 				return src.getConnection();
@@ -45,7 +45,7 @@ public class SQLPlus {
 		});
 	}
 	
-	public SQLPlus(Supplier<Connection> factory) {
+	public SqlPlus(Supplier<Connection> factory) {
 		this.connectionFactory = factory;
 	}
 	

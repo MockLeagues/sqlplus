@@ -9,17 +9,17 @@ import java.util.List;
 
 import org.junit.rules.ExternalResource;
 
-import com.tyler.sqlplus.SQLPlus;
+import com.tyler.sqlplus.SqlPlus;
 
 public abstract class AbstractDBRule extends ExternalResource {
 
-	private SQLPlus sqlPlus;
+	private SqlPlus sqlPlus;
 	
 	public AbstractDBRule() {
-		this.sqlPlus = new SQLPlus(this::getConnection);
+		this.sqlPlus = new SqlPlus(this::getConnection);
 	}
 	
-	public SQLPlus getSQLPlus() {
+	public SqlPlus getSQLPlus() {
 		return sqlPlus;
 	}
 	
