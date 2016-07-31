@@ -1,5 +1,7 @@
 package com.tyler.sqlplus;
 
+import static java.util.stream.Collectors.*;
+
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.tyler.sqlplus.conversion.AttributeConverter;
@@ -83,10 +84,16 @@ public class Query {
 	/**
 	 * Executes this query, mapping results to a simple list of maps
 	 */
-	@SuppressWarnings("unchecked")
-	public List<Map<String, String>> fetch() {
-		Object result = fetchAs(Map.class);
-		return (List<Map<String, String>>) result;
+	public List<Map<String, Object>> fetch() {
+		ResultMapper<Map<String, Object>> rowMapper = ResultMapper.forMap();
+		return stream().map(rs -> {
+			try {
+				return rowMapper.map(rs);
+			}
+			catch (SQLException e) {
+				throw new SqlRuntimeException(e);
+			}
+		}).collect(toList());
 	}
 	/**
 	 * Executes this query, mapping the single result to an instance of the given POJO class. If more than 1 result is returned,
@@ -107,7 +114,7 @@ public class Query {
 	 * A NoResultsException is thrown if there are no results
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
-		List<T> results = streamAs(resultClass).collect(Collectors.toList());
+		List<T> results = streamAs(resultClass).collect(toList());
 		if (results.isEmpty()) {
 			throw new NoResultsException();
 		}
@@ -145,16 +152,20 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
+		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionPolicy, rsColumn_classFieldName);
+		return stream().map(rs -> {
+			try {
+				return pojoMapper.map(rs);
+			} catch (SQLException e) {
+				throw new POJOBindException(e);
+			}
+		});
+	}
+	
+	public <T> Stream<ResultSet> stream() {
 		try {
 			applyParameterBatches();
-			ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionPolicy, rsColumn_classFieldName);
-			return ResultStream.stream(ps.executeQuery()).map(rs -> {
-				try {
-					return pojoMapper.map(rs);
-				} catch (SQLException e) {
-					throw new POJOBindException(e);
-				}
-			});
+			return ResultStream.stream(ps.executeQuery());
 		} catch (SQLException e) {
 			throw new SqlRuntimeException(e);
 		}

@@ -47,16 +47,17 @@ public interface ResultMapper<T> {
 	 * Creates a result mapper which maps rows to hash maps
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T extends Map<String, String>> ResultMapper<Map<String, String>> forMap() {
-		return forMap(HashMap.class);
+	public static <T extends Map<String, Object>> ResultMapper<T> forMap() {
+		return (ResultMapper<T>) forMap(HashMap.class);
 	}
 	
 	/**
 	 * Creates a result mapper which maps rows to java Map objects of the given implementation
 	 */
-	public static <T extends Map<String, String>> ResultMapper<Map<String, String>> forMap(Class<T> impl) {
+	@SuppressWarnings("unchecked")
+	public static <T extends Map<String, Object>> ResultMapper<T> forMap(Class<T> impl) {
 		return rs -> {
-			Map<String, String> row;
+			Map<String, Object> row;
 			if (impl == Map.class) {
 				row = new HashMap<>();
 			}
@@ -68,10 +69,10 @@ public interface ResultMapper<T> {
 			
 			ResultSetMetaData meta = rs.getMetaData();
 			for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
-				row.put(meta.getColumnLabel(col), rs.getString(col));
+				row.put(meta.getColumnLabel(col), rs.getObject(col));
 			}
 			
-			return row;
+			return (T) row;
 		};
 	};
 
@@ -84,7 +85,7 @@ public interface ResultMapper<T> {
 		return forType(type, ConversionPolicy.DEFAULT, rsCol_fieldName);
 	}
 	
-	public static <E> ResultMapper<E> forType(Class<E> type, ConversionPolicy conversionPolicy, Map<String, String> rsCol_fieldName) throws SQLException {
+	public static <E> ResultMapper<E> forType(Class<E> type, ConversionPolicy conversionPolicy, Map<String, String> rsCol_fieldName) {
 
 		// Since we iterate over the POJO class fields when mapping them from the result set, we need to invert the given map
 		// to ensure the keys are the POJO class field names, not the result set columns

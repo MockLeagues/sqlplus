@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.junit.Rule;
@@ -188,7 +189,7 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void testMappingSinglePOJOWithCustomFieldMappings() throws Exception {
+	public void testMappingSinglePOJOithCustomFieldMappings() throws Exception {
 		h2.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
@@ -241,6 +242,30 @@ public class QueryTest {
 			}, POJOBindException.class, "Custom-mapped field streetName not found in class " + Address.class.getName() + " for result set column STREET_NAME");
 		});
 		
+	}
+	
+	@Test
+	public void testFetchingAsMaps() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+		);
+		
+		List<Map<String, Object>> rows = h2.getSQLPlus().query(conn -> conn.createQuery("select * from address").fetch());
+		assertEquals(2, rows.size());
+		
+		Map<String, Object> row1 = rows.get(0);
+		assertEquals("Maple Street", row1.get("STREET"));
+		assertEquals("Anytown", row1.get("CITY"));
+		assertEquals("MN", row1.get("STATE"));
+		assertEquals("12345", row1.get("ZIP"));
+		
+		Map<String, Object> row2 = rows.get(1);
+		assertEquals("Elm Street", row2.get("STREET"));
+		assertEquals("Othertown", row2.get("CITY"));
+		assertEquals("CA", row2.get("STATE"));
+		assertEquals("54321", row2.get("ZIP"));
 	}
 	
 	@Test

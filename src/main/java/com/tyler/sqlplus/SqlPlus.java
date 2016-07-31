@@ -139,7 +139,7 @@ public class SqlPlus {
 	/**
 	 * Shortcut method for creating a query which immediately returns a list of maps
 	 */
-	public List<Map<String, String>> fetch(String sql, Object... params) {
+	public List<Map<String, Object>> fetch(String sql, Object... params) {
 		return query(conn -> {
 			Query q = conn.createQuery(sql);
 			for (int i = 0; i < params.length; i++) {
