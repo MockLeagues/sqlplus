@@ -55,6 +55,7 @@ public class QueryTest {
 		public String name;
 		public LocalDate hired;
 		public Integer salary;
+		public List<Office> offices;
 	}
 
 	public static class Office {
@@ -63,12 +64,6 @@ public class QueryTest {
 		public boolean primary;
 		public int employeeId;
 	}
-	
-//	"`office_id` int(11) not null auto_increment," +
-//	"`office_name` varchar(45) not null," +
-//	"`primary` tinyint(4) not null," +
-//	"`employee_id` int(11) default null," +
-//	"primary key (`office_id`)" +
 	
 	public static class Address {
 		
