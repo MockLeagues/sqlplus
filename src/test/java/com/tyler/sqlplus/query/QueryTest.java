@@ -56,6 +56,19 @@ public class QueryTest {
 		public LocalDate hired;
 		public Integer salary;
 	}
+
+	public static class Office {
+		public Integer officeId;
+		public String officeName;
+		public boolean primary;
+		public int employeeId;
+	}
+	
+//	"`office_id` int(11) not null auto_increment," +
+//	"`office_name` varchar(45) not null," +
+//	"`primary` tinyint(4) not null," +
+//	"`employee_id` int(11) default null," +
+//	"primary key (`office_id`)" +
 	
 	public static class Address {
 		

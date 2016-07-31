@@ -12,8 +12,17 @@ import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.junit.Test;
 
@@ -169,4 +178,17 @@ public class ResultMapperTest {
 		assertArrayEquals(new String[]{"valA", "valB"}, row);
 	}
 
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testDetermineCollectionImpl() throws Exception {
+		assertEquals(new ArrayList<>(), ResultMapper.determineCollectionImpl(Collection.class));
+		assertEquals(new ArrayList<>(), ResultMapper.determineCollectionImpl(List.class));
+		assertEquals(new HashSet<>(), ResultMapper.determineCollectionImpl(Set.class));
+		assertEquals(new TreeSet<>(), ResultMapper.determineCollectionImpl(TreeSet.class));
+		assertEquals(new LinkedList<>(), ResultMapper.determineCollectionImpl(LinkedList.class));
+		assertEquals(new LinkedList<>(), ResultMapper.determineCollectionImpl(Deque.class));
+		assertEquals(new LinkedList<>(), ResultMapper.determineCollectionImpl(Queue.class));
+		assertTrue(ResultMapper.determineCollectionImpl(PriorityQueue.class) instanceof PriorityQueue);
+	}
+	
 }

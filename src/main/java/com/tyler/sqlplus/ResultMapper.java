@@ -5,11 +5,15 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
 import com.tyler.sqlplus.conversion.AttributeConverter;
@@ -91,6 +95,7 @@ public interface ResultMapper<T> {
 
 			private Set<Field> mappableFields;
 			
+			@SuppressWarnings({ "rawtypes", "unchecked" })
 			@Override
 			public E map(ResultSet rs) throws SQLException {
 				
@@ -117,28 +122,29 @@ public interface ResultMapper<T> {
 					
 					Object fieldValue = converterForField.get(rs, rsColumnName);
 					try {
-						ReflectionUtils.set(mappableField, instance, fieldValue);
-					} catch (IllegalArgumentException | IllegalAccessException e) {
+						if (Collection.class.isAssignableFrom(mappableField.getType())) {
+							Collection collectionField = (Collection) ReflectionUtils.get(mappableField, instance);
+							if (collectionField == null) {
+								collectionField = determineCollectionImpl((Class<Collection>) mappableField.getType());
+								ReflectionUtils.set(mappableField, instance, collectionField);
+							}
+							collectionField.add(fieldValue);
+						}
+						else {
+							ReflectionUtils.set(mappableField, instance, fieldValue);
+						}
+					} catch (IllegalArgumentException | IllegalAccessException | InstantiationException e) {
 						throw new POJOBindException("Unable to set field value for field " + mappableField, e);
 					}
 				}
 				
 				return instance;
 			}
-			
+
 		};
 		
 	}
 
-	public static List<String> getColumnLabels(ResultSet rs) throws SQLException {
-		ResultSetMetaData meta = rs.getMetaData();
-		List<String> labels = new ArrayList<>();
-		for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
-			labels.add(meta.getColumnName(col));
-		}
-		return labels;
-	}
-	
 	public static Set<Field> determineMappableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName) throws SQLException {
 		
 		Set<Field> mappableFields = new HashSet<>();
@@ -171,6 +177,23 @@ public interface ResultMapper<T> {
 		}
 		
 		return mappableFields;
+	}
+	
+	public static <T extends Collection<T>> Collection<T> determineCollectionImpl(Class<T> collectionType) throws InstantiationException, IllegalAccessException {
+		
+		if (collectionType == Collection.class || collectionType == List.class) {
+			return new ArrayList<>();
+		}
+		
+		if (collectionType == Set.class) {
+			return new HashSet<>();
+		}
+		
+		if (collectionType == Deque.class || collectionType == Queue.class) {
+			return new LinkedList<>();
+		}
+		
+		return collectionType.newInstance();
 	}
 	
 }
