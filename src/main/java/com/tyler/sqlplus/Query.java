@@ -223,7 +223,7 @@ public class Query {
 			Field mappedField;
 			try {
 				mappedField = klass.getDeclaredField(paramLabel);
-			} catch (NoSuchFieldException | SecurityException e1) {
+			} catch (NoSuchFieldException e) {
 				throw new POJOBindException("No member exists in class " + o.getClass().getName() + " to bind a value for parameter '" + paramLabel + "'");
 			}
 			
