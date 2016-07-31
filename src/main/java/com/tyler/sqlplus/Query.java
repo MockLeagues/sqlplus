@@ -1,4 +1,4 @@
-package com.tyler.sqlplus.query;
+package com.tyler.sqlplus;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
@@ -17,7 +17,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.tyler.sqlplus.ResultMapper;
 import com.tyler.sqlplus.conversion.AttributeConverter;
 import com.tyler.sqlplus.conversion.ConversionPolicy;
 import com.tyler.sqlplus.exception.NoResultsException;

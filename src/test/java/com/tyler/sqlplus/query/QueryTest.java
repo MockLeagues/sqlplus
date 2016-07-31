@@ -17,6 +17,7 @@ import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
@@ -126,24 +127,6 @@ public class QueryTest {
 			{"2", "street2", "city2", "state2", "zip2"},
 			{"3", "street3", "city3", "state3", "zip3"},
 			{"4", "street4", "city4", "state4", "zip4"}
-		};
-		
-		assertArrayEquals(expect, results);
-	}
-	
-	@Test
-	public void update() throws Exception {
-		
-		h2.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
-		);
-		
-		h2.getSQLPlus().update("delete from address where street = ?", "Maple Street");
-		
-		String[][] results = h2.query("select * from address");
-		String[][] expect = {
-			{"2", "Elm Street", "Othertown", "CA", "54321"}
 		};
 		
 		assertArrayEquals(expect, results);

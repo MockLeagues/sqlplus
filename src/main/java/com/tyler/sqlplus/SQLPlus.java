@@ -12,8 +12,6 @@ import javax.sql.DataSource;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.query.Query;
-import com.tyler.sqlplus.query.QueryBuilder;
 
 /**
  * This class is the primary entry point to the SQLPlus API.
@@ -102,31 +100,42 @@ public class SQLPlus {
 	}
 	
 	/**
-	 * Shortcut method to create a query which applies a single update statement
-	 */
-	public void update(String string, Object... params) {
-		transact(conn -> new QueryBuilder(conn).query(string, params).build().executeUpdate());
-	}
-	
-	/**
 	 * Shortcut method for creating a query which immediately returns a list of maps
 	 */
 	public List<Map<String, String>> fetch(String sql, Object... params) {
-		return query(conn -> new QueryBuilder(conn).query(sql, params).build().fetch());
+		return query(conn -> {
+			Query q = new Query(sql, conn);
+			for (int i = 0; i < params.length; i++) {
+				q.setParameter(i + 1, params[i]);
+			}
+			return q.fetch();
+		});
 	}
 	
 	/**
 	 * Shortcut method for creating a query which immediately returns a list of mapped POJOs
 	 */
 	public <T> List<T> fetch(Class<T> pojoClass, String sql, Object... params) {
-		return query(conn -> new QueryBuilder(conn).query(sql, params).build().fetchAs(pojoClass));
+		return query(conn -> {
+			Query q = new Query(sql, conn);
+			for (int i = 0; i < params.length; i++) {
+				q.setParameter(i + 1, params[i]);
+			}
+			return q.fetchAs(pojoClass);
+		});
 	}
 	
 	/**
 	 * Shortcut method for creating a query which immediately finds a single instance of a mapped POJO
 	 */
 	public <T> T findUnique(Class<T> pojoClass, String sql, Object... params) {
-		return query(conn -> new QueryBuilder(conn).query(sql, params).build().getUniqueResultAs(pojoClass));
+		return query(conn -> {
+			Query q = new Query(sql, conn);
+			for (int i = 0; i < params.length; i++) {
+				q.setParameter(i + 1, params[i]);
+			}
+			return q.getUniqueResultAs(pojoClass);
+		});
 	}
 	
 	/**
