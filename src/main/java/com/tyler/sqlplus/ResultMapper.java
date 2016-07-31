@@ -19,7 +19,7 @@ import java.util.Set;
 import com.tyler.sqlplus.conversion.AttributeConverter;
 import com.tyler.sqlplus.conversion.ConversionPolicy;
 import com.tyler.sqlplus.exception.POJOBindException;
-import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 
 /**
@@ -63,7 +63,7 @@ public interface ResultMapper<T> {
 			try {
 				row = impl.newInstance();
 			} catch (InstantiationException | IllegalAccessException e) {
-				throw new SQLRuntimeException("Could not instantiate instance of map implementation " + impl.getName());
+				throw new SqlRuntimeException("Could not instantiate instance of map implementation " + impl.getName());
 			}
 			
 			ResultSetMetaData meta = rs.getMetaData();

@@ -22,7 +22,7 @@ import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
-import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.BatchConsumer;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 import com.tyler.sqlplus.utility.ResultStream;
@@ -49,7 +49,7 @@ public class Query {
 			this.ps = conn.prepareStatement(sql.replaceAll(REGEX_PARAM, "?"), Statement.RETURN_GENERATED_KEYS);
 			this.conversionPolicy = new ConversionPolicy();
 		} catch (SQLException e) {
-			throw new SQLRuntimeException(e);
+			throw new SqlRuntimeException(e);
 		}
 	}
 	
@@ -128,7 +128,7 @@ public class Query {
 				try {
 					processor.acceptBatch(batch);
 				} catch (Exception e) {
-					throw new SQLRuntimeException(e);
+					throw new SqlRuntimeException(e);
 				}
 				batch.clear();
 			}
@@ -139,7 +139,7 @@ public class Query {
 			try {
 				processor.acceptBatch(batch);
 			} catch (Exception e) {
-				throw new SQLRuntimeException(e);
+				throw new SqlRuntimeException(e);
 			}
 		}
 	}
@@ -156,14 +156,14 @@ public class Query {
 				}
 			});
 		} catch (SQLException e) {
-			throw new SQLRuntimeException(e);
+			throw new SqlRuntimeException(e);
 		}
 	}
 	
 	/**
 	 * Returns the result of this query as a 'scalar' (single) value of the given Java class type.
 	 * 
-	 * This method will throw a SQLSyntaxException if the produced result set has more than 1 column
+	 * This method will throw a SQLRuntimeException if the produced result set has more than 1 column
 	 */
 	public <T> T fetchScalar(Class<T> scalarClass) {
 		try {
@@ -173,11 +173,11 @@ public class Query {
 				throw new NoResultsException();
 			}
 			if (rs.getMetaData().getColumnCount() > 1) {
-				throw new SQLRuntimeException("Scalar query returned more than 1 column");
+				throw new SqlRuntimeException("Scalar query returned more than 1 column");
 			}
 			return conversionPolicy.findConverter(scalarClass).get(rs, 1);
 		} catch (SQLException e) {
-			throw new SQLRuntimeException("Error retrieving scalar value", e);
+			throw new SqlRuntimeException("Error retrieving scalar value", e);
 		}
 	}
 	
@@ -212,7 +212,7 @@ public class Query {
 			return keys;
 					
 		} catch (SQLException e) {
-			throw new SQLRuntimeException(e);
+			throw new SqlRuntimeException(e);
 		}
 	}
 
@@ -256,7 +256,7 @@ public class Query {
 			}
 		}
 		catch (SQLException e) {
-			throw new SQLRuntimeException(e);
+			throw new SqlRuntimeException(e);
 		}
 	}
 	
@@ -303,7 +303,7 @@ public class Query {
 	
 	/**
 	 * Adds a parameter batch to the list of this querie's batches.
-	 * Verifies a parameter exists in the given batch for each given parameter label. If not, a SQLRuntimeException is thrown
+	 * Verifies a parameter exists in the given batch for each given parameter label. If not, a QuerySyntaxException is thrown
 	 */
 	private void addBatch(LinkedHashMap<Integer, Object> newBatch) {
 		

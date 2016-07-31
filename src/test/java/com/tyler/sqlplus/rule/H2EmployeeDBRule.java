@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.exception.SqlRuntimeException;
 
 public class H2EmployeeDBRule extends AbstractDBRule {
 
@@ -21,7 +21,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 		try {
 			return DriverManager.getConnection("jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1", "sa", "sa");
 		} catch (SQLException e) {
-			throw new SQLRuntimeException(e);
+			throw new SqlRuntimeException(e);
 		}
 	}
 	
@@ -104,7 +104,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 				);
 			}
 		} catch (SQLException e) {
-			throw new SQLRuntimeException(e);
+			throw new SqlRuntimeException(e);
 		}
 	}
 	
@@ -121,7 +121,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 				conn.createStatement().executeUpdate("drop table order_product_map");
 			}
 		} catch (SQLException e) {
-			throw new SQLRuntimeException(e);
+			throw new SqlRuntimeException(e);
 		}
 	}
 	

@@ -8,7 +8,7 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.exception.SqlRuntimeException;
 
 /**
  * Encapsulates iteration / functional streaming over a result set
@@ -28,7 +28,7 @@ public class ResultStream {
 			try {
 				return rs.next();
 			} catch (SQLException e) {
-				throw new SQLRuntimeException(e);
+				throw new SqlRuntimeException(e);
 			}
 		}
 

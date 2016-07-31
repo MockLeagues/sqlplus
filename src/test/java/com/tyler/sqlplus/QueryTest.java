@@ -88,7 +88,7 @@ public class QueryTest {
 	public void testErrorThrownIfUnkownParamAdded() throws SQLException {
 		h2.getSQLPlus().open(conn -> {
 			assertThrows(() -> {
-				Query q = new Query("select * from employee where employee_id = :id", conn);
+				Query q = conn.createQuery("select * from employee where employee_id = :id");
 				q.setParameter("idx", "123");
 			}, QuerySyntaxException.class, "Unknown query parameter: idx");
 		});
@@ -99,7 +99,7 @@ public class QueryTest {
 		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		h2.getSQLPlus().open(conn -> {
 			assertThrows(() -> {
-				new Query("select address_id from address where state = :state and city = :city", conn).setParameter("state", "s").getUniqueResultAs(Address.class);
+				conn.createQuery("select address_id from address where state = :state and city = :city").setParameter("state", "s").getUniqueResultAs(Address.class);
 			}, QuerySyntaxException.class, "Missing parameter values for the following parameters: [city]");
 		});
 	}
@@ -108,7 +108,7 @@ public class QueryTest {
 	public void testThrowsIfParamIndexOutOfRange() throws Exception {
 		h2.getSQLPlus().open(conn -> {
 			assertThrows(() -> {
-				new Query("select address_id from address where city = ?", conn).setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
+				conn.createQuery("select address_id from address where city = ?").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
 			}, QuerySyntaxException.class, "Parameter index 2 is out of range of this query's parameters (max parameters: 1)");
 		});
 	}
@@ -117,7 +117,7 @@ public class QueryTest {
 	public void testErrorThrownIfNoParamsSet() throws Exception {
 		h2.getSQLPlus().open(conn -> {
 			assertThrows(() -> {
-				new Query("select * from employee where name = :name", conn).fetch();
+				conn.createQuery("select * from employee where name = :name").fetch();
 			}, QuerySyntaxException.class, "No parameters set");
 		});
 	}
@@ -130,7 +130,7 @@ public class QueryTest {
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
 		h2.getSQLPlus().open(conn -> {
-			Address result = new Query("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a where state = :state and city = :city", conn)
+			Address result = conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a where state = :state and city = :city")
 			                     .setParameter("state", "CA")
 			                     .setParameter("city", "Othertown")
 			                     .getUniqueResultAs(Address.class);
@@ -153,7 +153,7 @@ public class QueryTest {
 							"from address a " +
 							"where a.city = ? and a.state = :state";
 			
-			Address addr = new Query(sql, conn).setParameter(1, "Anytown").setParameter("state", "MN").getUniqueResultAs(Address.class);
+			Address addr = conn.createQuery(sql).setParameter(1, "Anytown").setParameter("state", "MN").getUniqueResultAs(Address.class);
 			assertEquals("Maple Street", addr.street);
 			assertEquals("Anytown", addr.city);
 			assertEquals("MN", addr.state);
@@ -194,7 +194,7 @@ public class QueryTest {
 		);
 		
 		List<Address> results = h2.getSQLPlus().query(conn -> {
-			return new Query("select address_id as ADD_ID, street as STREET_NAME, state as STATE_ABBR, city as CITY_NAME, zip as POSTAL from address", conn)
+			return conn.createQuery("select address_id as ADD_ID, street as STREET_NAME, state as STATE_ABBR, city as CITY_NAME, zip as POSTAL from address")
 						.addColumnMapping("ADD_ID", "addressId")
 						.addColumnMapping("STREET_NAME", "street")
 						.addColumnMapping("STATE_ABBR", "state")
@@ -230,7 +230,7 @@ public class QueryTest {
 		
 		h2.getSQLPlus().open(conn -> {
 			assertThrows(() -> {
-				new Query("select address_id as ADD_ID, street as STREET_NAME, state as STATE_ABBR, city as CITY_NAME, zip as POSTAL from address", conn)
+				conn.createQuery("select address_id as ADD_ID, street as STREET_NAME, state as STATE_ABBR, city as CITY_NAME, zip as POSTAL from address")
 					.addColumnMapping("ADD_ID", "addressId")
 					.addColumnMapping("STREET_NAME", "streetName")
 					.addColumnMapping("STATE_ABBR", "state")
@@ -299,7 +299,7 @@ public class QueryTest {
 		int[] numBatchesSeen = {0};
 		
 		h2.getSQLPlus().open(conn -> {
-			Query q = new Query("select street as \"street\", city as \"city\" from address", conn);
+			Query q = conn.createQuery("select street as \"street\", city as \"city\" from address");
 			q.batchProcess(Address.class, 4, batch -> {
 				assertEquals(4, batch.size());
 				numBatchesSeen[0]++;
@@ -322,7 +322,7 @@ public class QueryTest {
 		int[] numBatchesSeen = {0};
 		
 		h2.getSQLPlus().open(conn -> {
-			Query q = new Query("select street as \"street\", city as \"city\" from address", conn);
+			Query q = conn.createQuery("select street as \"street\", city as \"city\" from address");
 			q.batchProcess(Address.class, 4, batch -> {
 				if (numBatchesSeen[0] == 5) {
 					assertEquals(2, batch.size());
@@ -372,7 +372,7 @@ public class QueryTest {
 		
 		h2.getSQLPlus().open(conn -> {
 			
-			new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01")
@@ -401,7 +401,7 @@ public class QueryTest {
 		
 		h2.getSQLPlus().open(conn -> {
 			
-			new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01")
@@ -427,7 +427,7 @@ public class QueryTest {
 	@Test
 	public void testFinishingABatchWithMissingParametersThrowsError() throws Exception {
 		h2.getSQLPlus().open(conn -> {
-			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+			Query q = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01");
@@ -447,7 +447,7 @@ public class QueryTest {
 		toCreate.type = Type.HOURLY;
 		h2.getSQLPlus().open(conn -> {
 			
-			new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .bind(toCreate)
 			    .executeUpdate();
 			
@@ -466,7 +466,7 @@ public class QueryTest {
 		
 		h2.getSQLPlus().open(conn -> {
 			
-			new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .bind(toCreate)
 			    .executeUpdate();
 			
@@ -494,7 +494,7 @@ public class QueryTest {
 		
 		h2.getSQLPlus().open(conn -> {
 			assertThrows(() -> {
-				new Query("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)", conn).bind(toCreate);
+				conn.createQuery("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)").bind(toCreate);
 			}, POJOBindException.class);
 		});
 	}
@@ -504,7 +504,7 @@ public class QueryTest {
 		h2.batch("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
 		
 		h2.getSQLPlus().open(conn -> {
-			List<Integer> keys = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
+			List<Integer> keys = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			                                   .setParameter("type", "HOURLY")
 			                                   .setParameter("name", "tester-2")
 			                                   .setParameter("hired", "2015-01-01")
