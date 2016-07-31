@@ -48,7 +48,9 @@ public class SQLPlus {
 	}
 	
 	public void testConnection() {
-		connectionFactory.get(); // Throws if problems
+		transact(conn -> {
+			// Throws if problems opening connection
+		});
 	}
 	
 	/**
