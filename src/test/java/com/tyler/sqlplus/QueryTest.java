@@ -19,6 +19,7 @@ import org.junit.Test;
 import com.tyler.sqlplus.QueryTest.Employee.Type;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
+import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.Task;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 
@@ -514,4 +515,22 @@ public class QueryTest {
 		});
 	}
 
+	@Test
+	public void testNoStatementsAreCommittedIfExceptionThrownInTransact() throws Exception {
+		
+		class TransactionException extends RuntimeException {}
+		
+		try {
+			h2.getSQLPlus().transact(conn -> {
+				conn.createQuery("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
+				conn.createQuery("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-2', '2015-01-01', 20500)");
+				throw new TransactionException();
+			});
+			
+		} catch (SqlRuntimeException e) {
+			assertEquals(TransactionException.class, e.getCause().getClass()); // Make sure the error we got was from us throwing the transaction exception
+			assertArrayEquals(new String[][]{}, h2.query("select * from employee"));
+		}
+	}
+	
 }
