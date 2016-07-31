@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import javax.sql.DataSource;
@@ -23,8 +24,14 @@ import com.tyler.sqlplus.functional.Work;
 public class SqlPlus {
 
 	private Supplier<Connection> connectionFactory;
-
+	private SessionIDMode sessionIDMode;
+	private ConcurrentHashMap<Object, SqlPlusSession> id_currentSession = new ConcurrentHashMap<>();
+	
 	public SqlPlus(String url, String user, String pass) {
+		this(url, user, pass, SessionIDMode.CURRENT_THREAD);
+	}
+	
+	public SqlPlus(String url, String user, String pass, SessionIDMode idMode) {
 		this(() -> {
 			try {
 				return DriverManager.getConnection(url, user, pass);
@@ -32,23 +39,46 @@ public class SqlPlus {
 			catch (Exception ex) {
 				throw new ConfigurationException("Failed to connect to database", ex);
 			}
-		});
+		}, idMode);
 	}
 
 	public SqlPlus(DataSource src) {
+		this(src, SessionIDMode.CURRENT_THREAD);
+	}
+	
+	public SqlPlus(DataSource src, SessionIDMode idMode) {
 		this(() -> {
 			try {
 				return src.getConnection();
 			} catch (SQLException e) {
 				throw new SqlRuntimeException(e);
 			}
-		});
+		}, idMode);
 	}
 
 	public SqlPlus(Supplier<Connection> factory) {
+		this(factory, SessionIDMode.CURRENT_THREAD);
+	}
+	
+	public SqlPlus(Supplier<Connection> factory, SessionIDMode idMode) {
 		this.connectionFactory = factory;
+		this.sessionIDMode = idMode;
 	}
 
+	public void setSessionIDMode(SessionIDMode mode) {
+		this.sessionIDMode = mode;
+	}
+	
+	public Object getCurrentSessionId() {
+		switch (sessionIDMode) {
+//		case DATA_SOURCE:
+//			return hashCode();
+		case CURRENT_THREAD:
+		default:
+			 return Thread.currentThread().getId();
+		}
+	}
+	
 	public void testConnection() {
 		open(conn -> {
 			// Throws if problems opening connection
@@ -180,6 +210,16 @@ public class SqlPlus {
 	 * Private method through which all other sql plus session method interfaces filter into
 	 */
 	private <T> T exec(ReturningWork<SqlPlusSession, T> action, boolean transactional) {
+
+		Object currentSessionId = getCurrentSessionId();
+		if (id_currentSession.containsKey(currentSessionId)) {
+			SqlPlusSession currentSession = id_currentSession.get(currentSessionId);
+			try {
+				return action.doReturningWork(currentSession);
+			} catch (Exception e) {
+				throw new SqlRuntimeException(e);
+			}
+		}
 		
 		Connection conn = null;
 		T result = null;
@@ -189,12 +229,15 @@ public class SqlPlus {
 			if (transactional) {
 				conn.setAutoCommit(false);
 			}
-			result = action.doReturningWork(new SqlPlusSession(conn));
+			SqlPlusSession newSession = new SqlPlusSession(conn);
+			id_currentSession.putIfAbsent(currentSessionId, newSession);
+			result = action.doReturningWork(newSession);
 			if (transactional) {
 				conn.commit();
 			}
 		}
 		catch (Exception e) {
+			id_currentSession.remove(currentSessionId);
 			if (conn != null) {
 				try {
 					if (transactional) {
@@ -208,6 +251,7 @@ public class SqlPlus {
 			throw new SqlRuntimeException(e);
 		}
 
+		id_currentSession.remove(currentSessionId);
 		if (conn != null) {
 			try {
 				conn.close();
