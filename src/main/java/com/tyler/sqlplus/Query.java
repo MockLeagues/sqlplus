@@ -23,6 +23,7 @@ import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.functional.BatchConsumer;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 import com.tyler.sqlplus.utility.ResultStream;
 
@@ -111,6 +112,36 @@ public class Query {
 			throw new NoResultsException();
 		}
 		return results;
+	}
+	
+	/**
+	 * Processes results in batches of the given size.
+	 * 
+	 * This method is useful for processing huge chunks of data which could potentially exhaust available memory if read all at once
+	 */
+	public <T> void batchProcess(Class<T> batchType, int batchSize, BatchConsumer<T> processor) {
+		
+		List<T> batch = new ArrayList<>();
+		streamAs(batchType).forEach(data -> {
+			batch.add(data);
+			if (batch.size() == batchSize) {
+				try {
+					processor.acceptBatch(batch);
+				} catch (Exception e) {
+					throw new SQLRuntimeException(e);
+				}
+				batch.clear();
+			}
+		});
+		
+		// Will have leftover if batch size does not evenly divide into total results
+		if (!batch.isEmpty()) {
+			try {
+				processor.acceptBatch(batch);
+			} catch (Exception e) {
+				throw new SQLRuntimeException(e);
+			}
+		}
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {

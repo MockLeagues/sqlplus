@@ -12,6 +12,8 @@ import javax.sql.DataSource;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.functional.DBWork;
+import com.tyler.sqlplus.functional.ReturningDBWork;
 
 /**
  * This class is the primary entry point to the SQLPlus API.

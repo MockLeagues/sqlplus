@@ -1,4 +1,4 @@
-package com.tyler.sqlplus.query;
+package com.tyler.sqlplus;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -8,6 +8,7 @@ import static org.junit.Assert.fail;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -15,12 +16,11 @@ import java.util.Objects;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.tyler.sqlplus.Query;
+import com.tyler.sqlplus.QueryTest.Employee.Type;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
-import com.tyler.sqlplus.query.QueryTest.Employee.Type;
+import com.tyler.sqlplus.functional.Task;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
-import com.tyler.sqlplus.utility.Tasks.Task;
 
 public class QueryTest {
 
@@ -286,6 +286,56 @@ public class QueryTest {
 		assertArrayEquals(expect, results);
 	}
 
+	@Test
+	public void testBatchProcessWithEvenBatchDivision() throws Exception {
+		
+		int numAddress = 20;
+		List<String> insertSqls = new ArrayList<>();
+		for (int i = 1; i <= numAddress; i++) {
+			insertSqls.add("insert into address (street, city, state, zip) values ('street" + i + "', 'city" + i + "', 'state" + i + "', 'zip" + i + "')");
+		}
+		h2.getSQLPlus().batchExec(insertSqls.stream().toArray(String[]::new));
+		
+		int[] numBatchesSeen = {0};
+		
+		h2.getSQLPlus().transact(conn -> {
+			Query q = new Query("select street as \"street\", city as \"city\" from address", conn);
+			q.batchProcess(Address.class, 4, batch -> {
+				assertEquals(4, batch.size());
+				numBatchesSeen[0]++;
+			});
+		});
+		
+		assertEquals(5, numBatchesSeen[0]);
+	}
+	
+	@Test
+	public void testBatchProcessWithUnevenBatchDivision() throws Exception {
+		
+		int numAddress = 22;
+		List<String> insertSqls = new ArrayList<>();
+		for (int i = 1; i <= numAddress; i++) {
+			insertSqls.add("insert into address (street, city, state, zip) values ('street" + i + "', 'city" + i + "', 'state" + i + "', 'zip" + i + "')");
+		}
+		h2.getSQLPlus().batchExec(insertSqls.stream().toArray(String[]::new));
+		
+		int[] numBatchesSeen = {0};
+		
+		h2.getSQLPlus().transact(conn -> {
+			Query q = new Query("select street as \"street\", city as \"city\" from address", conn);
+			q.batchProcess(Address.class, 4, batch -> {
+				if (numBatchesSeen[0] == 5) {
+					assertEquals(2, batch.size());
+				}
+				else {
+					assertEquals(4, batch.size());
+				}
+				numBatchesSeen[0]++;
+			});
+		});
+		
+		assertEquals(6, numBatchesSeen[0]);
+	}
 	
 	@Test
 	public void testFieldsNotPresentInResultSetAreLeftNullInPOJO() throws Exception {
@@ -429,7 +479,7 @@ public class QueryTest {
 	}
 	
 	public static class EmployeeMissingBindParam {
-		public com.tyler.sqlplus.query.QueryTest.Employee.Type type;
+		public com.tyler.sqlplus.QueryTest.Employee.Type type;
 		public String name;
 		public Integer salary;
 	}
