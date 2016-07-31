@@ -9,7 +9,7 @@ import java.sql.SQLException;
  */
 public interface AttributeConverter<T> {
 
-	public T get(ResultSet rs, int column) throws SQLException;
+	public T get(ResultSet rs, String column) throws SQLException;
 
 	public void set(PreparedStatement ps, int parameterIndex, T obj) throws SQLException;
 	

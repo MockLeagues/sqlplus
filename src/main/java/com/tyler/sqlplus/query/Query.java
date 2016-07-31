@@ -116,7 +116,8 @@ public class Query {
 			if (rs.getMetaData().getColumnCount() > 1) {
 				throw new SQLRuntimeException("Scalar query returned more than 1 column");
 			}
-			return conversionPolicy.findConverter(scalarClass).get(rs, 1);
+			//return conversionPolicy.findConverter(scalarClass).get(rs, 1);
+			return null;
 		} catch (SQLException e) {
 			throw new SQLRuntimeException("Error retrieving scalar value", e);
 		}
@@ -165,8 +166,8 @@ public class Query {
 				ResultSet rsKeys = ps.getGeneratedKeys();
 				
 				while (rsKeys.next()) {
-					T key = conversionPolicy.findConverter(targetKeyClass).get(rsKeys, 1);
-					keys.add(key);
+					//T key = conversionPolicy.findConverter(targetKeyClass).get(rsKeys, 1);
+					keys.add(null);
 				}
 				
 				return Optional.of(keys);

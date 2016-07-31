@@ -164,7 +164,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 					String mappedCol = meta.getMappedColumnName(field).get(); // Will always be present since we are iterating over only mappable columns
 					Integer resultSetIndex = colName_colIndex.get(mappedCol.toUpperCase());
 					AttributeConverter converter = conversionPolicy.findConverter(field.getType());
-					Object value = rs.getObject(resultSetIndex) == null ? null : converter.get(rs, resultSetIndex);
+					Object value = rs.getObject(resultSetIndex) == null ? null : converter.get(rs, mappedCol);
 					ReflectionUtils.set(field, mappedPOJO.pojo, value);
 				}
 			}
@@ -241,8 +241,7 @@ public class ResultStream<T> implements Iterator<MappedPOJO<T>> {
 		
 		MappedPOJO<E> mappedPojo = null;
 		AttributeConverter converter = conversionPolicy.findConverter(keyField.get().getType());
-		Integer resultSetIndex = colName_colIndex.get(keyColumnName.get());
-		Object key = converter.get(rs, resultSetIndex);
+		Object key = converter.get(rs, keyColumnName.get());
 		if (key_pojo.containsKey(key)) {
 			mappedPojo = (MappedPOJO<E>) key_pojo.get(key);
 		}
