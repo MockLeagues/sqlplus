@@ -39,6 +39,7 @@ public class Query {
 	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
+	private Map<String, String> rsColumn_classFieldName = new HashMap<>();
 	private ConversionPolicy conversionPolicy;
 	
 	public Query(String sql, Connection conn) {
@@ -62,6 +63,11 @@ public class Query {
 				"Parameter index " + index + " is out of range of this query's parameters (max parameters: " + paramLabel_paramIndex.size() + ")");
 		}
 		return setParameter(index + "", val);
+	}
+	
+	public Query addColumnMapping(String resultSetColumnName, String classFieldName) {
+		rsColumn_classFieldName.put(resultSetColumnName, classFieldName);
+		return this;
 	}
 	
 	public Query setParameter(String key, Object val) {
@@ -110,7 +116,7 @@ public class Query {
 	public <T> Stream<T> streamAs(Class<T> klass) {
 		try {
 			applyParameterBatches();
-			ResultMapper<T> pojoMapper = ResultMapper.forType(klass);
+			ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionPolicy, rsColumn_classFieldName);
 			return ResultStream.stream(ps.executeQuery()).map(rs -> {
 				try {
 					return pojoMapper.map(rs);

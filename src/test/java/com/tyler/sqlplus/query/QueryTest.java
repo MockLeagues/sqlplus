@@ -18,7 +18,6 @@ import org.junit.Test;
 import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
-import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.query.QueryTest.Employee.Type;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 import com.tyler.sqlplus.utility.Tasks.Task;
@@ -116,19 +115,35 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void testSetParamsWithMixtureOfLabelsAndQuestionMarks() throws Exception {
-		
+	public void testsQueryingWithParameterLabels() throws Exception {
 		h2.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
+			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
+		h2.getSQLPlus().transact(conn -> {
+			Address result = new Query("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a where state = :state and city = :city", conn)
+			                     .setParameter("state", "CA")
+			                     .setParameter("city", "Othertown")
+			                     .getUniqueResultAs(Address.class);
+			assertEquals("Elm Street", result.street);
+		});
+	}
+	
+	@Test
+	public void testQueryingWithWithMixtureOfParameterLabelsAndQuestionMarks() throws Exception {
+		
+		h2.batch(
+				"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+				"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+				);
 		
 		h2.getSQLPlus().transact(conn -> {
 			
 			String sql =
-				"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
-				"from address a " +
-				"where a.city = ? and a.state = :state";
+					"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
+							"from address a " +
+							"where a.city = ? and a.state = :state";
 			
 			Address addr = new Query(sql, conn).setParameter(1, "Anytown").setParameter("state", "MN").getUniqueResultAs(Address.class);
 			assertEquals("Maple Street", addr.street);
@@ -139,7 +154,7 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void testMapResultsToNonRelationalPOJO() throws Exception {
+	public void testMappingSinglePOJOWithNoCustomFieldMappings() throws Exception {
 		h2.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
@@ -164,7 +179,63 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void batchUpdate() throws Exception {
+	public void testMappingSinglePOJOWithCustomFieldMappings() throws Exception {
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+		);
+		
+		List<Address> results = h2.getSQLPlus().query(conn -> {
+			return new Query("select address_id as ADD_ID, street as STREET_NAME, state as STATE_ABBR, city as CITY_NAME, zip as POSTAL from address", conn)
+						.addColumnMapping("ADD_ID", "addressId")
+						.addColumnMapping("STREET_NAME", "street")
+						.addColumnMapping("STATE_ABBR", "state")
+						.addColumnMapping("CITY_NAME", "city")
+						.addColumnMapping("POSTAL", "zip")
+						.fetchAs(Address.class);
+		});
+		
+		assertEquals(2, results.size());
+		
+		Address first = results.get(0);
+		assertEquals(new Integer(1), first.addressId);
+		assertEquals("Maple Street", first.street);
+		assertEquals("Anytown", first.city);
+		assertEquals("MN", first.state);
+		assertEquals("12345", first.zip);
+		
+		Address second = results.get(1);
+		assertEquals(new Integer(2), second.addressId);
+		assertEquals("Elm Street", second.street);
+		assertEquals("Othertown", second.city);
+		assertEquals("CA", second.state);
+		assertEquals("54321", second.zip);
+	}
+	
+	@Test
+	public void testMappingSinglePOJOWithCustomFieldMappingsThrowsErrorIfUnknownFieldName() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+		);
+		
+		h2.getSQLPlus().transact(conn -> {
+			assertThrows(() -> {
+				new Query("select address_id as ADD_ID, street as STREET_NAME, state as STATE_ABBR, city as CITY_NAME, zip as POSTAL from address", conn)
+					.addColumnMapping("ADD_ID", "addressId")
+					.addColumnMapping("STREET_NAME", "streetName")
+					.addColumnMapping("STATE_ABBR", "state")
+					.addColumnMapping("CITY_NAME", "city")
+					.addColumnMapping("POSTAL", "zip")
+					.fetchAs(Address.class);
+			}, POJOBindException.class, "Custom-mapped field streetName not found in class " + Address.class.getName() + " for result set column STREET_NAME");
+		});
+		
+	}
+	
+	@Test
+	public void testBatchUpdate() throws Exception {
 		
 		List<Address> toInsert = Arrays.asList(
 			new Address("street1", "city1", "state1", "zip1"),
@@ -187,7 +258,7 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void batchExec() throws Exception {
+	public void testBatchExec() throws Exception {
 		
 		h2.getSQLPlus().batchExec(
 			"insert into address (street, city, state, zip) values ('street1', 'city1', 'state1', 'zip1')",
@@ -206,25 +277,10 @@ public class QueryTest {
 		
 		assertArrayEquals(expect, results);
 	}
+
 	
 	@Test
-	public void queryWithParams() throws Exception {
-		h2.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
-			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
-		);
-		h2.getSQLPlus().transact(conn -> {
-			Address result = new Query("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a where state = :state and city = :city", conn)
-			                     .setParameter("state", "CA")
-			                     .setParameter("city", "Othertown")
-			                     .getUniqueResultAs(Address.class);
-			assertEquals("Elm Street", result.street);
-		});
-	}
-	
-	@Test
-	public void leavesNullValuesIfCertainFieldsNotPresentInResults() throws Exception {
+	public void testFieldsNotPresentInResultSetAreLeftNullInPOJO() throws Exception {
 		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		
 		Address result = h2.getSQLPlus().findUnique(Address.class, "select street as \"street\", city as \"city\" from address");
@@ -235,14 +291,14 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void mapEnumTypes() throws Exception {
+	public void testMapEnumTypes() throws Exception {
 		h2.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
 		List<Employee> es = h2.getSQLPlus().fetch(Employee.class, "select employee_id as \"employeeId\", type as \"type\", name as \"name\", salary as \"salary\", hired as \"hired\" from employee");
 		assertEquals(Type.HOURLY, es.get(0).type);
 	}
 	
 	@Test
-	public void queryScalar() throws Exception {
+	public void testQueryIntScalar() throws Exception {
 		h2.batch(
 			"insert into employee(type, name, salary, hired) values ('SALARY', 'Steve Jobs', '41000000', '1982-05-13')",
 			"insert into office(office_name, `primary`, employee_id) values ('Office A', 1, 1)",
@@ -254,7 +310,7 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void manualInsertBatchValid() throws Exception {
+	public void testBatchesAreAddedWhenExplicitlyAdded() throws Exception {
 		
 		h2.getSQLPlus().transact(conn -> {
 			
@@ -283,7 +339,7 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void manualInsertBatchFinalBatchNotAdded() throws Exception {
+	public void testTheLastManualBatchIsAutoAddedIfNotExplicitlyAdded() throws Exception {
 		
 		h2.getSQLPlus().transact(conn -> {
 			
@@ -311,19 +367,19 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void manualInsertBatchMissingParamsValid() throws Exception {
+	public void testFinishingABatchWithMissingParametersThrowsError() throws Exception {
 		h2.getSQLPlus().transact(conn -> {
 			Query q = new Query("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)", conn)
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01");
 			
-			assertThrows(q::finishBatch, QuerySyntaxException.class);
+			assertThrows(q::finishBatch, QuerySyntaxException.class, "Missing parameter values for the following parameters: [salary]");
 		});
 	}
 	
 	@Test
-	public void objectBind() throws Exception {
+	public void testBindingParamsFromObject() throws Exception {
 		
 		Employee toCreate = new Employee();
 		LocalDate hiredAt = LocalDate.now();
@@ -344,7 +400,7 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void objectBindWithNullParams() throws Exception {
+	public void testBindingObjectParamsWhenSomeFieldIsNullSetsNull() throws Exception {
 		
 		Employee toCreate = new Employee();
 		toCreate.type = Type.HOURLY;

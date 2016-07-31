@@ -5,6 +5,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -69,27 +70,22 @@ public interface ResultMapper<T> {
 			return row;
 		};
 	};
-	
-	/**
-	 * Creates a result mapper which will convert rows of a result set to objects of the given POJO class
-	 */
+
+	@SuppressWarnings("unchecked")
 	public static <E> ResultMapper<E> forType(Class<E> type) throws SQLException {
-		return forType(type, ConversionPolicy.DEFAULT);
+		return forType(type, Collections.EMPTY_MAP);
 	}
 	
-	/**
-	 * Creates a result mapper which will convert rows of a result set to objects of the given POJO class using the given conversion policy
-	 */
-	@SuppressWarnings("unchecked")
-	public static <E> ResultMapper<E> forType(Class<E> type, ConversionPolicy conversionPolicy) throws SQLException {
-		
-		if (Map.class.isAssignableFrom(type)) {
-			return (ResultMapper<E>) forMap((Class<? extends Map<String, String>>) type);
-		}
-		
-		if (String[].class == type) {
-			return (ResultMapper<E>) forStringArray();
-		}
+	public static <E> ResultMapper<E> forType(Class<E> type, Map<String, String> rsCol_fieldName) throws SQLException {
+		return forType(type, ConversionPolicy.DEFAULT, rsCol_fieldName);
+	}
+	
+	public static <E> ResultMapper<E> forType(Class<E> type, ConversionPolicy conversionPolicy, Map<String, String> rsCol_fieldName) throws SQLException {
+
+		// Since we iterate over the POJO class fields when mapping them from the result set, we need to invert the given map
+		// to ensure the keys are the POJO class field names, not the result set columns
+		Map<String, String> fieldName_rsCol = new HashMap<>();
+		rsCol_fieldName.forEach((rsCol, fieldName) -> fieldName_rsCol.put(fieldName, rsCol));
 		
 		return new ResultMapper<E>() {
 
@@ -99,7 +95,7 @@ public interface ResultMapper<T> {
 			public E map(ResultSet rs) throws SQLException {
 				
 				if (mappableFields == null) {
-					mappableFields = findMappableFields(rs, type);
+					mappableFields = determineMappableFields(rs, type, rsCol_fieldName);
 				}
 				
 				E instance;
@@ -111,14 +107,19 @@ public interface ResultMapper<T> {
 				}
 				
 				for (Field mappableField : mappableFields) {
+					
 					AttributeConverter<?> converterForField = conversionPolicy.findConverter(mappableField.getType());
-					if (converterForField != null) {
-						Object fieldValue = converterForField.get(rs, mappableField.getName());
-						try {
-							ReflectionUtils.set(mappableField, instance, fieldValue);
-						} catch (IllegalArgumentException | IllegalAccessException e) {
-							throw new POJOBindException("Unable to set field value for field " + mappableField + " in class " + type.getName(), e);
-						}
+					
+					String nameOfFieldToMap = mappableField.getName();
+					String rsColumnName = fieldName_rsCol.containsKey(nameOfFieldToMap) ?
+					                               fieldName_rsCol.get(nameOfFieldToMap) :
+					                               nameOfFieldToMap;
+					
+					Object fieldValue = converterForField.get(rs, rsColumnName);
+					try {
+						ReflectionUtils.set(mappableField, instance, fieldValue);
+					} catch (IllegalArgumentException | IllegalAccessException e) {
+						throw new POJOBindException("Unable to set field value for field " + mappableField, e);
 					}
 				}
 				
@@ -128,23 +129,47 @@ public interface ResultMapper<T> {
 		};
 		
 	}
+
+	public static List<String> getColumnLabels(ResultSet rs) throws SQLException {
+		ResultSetMetaData meta = rs.getMetaData();
+		List<String> labels = new ArrayList<>();
+		for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
+			labels.add(meta.getColumnName(col));
+		}
+		return labels;
+	}
 	
-	/**
-	 * Detects which fields for the given class type can be mapped from the given result set. A field is considered
-	 * mappable if its name is present as a column label (as pulled via 'getColumnLabel()')
-	 */
-	public static Set<Field> findMappableFields(ResultSet rs, Class<?> type) throws SQLException {
+	public static Set<Field> determineMappableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName) throws SQLException {
+		
 		Set<Field> mappableFields = new HashSet<>();
 		ResultSetMetaData meta = rs.getMetaData();
+		
 		for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
-			String label = meta.getColumnLabel(col);
+			
+			String rsColName = meta.getColumnLabel(col);
+			
+			String mappedFieldName;
+			boolean customMappingPresent = rsColName_fieldName.containsKey(rsColName);
+			if (customMappingPresent) {
+				mappedFieldName = rsColName_fieldName.get(rsColName);
+			}
+			else {
+				mappedFieldName = rsColName;
+			}
+			
 			try {
-				Field mappableField = type.getDeclaredField(label);
+				Field mappableField = type.getDeclaredField(mappedFieldName);
 				mappableFields.add(mappableField);
-			} catch (NoSuchFieldException | SecurityException e) {
-				// Not mappable
+			} catch (NoSuchFieldException e) {
+				// Not mappable. If the mapped field name was pulled from a custom mapping, we should throw an error
+				// letting the user know they messed up their field name; otherwise would be hard to track down
+				if (customMappingPresent) {
+					throw new POJOBindException(
+						"Custom-mapped field " + mappedFieldName + " not found in class " + type.getName() + " for result set column " + rsColName);
+				}
 			}
 		}
+		
 		return mappableFields;
 	}
 	

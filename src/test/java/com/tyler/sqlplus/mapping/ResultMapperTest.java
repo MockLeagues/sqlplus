@@ -1,6 +1,10 @@
 package com.tyler.sqlplus.mapping;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -8,6 +12,7 @@ import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Set;
 
 import org.junit.Test;
@@ -131,7 +136,7 @@ public class ResultMapperTest {
 	}
 	
 	@Test
-	public void testFindMappableFields() throws Exception {
+	public void testFindMappableFieldsNoCustomMappings() throws Exception {
 		
 		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
 		when(rsMeta.getColumnCount()).thenReturn(2);
@@ -143,7 +148,7 @@ public class ResultMapperTest {
 		when(rsToMap.getString("mappableA")).thenReturn("valA");
 		when(rsToMap.getString("notMappable")).thenReturn("valB");
 		
-		Set<Field> mappableFields = ResultMapper.findMappableFields(rsToMap, POJOMappableFields.class);
+		Set<Field> mappableFields = ResultMapper.determineMappableFields(rsToMap, POJOMappableFields.class, new HashMap<>());
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertFalse(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
