@@ -4,8 +4,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -82,56 +80,6 @@ public class SqlPlus {
 	public void testConnection() {
 		open(conn -> {
 			// Throws if problems opening connection
-		});
-	}
-
-	/**
-	 * Shortcut for creating a query which applies batch updates using the given entity classes
-	 */
-	public <T> void batchUpdate(String sql, List<T> entities) {
-		open(conn -> {
-			Query q = conn.createQuery(sql);
-			entities.forEach(q::bind);
-			q.executeUpdate();
-		});
-	}
-
-	/**
-	 * Shortcut method for creating a query which immediately returns a list of maps
-	 */
-	public List<Map<String, Object>> fetch(String sql, Object... params) {
-		return query(conn -> {
-			Query q = conn.createQuery(sql);
-			for (int i = 0; i < params.length; i++) {
-				q.setParameter(i + 1, params[i]);
-			}
-			return q.fetch();
-		});
-	}
-
-	/**
-	 * Shortcut method for creating a query which immediately returns a list of mapped POJOs
-	 */
-	public <T> List<T> fetch(Class<T> pojoClass, String sql, Object... params) {
-		return query(conn -> {
-			Query q = conn.createQuery(sql);
-			for (int i = 0; i < params.length; i++) {
-				q.setParameter(i + 1, params[i]);
-			}
-			return q.fetchAs(pojoClass);
-		});
-	}
-
-	/**
-	 * Shortcut method for creating a query which immediately finds a single instance of a mapped POJO
-	 */
-	public <T> T findUnique(Class<T> pojoClass, String sql, Object... params) {
-		return query(conn -> {
-			Query q = conn.createQuery(sql);
-			for (int i = 0; i < params.length; i++) {
-				q.setParameter(i + 1, params[i]);
-			}
-			return q.getUniqueResultAs(pojoClass);
 		});
 	}
 

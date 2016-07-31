@@ -9,7 +9,6 @@ import static org.junit.Assert.fail;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -164,31 +163,6 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void testMappingSinglePOJOWithNoCustomFieldMappings() throws Exception {
-		h2.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
-		);
-		
-		List<Address> results = h2.getSQLPlus().fetch(Address.class, "select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address");
-		assertEquals(2, results.size());
-		
-		Address first = results.get(0);
-		assertEquals(new Integer(1), first.addressId);
-		assertEquals("Maple Street", first.street);
-		assertEquals("Anytown", first.city);
-		assertEquals("MN", first.state);
-		assertEquals("12345", first.zip);
-		
-		Address second = results.get(1);
-		assertEquals(new Integer(2), second.addressId);
-		assertEquals("Elm Street", second.street);
-		assertEquals("Othertown", second.city);
-		assertEquals("CA", second.state);
-		assertEquals("54321", second.zip);
-	}
-	
-	@Test
 	public void testMappingSinglePOJOithCustomFieldMappings() throws Exception {
 		h2.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
@@ -269,29 +243,6 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void testBatchUpdate() throws Exception {
-		
-		List<Address> toInsert = Arrays.asList(
-			new Address("street1", "city1", "state1", "zip1"),
-			new Address("street2", "city2", "state2", "zip2"),
-			new Address("street3", "city3", "state3", "zip3"),
-			new Address("street4", "city4", "state4", "zip4")
-		);
-		
-		h2.getSQLPlus().batchUpdate("insert into address (street, city, state, zip) values (:street, :city, :state, :zip)", toInsert);
-		
-		String[][] results = h2.query("select * from address");
-		String[][] expect = {
-			{"1", "street1", "city1", "state1", "zip1"},
-			{"2", "street2", "city2", "state2", "zip2"},
-			{"3", "street3", "city3", "state3", "zip3"},
-			{"4", "street4", "city4", "state4", "zip4"}
-		};
-		
-		assertArrayEquals(expect, results);
-	}
-	
-	@Test
 	public void testBatchExec() throws Exception {
 		
 		h2.getSQLPlus().batchExec(
@@ -367,7 +318,7 @@ public class QueryTest {
 	public void testFieldsNotPresentInResultSetAreLeftNullInPOJO() throws Exception {
 		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		
-		Address result = h2.getSQLPlus().findUnique(Address.class, "select street as \"street\", city as \"city\" from address");
+		Address result = h2.getSQLPlus().query(sess -> sess.createQuery("select street as \"street\", city as \"city\" from address").getUniqueResultAs(Address.class));
 		assertNull(result.state);
 		assertNull(result.zip);
 		assertNotNull(result.street);
@@ -377,8 +328,11 @@ public class QueryTest {
 	@Test
 	public void testMapEnumTypes() throws Exception {
 		h2.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
-		List<Employee> es = h2.getSQLPlus().fetch(Employee.class, "select employee_id as \"employeeId\", type as \"type\", name as \"name\", salary as \"salary\", hired as \"hired\" from employee");
-		assertEquals(Type.HOURLY, es.get(0).type);
+		Employee emp = h2.getSQLPlus().query(sess -> {
+			return sess.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", salary as \"salary\", hired as \"hired\" from employee")
+			           .getUniqueResultAs(Employee.class);
+		});
+		assertEquals(Type.HOURLY, emp.type);
 	}
 	
 	@Test
