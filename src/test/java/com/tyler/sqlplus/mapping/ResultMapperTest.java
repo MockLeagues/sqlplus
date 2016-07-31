@@ -1,9 +1,6 @@
 package com.tyler.sqlplus.mapping;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -152,4 +149,19 @@ public class ResultMapperTest {
 		assertFalse(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
 	}
 	
+	@Test
+	public void testMapStringArray() throws Exception {
+		
+		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
+		when(rsMeta.getColumnCount()).thenReturn(2);
+		
+		ResultSet rsToMap = mock(ResultSet.class);
+		when(rsToMap.getMetaData()).thenReturn(rsMeta);
+		when(rsToMap.getString(1)).thenReturn("valA");
+		when(rsToMap.getString(2)).thenReturn("valB");
+		
+		String[] row = ResultMapper.forStringArray().map(rsToMap);
+		assertArrayEquals(new String[]{"valA", "valB"}, row);
+	}
+
 }

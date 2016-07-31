@@ -12,8 +12,8 @@ import javax.sql.DataSource;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.query.QueryBuilder;
 import com.tyler.sqlplus.query.Query;
+import com.tyler.sqlplus.query.QueryBuilder;
 
 /**
  * This class is the primary entry point to the SQLPlus API.
@@ -77,15 +77,17 @@ public class SQLPlus {
 	}
 	
 	public int[] batchExec(String... stmts) {
-		try (Connection conn = connectionFactory.get()) {
-			Statement s = conn.createStatement();
-			for (String sql : stmts) {
-				s.addBatch(sql);
+		return query(conn -> {
+			try {
+				Statement s = conn.createStatement();
+				for (String sql : stmts) {
+					s.addBatch(sql);
+				}
+				return s.executeBatch();
+			} catch (SQLException e) {
+				throw new SQLRuntimeException(e);
 			}
-			return s.executeBatch();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
+		});
 	}
 	
 	/**
