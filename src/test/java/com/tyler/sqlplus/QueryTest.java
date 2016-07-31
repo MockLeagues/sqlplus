@@ -524,8 +524,8 @@ public class QueryTest {
 		
 		try {
 			h2.getSQLPlus().transact(conn -> {
-				conn.createQuery("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
-				conn.createQuery("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-2', '2015-01-01', 20500)");
+				conn.createQuery("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)").executeUpdate();
+				conn.createQuery("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-2', '2015-01-01', 20500)").executeUpdate();
 				throw new TransactionException();
 			});
 			
