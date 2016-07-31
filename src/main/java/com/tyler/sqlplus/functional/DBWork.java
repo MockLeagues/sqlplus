@@ -8,6 +8,6 @@ import java.sql.Connection;
 @FunctionalInterface
 public interface DBWork {
 
-	public void transact(Connection conn) throws Exception;
+	public void doWork(Connection conn) throws Exception;
 	
 }

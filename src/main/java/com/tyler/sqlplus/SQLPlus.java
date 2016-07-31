@@ -60,19 +60,53 @@ public class SQLPlus {
 	 */
 	public void open(DBWork action) {
 		query(conn -> {
-			action.transact(conn);
+			action.doWork(conn);
 			return null;
 		});
+	}
+	
+	/**
+	 * Executes an action inside of a single database transaction.
+	 * 
+	 * If any exceptions are thrown, the transaction is immediately rolled back
+	 */
+	public void transact(DBWork action) {
+		
+		Connection conn = null;
+		
+		try {
+			conn = connectionFactory.get();
+			conn.setAutoCommit(false);
+			action.doWork(conn);
+			conn.commit();
+		}
+		catch (Exception e) {
+			if (conn != null) {
+				try {
+					conn.rollback();
+					conn.close();
+				} catch (SQLException e2) {
+					throw new SQLRuntimeException(e2);
+				}
+			}
+			throw new SQLRuntimeException(e);
+		}
+		
+		if (conn != null) {
+			try {
+				conn.close();
+			} catch (SQLException e) {
+				throw new SQLRuntimeException(e);
+			}
+		}
 	}
 	
 	/**
 	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 */
 	public <T> T query(ReturningDBWork<T> action) {
-		try {
-			try (Connection conn = connectionFactory.get()) {
-				return action.query(conn);
-			}
+		try (Connection conn = connectionFactory.get()) {
+			return action.doReturningWork(conn);
 		} catch (Exception e) {
 			throw new SQLRuntimeException(e);
 		}

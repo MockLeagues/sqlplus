@@ -8,6 +8,6 @@ import java.sql.Connection;
 @FunctionalInterface
 public interface ReturningDBWork<T> {
 
-	public T query(Connection conn) throws Exception;
+	public T doReturningWork(Connection conn) throws Exception;
 	
 }
