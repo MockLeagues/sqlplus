@@ -56,76 +56,6 @@ public class SqlPlus {
 	}
 
 	/**
-	 * Executes an action against a database connection obtained from this instance's connection factory
-	 */
-	public void open(Work<SqlPlusSession> action) {
-		query(conn -> {
-			action.doWork(conn);
-			return null;
-		});
-	}
-
-	/**
-	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
-	 */
-	public <T> T query(ReturningWork<SqlPlusSession, T> action) {
-		try (Connection conn = connectionFactory.get()) {
-			return action.doReturningWork(new SqlPlusSession(conn));
-		} catch (Exception e) {
-			throw new SqlRuntimeException(e);
-		}
-	}
-
-	public int[] batchExec(String... stmts) {
-		try (Connection conn = connectionFactory.get()) {
-			Statement s = conn.createStatement();
-			for (String sql : stmts) {
-				s.addBatch(sql);
-			}
-			return s.executeBatch();
-		}
-		catch (SQLException e) {
-			throw new SqlRuntimeException(e);
-		}
-	}
-
-	/**
-	 * Executes an action inside of a single database transaction.
-	 * 
-	 * If any exceptions are thrown, the transaction is immediately rolled back
-	 */
-	public void transact(Work<SqlPlusSession> action) {
-
-		Connection conn = null;
-
-		try {
-			conn = connectionFactory.get();
-			conn.setAutoCommit(false);
-			action.doWork(new SqlPlusSession(conn));
-			conn.commit();
-		}
-		catch (Exception e) {
-			if (conn != null) {
-				try {
-					conn.rollback();
-					conn.close();
-				} catch (SQLException e2) {
-					throw new SqlRuntimeException(e2);
-				}
-			}
-			throw new SqlRuntimeException(e);
-		}
-
-		if (conn != null) {
-			try {
-				conn.close();
-			} catch (SQLException e) {
-				throw new SqlRuntimeException(e);
-			}
-		}
-	}
-
-	/**
 	 * Shortcut for creating a query which applies batch updates using the given entity classes
 	 */
 	public <T> void batchUpdate(String sql, List<T> entities) {
@@ -215,6 +145,91 @@ public class SqlPlus {
 	 */
 	private <T> T queryScalar(Class<T> scalarClass, String sql) {
 		return query(conn -> conn.createQuery(sql).fetchScalar(scalarClass));
+	}
+	
+	/**
+	 * Executes an action against a database connection obtained from this instance's connection factory
+	 */
+	public void open(Work<SqlPlusSession> action) {
+		exec(conn -> {
+			action.doWork(conn);
+			return null;
+		}, false);
+	}
+	
+	/**
+	 * Executes an action inside of a single database transaction.
+	 * 
+	 * If any exceptions are thrown, the transaction is immediately rolled back
+	 */
+	public void transact(Work<SqlPlusSession> action) {
+		exec(conn -> {
+			action.doWork(conn);
+			return null;
+		}, true);
+	}
+
+	/**
+	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
+	 */
+	public <T> T query(ReturningWork<SqlPlusSession, T> action) {
+		return exec(action, false);
+	}
+
+	/**
+	 * Private method through which all other sql plus session method interfaces filter into
+	 */
+	private <T> T exec(ReturningWork<SqlPlusSession, T> action, boolean transactional) {
+		
+		Connection conn = null;
+		T result = null;
+
+		try {
+			conn = connectionFactory.get();
+			if (transactional) {
+				conn.setAutoCommit(false);
+			}
+			result = action.doReturningWork(new SqlPlusSession(conn));
+			if (transactional) {
+				conn.commit();
+			}
+		}
+		catch (Exception e) {
+			if (conn != null) {
+				try {
+					if (transactional) {
+						conn.rollback();
+					}
+					conn.close();
+				} catch (SQLException e2) {
+					throw new SqlRuntimeException(e2);
+				}
+			}
+			throw new SqlRuntimeException(e);
+		}
+
+		if (conn != null) {
+			try {
+				conn.close();
+			} catch (SQLException e) {
+				throw new SqlRuntimeException(e);
+			}
+		}
+		
+		return result;
+	}
+	
+	public int[] batchExec(String... stmts) {
+		try (Connection conn = connectionFactory.get()) {
+			Statement s = conn.createStatement();
+			for (String sql : stmts) {
+				s.addBatch(sql);
+			}
+			return s.executeBatch();
+		}
+		catch (SQLException e) {
+			throw new SqlRuntimeException(e);
+		}
 	}
 
 }
