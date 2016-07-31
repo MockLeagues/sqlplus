@@ -50,8 +50,18 @@ public class SQLPlus {
 	}
 	
 	public void testConnection() {
-		transact(conn -> {
+		open(conn -> {
 			// Throws if problems opening connection
+		});
+	}
+	
+	/**
+	 * Executes an action against a database connection obtained from this instance's connection factory
+	 */
+	public void open(DBWork action) {
+		query(conn -> {
+			action.transact(conn);
+			return null;
 		});
 	}
 	
@@ -66,16 +76,6 @@ public class SQLPlus {
 		} catch (Exception e) {
 			throw new SQLRuntimeException(e);
 		}
-	}
-	
-	/**
-	 * Executes an action against a database connection obtained from this instance's connection factory
-	 */
-	public void transact(DBWork action) {
-		query(conn -> {
-			action.transact(conn);
-			return null;
-		});
 	}
 	
 	public int[] batchExec(String... stmts) {
@@ -96,7 +96,7 @@ public class SQLPlus {
 	 * Shortcut for creating a query which applies batch updates using the given entity classes
 	 */
 	public <T> void batchUpdate(String sql, List<T> entities) {
-		transact(conn -> {
+		open(conn -> {
 			Query q = new Query(sql, conn);
 			entities.forEach(q::bind);
 			q.executeUpdate();
