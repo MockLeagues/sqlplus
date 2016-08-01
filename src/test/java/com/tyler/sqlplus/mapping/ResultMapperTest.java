@@ -155,8 +155,6 @@ public class ResultMapperTest {
 		
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
-		when(rsToMap.getString("mappableA")).thenReturn("valA");
-		when(rsToMap.getString("notMappable")).thenReturn("valB");
 		
 		Set<Field> mappableFields = ResultMapper.determineMappableFields(rsToMap, POJOMappableFields.class, new HashMap<>());
 		
@@ -174,8 +172,6 @@ public class ResultMapperTest {
 		
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
-		when(rsToMap.getString("mappableA")).thenReturn("valA");
-		when(rsToMap.getString("customField")).thenReturn("valB");
 		
 		Map<String, String> customMappings = new HashMap<>();
 		customMappings.put("customField", "mappableB");

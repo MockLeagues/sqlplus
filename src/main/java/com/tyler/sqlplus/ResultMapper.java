@@ -96,7 +96,6 @@ public interface ResultMapper<T> {
 
 			private Set<Field> mappableFields;
 			
-			@SuppressWarnings({ "rawtypes", "unchecked" })
 			@Override
 			public E map(ResultSet rs) throws SQLException {
 				
@@ -123,18 +122,8 @@ public interface ResultMapper<T> {
 					
 					Object fieldValue = converterForField.get(rs, rsColumnName);
 					try {
-						if (Collection.class.isAssignableFrom(mappableField.getType())) {
-							Collection collectionField = (Collection) ReflectionUtils.get(mappableField, instance);
-							if (collectionField == null) {
-								collectionField = determineCollectionImpl((Class<Collection>) mappableField.getType());
-								ReflectionUtils.set(mappableField, instance, collectionField);
-							}
-							collectionField.add(fieldValue);
-						}
-						else {
-							ReflectionUtils.set(mappableField, instance, fieldValue);
-						}
-					} catch (IllegalArgumentException | IllegalAccessException | InstantiationException e) {
+						ReflectionUtils.set(mappableField, instance, fieldValue);
+					} catch (IllegalArgumentException | IllegalAccessException e) {
 						throw new POJOBindException("Unable to set field value for field " + mappableField, e);
 					}
 				}
@@ -146,6 +135,11 @@ public interface ResultMapper<T> {
 		
 	}
 
+	@SuppressWarnings("unchecked")
+	public static Set<Field> determineMappableFields(ResultSet rs, Class<?> type) throws SQLException {
+		return determineMappableFields(rs, type, Collections.EMPTY_MAP);
+	}
+	
 	public static Set<Field> determineMappableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName) throws SQLException {
 		
 		Set<Field> mappableFields = new HashSet<>();
