@@ -1,9 +1,8 @@
 package com.tyler.sqlplus;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
 
 import java.lang.reflect.Field;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,6 +12,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -25,8 +25,11 @@ import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.BatchConsumer;
+import com.tyler.sqlplus.proxy.ProxyResultMapper;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 import com.tyler.sqlplus.utility.ResultStream;
+
+import javassist.util.proxy.Proxy;
 
 /**
  * Provides encapsulation for an SQL query, allowing results to be retrieved and streamed as POJOs
@@ -38,17 +41,19 @@ public class Query {
 	private static final String REGEX_PARAM = ":\\w+|\\?";
 	
 	private PreparedStatement ps;
+	private Session session;
 	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
 	private Map<String, String> rsColumn_classFieldName = new HashMap<>();
 	private ConversionPolicy conversionPolicy;
 	
-	public Query(String sql, Connection conn) {
+	public Query(String sql, Session session) {
 		try {
 			this.paramLabel_paramIndex = parseParams(sql);
-			this.ps = conn.prepareStatement(sql.replaceAll(REGEX_PARAM, "?"), Statement.RETURN_GENERATED_KEYS);
 			this.conversionPolicy = new ConversionPolicy();
+			this.session = session;
+			this.ps = session.getJdbcConnection().prepareStatement(sql.replaceAll(REGEX_PARAM, "?"), Statement.RETURN_GENERATED_KEYS);
 		} catch (SQLException e) {
 			throw new SqlRuntimeException(e);
 		}
@@ -79,6 +84,10 @@ public class Query {
 		Integer paramIndex = paramLabel_paramIndex.get(key);
 		manualParamBatch.put(paramIndex, val);
 		return this;
+	}
+	
+	public Set<String> getParameterLabels() {
+		return paramLabel_paramIndex.keySet();
 	}
 	
 	/**
@@ -152,7 +161,7 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionPolicy, rsColumn_classFieldName);
+		ResultMapper<T> pojoMapper = ProxyResultMapper.forType(klass, conversionPolicy, rsColumn_classFieldName, session);
 		return stream().map(rs -> {
 			try {
 				return pojoMapper.map(rs);
@@ -277,6 +286,12 @@ public class Query {
 	public Query bind(Object o) {
 		
 		Class<?> klass = o.getClass();
+		
+		// Proxies are bound when lazy loading related entities. In this case, we want to pull bind fields from the proxy's superclass
+		if (Proxy.class.isAssignableFrom(klass)) {
+			klass = klass.getSuperclass();
+		}
+		
 		LinkedHashMap<Integer, Object> bindParams = new LinkedHashMap<>();
 		for (String paramLabel : paramLabel_paramIndex.keySet()) {
 			
@@ -339,7 +354,7 @@ public class Query {
 	 * 'select fieldA from table1 where fieldA = ? and fieldB = ?', a mapping would be produced with the keys
 	 * "1" and "2" and the values 1 and 2.
 	 */
-	private static Map<String, Integer> parseParams(String sql) {
+	public static Map<String, Integer> parseParams(String sql) {
 		
 		Map<String, Integer> paramLabel_index = new HashMap<>();
 		
@@ -352,7 +367,11 @@ public class Query {
 				paramLabel_index.put(paramIndex + "", paramIndex);
 			}
 			else {
-				paramLabel_index.put(paramLabel.substring(1), paramIndex);
+				paramLabel = paramLabel.substring(1);
+				if (paramLabel_index.containsKey(paramLabel)) {
+					throw new QuerySyntaxException("Duplicate parameter '" + paramLabel + "'");
+				}
+				paramLabel_index.put(paramLabel, paramIndex);
 			}
 		}
 		

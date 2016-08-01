@@ -81,6 +81,26 @@ public final class ReflectionUtils {
 			setValue.accept(instance, value);
 		}
 	}
+
+	/**
+	 * Attempts to extract the field name referred to by the javabeans style getter / setter.
+	 * Standard getter names begin with either 'get' or 'is'. Standard setter names begin with 'set'
+	 */
+	public static String extractFieldName(String methodName) {
+		
+		String fieldName;
+		if (methodName.startsWith("get") || methodName.startsWith("set")) {
+			fieldName = methodName.substring(3);
+		}
+		else if (methodName.startsWith("is")) {
+			fieldName = methodName.substring(2);
+		}
+		else {
+			throw new IllegalArgumentException(methodName + " does not conform to javabeans style accessor naming convetions");
+		}
+		
+		return Character.toLowerCase(fieldName.charAt(0)) + fieldName.substring(1);
+	}
 	
 	private static String capitalize(String s) {
 		return String.valueOf(s.charAt(0)).toUpperCase() + s.substring(1);

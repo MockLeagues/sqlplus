@@ -3,7 +3,7 @@ package com.tyler.sqlplus;
 /**
  * Defines methods for identifying the 'current' session for any given SqlPlus instance.
  */
-public enum SessionIDMode {
+public enum SessionIdMode {
 
 	/**
 	 * In current thread mode, sessions are associated with the threads that spawned them. Any call to retrieve the current

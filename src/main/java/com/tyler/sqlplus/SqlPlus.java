@@ -22,14 +22,14 @@ import com.tyler.sqlplus.functional.Work;
 public class SqlPlus {
 
 	private Supplier<Connection> connectionFactory;
-	private SessionIDMode sessionIDMode;
-	private ConcurrentHashMap<Object, SqlPlusSession> id_currentSession = new ConcurrentHashMap<>();
+	private SessionIdMode sessionIDMode;
+	private ConcurrentHashMap<Object, Session> id_currentSession = new ConcurrentHashMap<>();
 	
 	public SqlPlus(String url, String user, String pass) {
-		this(url, user, pass, SessionIDMode.CURRENT_THREAD);
+		this(url, user, pass, SessionIdMode.CURRENT_THREAD);
 	}
 	
-	public SqlPlus(String url, String user, String pass, SessionIDMode idMode) {
+	public SqlPlus(String url, String user, String pass, SessionIdMode idMode) {
 		this(() -> {
 			try {
 				return DriverManager.getConnection(url, user, pass);
@@ -41,10 +41,10 @@ public class SqlPlus {
 	}
 
 	public SqlPlus(DataSource src) {
-		this(src, SessionIDMode.CURRENT_THREAD);
+		this(src, SessionIdMode.CURRENT_THREAD);
 	}
 	
-	public SqlPlus(DataSource src, SessionIDMode idMode) {
+	public SqlPlus(DataSource src, SessionIdMode idMode) {
 		this(() -> {
 			try {
 				return src.getConnection();
@@ -55,15 +55,15 @@ public class SqlPlus {
 	}
 
 	public SqlPlus(Supplier<Connection> factory) {
-		this(factory, SessionIDMode.CURRENT_THREAD);
+		this(factory, SessionIdMode.CURRENT_THREAD);
 	}
 	
-	public SqlPlus(Supplier<Connection> factory, SessionIDMode idMode) {
+	public SqlPlus(Supplier<Connection> factory, SessionIdMode idMode) {
 		this.connectionFactory = factory;
 		this.sessionIDMode = idMode;
 	}
 
-	public void setSessionIDMode(SessionIDMode mode) {
+	public void setSessionIDMode(SessionIdMode mode) {
 		this.sessionIDMode = mode;
 	}
 	
@@ -128,7 +128,7 @@ public class SqlPlus {
 	/**
 	 * Executes an action against a database connection obtained from this instance's connection factory
 	 */
-	public void open(Work<SqlPlusSession> action) {
+	public void open(Work<Session> action) {
 		exec(conn -> {
 			action.doWork(conn);
 			return null;
@@ -140,7 +140,7 @@ public class SqlPlus {
 	 * 
 	 * If any exceptions are thrown, the transaction is immediately rolled back
 	 */
-	public void transact(Work<SqlPlusSession> action) {
+	public void transact(Work<Session> action) {
 		exec(conn -> {
 			action.doWork(conn);
 			return null;
@@ -150,18 +150,18 @@ public class SqlPlus {
 	/**
 	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 */
-	public <T> T query(ReturningWork<SqlPlusSession, T> action) {
+	public <T> T query(ReturningWork<Session, T> action) {
 		return exec(action, false);
 	}
 
 	/**
 	 * Private method through which all other sql plus session method interfaces filter into
 	 */
-	private <T> T exec(ReturningWork<SqlPlusSession, T> action, boolean transactional) {
+	private <T> T exec(ReturningWork<Session, T> action, boolean transactional) {
 
 		Object currentSessionId = getCurrentSessionId();
 		if (id_currentSession.containsKey(currentSessionId)) {
-			SqlPlusSession currentSession = id_currentSession.get(currentSessionId);
+			Session currentSession = id_currentSession.get(currentSessionId);
 			try {
 				return action.doReturningWork(currentSession);
 			} catch (Exception e) {
@@ -177,7 +177,7 @@ public class SqlPlus {
 			if (transactional) {
 				conn.setAutoCommit(false);
 			}
-			SqlPlusSession newSession = new SqlPlusSession(conn);
+			Session newSession = new Session(conn);
 			id_currentSession.putIfAbsent(currentSessionId, newSession);
 			result = action.doReturningWork(newSession);
 			if (transactional) {

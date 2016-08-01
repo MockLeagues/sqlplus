@@ -1,6 +1,5 @@
-package com.tyler.sqlplus.mapping;
+package com.tyler.sqlplus.proxy;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -27,10 +26,10 @@ import java.util.TreeSet;
 
 import org.junit.Test;
 
-import com.tyler.sqlplus.ResultMapper;
-import com.tyler.sqlplus.mapping.ResultMapperTest.MyPOJO.Size;
+import com.tyler.sqlplus.Session;
+import com.tyler.sqlplus.proxy.ProxyResultMapperTest.MyPOJO.Size;
 
-public class ResultMapperTest {
+public class ProxyResultMapperTest {
 
 	public static class MyPOJO {
 		
@@ -96,7 +95,7 @@ public class ResultMapperTest {
 		when(rsToMap.getString("enumField")).thenReturn("SMALL");
 		when(rsToMap.getString("localDateField")).thenReturn("2015-01-01");
 		
-		MyPOJO pojo = ResultMapper.forType(MyPOJO.class).map(rsToMap);
+		MyPOJO pojo = ProxyResultMapper.forType(MyPOJO.class, mock(Session.class)).map(rsToMap);
 		
 		assertEquals(1, pojo.intField);
 		assertEquals(new Float(1.5), new Float(pojo.floatField));
@@ -135,7 +134,7 @@ public class ResultMapperTest {
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		when(rsToMap.getInt("presentField")).thenReturn(1);
 		
-		POJOWithNullFields pojo = ResultMapper.forType(POJOWithNullFields.class).map(rsToMap);
+		POJOWithNullFields pojo = ProxyResultMapper.forType(POJOWithNullFields.class, mock(Session.class)).map(rsToMap);
 		
 		assertEquals(new Integer(1), pojo.presentField);
 		assertNull(pojo.nonPresentField);
@@ -156,7 +155,7 @@ public class ResultMapperTest {
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		
-		Set<Field> mappableFields = ResultMapper.determineMappableFields(rsToMap, POJOMappableFields.class, new HashMap<>());
+		Set<Field> mappableFields = ProxyResultMapper.determineMappableFields(rsToMap, POJOMappableFields.class, new HashMap<>());
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertFalse(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
@@ -175,38 +174,23 @@ public class ResultMapperTest {
 		
 		Map<String, String> customMappings = new HashMap<>();
 		customMappings.put("customField", "mappableB");
-		Set<Field> mappableFields = ResultMapper.determineMappableFields(rsToMap, POJOMappableFields.class, customMappings);
+		Set<Field> mappableFields = ProxyResultMapper.determineMappableFields(rsToMap, POJOMappableFields.class, customMappings);
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
-	}
-	
-	@Test
-	public void testMapStringArray() throws Exception {
-		
-		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
-		when(rsMeta.getColumnCount()).thenReturn(2);
-		
-		ResultSet rsToMap = mock(ResultSet.class);
-		when(rsToMap.getMetaData()).thenReturn(rsMeta);
-		when(rsToMap.getString(1)).thenReturn("valA");
-		when(rsToMap.getString(2)).thenReturn("valB");
-		
-		String[] row = ResultMapper.forStringArray().map(rsToMap);
-		assertArrayEquals(new String[]{"valA", "valB"}, row);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Test
 	public void testDetermineCollectionImpl() throws Exception {
-		assertEquals(new ArrayList<>(), ResultMapper.determineCollectionImpl(Collection.class));
-		assertEquals(new ArrayList<>(), ResultMapper.determineCollectionImpl(List.class));
-		assertEquals(new HashSet<>(), ResultMapper.determineCollectionImpl(Set.class));
-		assertEquals(new TreeSet<>(), ResultMapper.determineCollectionImpl(TreeSet.class));
-		assertEquals(new LinkedList<>(), ResultMapper.determineCollectionImpl(LinkedList.class));
-		assertEquals(new LinkedList<>(), ResultMapper.determineCollectionImpl(Deque.class));
-		assertEquals(new LinkedList<>(), ResultMapper.determineCollectionImpl(Queue.class));
-		assertTrue(ResultMapper.determineCollectionImpl(PriorityQueue.class) instanceof PriorityQueue);
+		assertEquals(new ArrayList<>(), ProxyResultMapper.determineCollectionImpl(Collection.class));
+		assertEquals(new ArrayList<>(), ProxyResultMapper.determineCollectionImpl(List.class));
+		assertEquals(new HashSet<>(), ProxyResultMapper.determineCollectionImpl(Set.class));
+		assertEquals(new TreeSet<>(), ProxyResultMapper.determineCollectionImpl(TreeSet.class));
+		assertEquals(new LinkedList<>(), ProxyResultMapper.determineCollectionImpl(LinkedList.class));
+		assertEquals(new LinkedList<>(), ProxyResultMapper.determineCollectionImpl(Deque.class));
+		assertEquals(new LinkedList<>(), ProxyResultMapper.determineCollectionImpl(Queue.class));
+		assertTrue(ProxyResultMapper.determineCollectionImpl(PriorityQueue.class) instanceof PriorityQueue);
 	}
 	
 }

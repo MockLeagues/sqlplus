@@ -19,9 +19,9 @@ public class SqlPlusTest {
 	@Test
 	public void testCurrentThreadSessionIDModeCorrectlyPullsCurrentSession() throws Exception {
 		
-		h2.getSQLPlus().setSessionIDMode(SessionIDMode.CURRENT_THREAD);
+		h2.getSQLPlus().setSessionIDMode(SessionIdMode.CURRENT_THREAD);
 		
-		List<SqlPlusSession> sessionsRetrieved = new ArrayList<>();
+		List<Session> sessionsRetrieved = new ArrayList<>();
 		
 		Callable<Object> childCall = () -> {
 			h2.getSQLPlus().open(conn -> {

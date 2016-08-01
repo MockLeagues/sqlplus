@@ -17,8 +17,10 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.tyler.sqlplus.QueryTest.Employee.Type;
+import com.tyler.sqlplus.annotation.SqlPlusLoad;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
+import com.tyler.sqlplus.exception.SessionClosedException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.Task;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
@@ -50,13 +52,14 @@ public class QueryTest {
 	}
 	
 	public static class Employee {
+		
 		public enum Type { HOURLY, SALARY; }
 		public Integer employeeId;
 		public Type type;
 		public String name;
 		public LocalDate hired;
 		public Integer salary;
-		public List<Office> offices;
+
 	}
 
 	public static class Office {
@@ -74,6 +77,13 @@ public class QueryTest {
 		public String state;
 		public String zip;
 		
+		@SqlPlusLoad(
+			"select employee_id as \"employee_id\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\"" +
+			"from employee e " +
+			"where e.address_id = :addressId"
+		)
+		public Employee employee;
+		
 		public Address() {}
 		
 		public Address(String street, String city, String state, String zip) {
@@ -81,6 +91,10 @@ public class QueryTest {
 			this.city = city;
 			this.state = state;
 			this.zip = zip;
+		}
+		
+		public Employee getEmployee() {
+			return employee;
 		}
 		
 	}
@@ -115,6 +129,15 @@ public class QueryTest {
 	}
 	
 	@Test
+	public void testThrowsIfDuplicateParamAdded() throws Exception {
+		h2.getSQLPlus().open(conn -> {
+			assertThrows(() -> {
+				conn.createQuery("select address_id from address where city = :city and street = :city").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
+			}, QuerySyntaxException.class, "Duplicate parameter 'city'");
+		});
+	}
+	
+	@Test
 	public void testErrorThrownIfNoParamsSet() throws Exception {
 		h2.getSQLPlus().open(conn -> {
 			assertThrows(() -> {
@@ -143,16 +166,16 @@ public class QueryTest {
 	public void testQueryingWithWithMixtureOfParameterLabelsAndQuestionMarks() throws Exception {
 		
 		h2.batch(
-				"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-				"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
-				);
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+		);
 		
 		h2.getSQLPlus().open(conn -> {
 			
 			String sql =
-					"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
-							"from address a " +
-							"where a.city = ? and a.state = :state";
+				"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
+				"from address a " +
+				"where a.city = ? and a.state = :state";
 			
 			Address addr = conn.createQuery(sql).setParameter(1, "Anytown").setParameter("state", "MN").getUniqueResultAs(Address.class);
 			assertEquals("Maple Street", addr.street);
@@ -512,6 +535,50 @@ public class QueryTest {
 			assertEquals(TransactionException.class, e.getCause().getClass()); // Make sure the error we got was from us throwing the transaction exception
 			assertArrayEquals(new String[][]{}, h2.query("select * from employee"));
 		}
+	}
+	
+	@Test
+	public void testLazyLoadSingleRelation() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			Address singleAddress = 
+				conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
+			        .getUniqueResultAs(Address.class);
+			
+			// Make sure it stays null until getter is called
+			assertNull(singleAddress.employee);
+			Employee lazyEmployee = singleAddress.getEmployee();
+			assertNotNull(lazyEmployee);
+			
+			assertEquals(Type.SALARY, lazyEmployee.type);
+			assertEquals("tester-1", lazyEmployee.name);
+			assertEquals(LocalDate.of(2015, 1, 1), lazyEmployee.hired);
+			assertEquals(new Integer(20500), lazyEmployee.salary);
+		});
+		
+	}
+	
+	@Test
+	public void testLazyLoadFailsOutsideSession() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
+		);
+		
+		Address foundAddress = h2.getSQLPlus().query(conn -> {
+			return conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
+			           .getUniqueResultAs(Address.class);
+		});
+		
+		assertThrows(() -> foundAddress.getEmployee(), SessionClosedException.class,
+			"Cannot lazy-load field " + Address.class.getDeclaredField("employee") + ", session is no longer open");
 	}
 	
 }
