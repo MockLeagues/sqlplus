@@ -11,18 +11,9 @@ import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.junit.Test;
 
@@ -180,17 +171,4 @@ public class ProxyResultMapperTest {
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
 	}
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void testDetermineCollectionImpl() throws Exception {
-		assertEquals(new ArrayList<>(), ProxyResultMapper.determineCollectionImpl(Collection.class));
-		assertEquals(new ArrayList<>(), ProxyResultMapper.determineCollectionImpl(List.class));
-		assertEquals(new HashSet<>(), ProxyResultMapper.determineCollectionImpl(Set.class));
-		assertEquals(new TreeSet<>(), ProxyResultMapper.determineCollectionImpl(TreeSet.class));
-		assertEquals(new LinkedList<>(), ProxyResultMapper.determineCollectionImpl(LinkedList.class));
-		assertEquals(new LinkedList<>(), ProxyResultMapper.determineCollectionImpl(Deque.class));
-		assertEquals(new LinkedList<>(), ProxyResultMapper.determineCollectionImpl(Queue.class));
-		assertTrue(ProxyResultMapper.determineCollectionImpl(PriorityQueue.class) instanceof PriorityQueue);
-	}
-	
 }

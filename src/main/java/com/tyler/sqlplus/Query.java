@@ -313,7 +313,7 @@ public class Query {
 			Integer paramIndex = paramLabel_paramIndex.get(paramLabel);
 			bindParams.put(paramIndex, member);
 		}
-			
+		
 		addBatch(bindParams);
 		return this;
 	}

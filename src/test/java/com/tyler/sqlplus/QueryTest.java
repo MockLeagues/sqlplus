@@ -60,6 +60,17 @@ public class QueryTest {
 		public LocalDate hired;
 		public Integer salary;
 
+		@LoadQuery(
+			"select office_id as \"office_id\", office_name as \"office_name\", employee_id as \"employee_id\", `primary` as \"primary\" " +
+			"from office o " +
+			"where o.employee_id = :employeeId"
+		)
+		public List<Office> offices;
+		
+		public List<Office> getOffices() {
+			return offices;
+		}
+		
 	}
 
 	public static class Office {
@@ -78,7 +89,7 @@ public class QueryTest {
 		public String zip;
 		
 		@LoadQuery(
-			"select employee_id as \"employee_id\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\"" +
+			"select employee_id as \"employee_id\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" " +
 			"from employee e " +
 			"where e.address_id = :addressId"
 		)
@@ -560,6 +571,32 @@ public class QueryTest {
 			assertEquals("tester-1", lazyEmployee.name);
 			assertEquals(LocalDate.of(2015, 1, 1), lazyEmployee.hired);
 			assertEquals(new Integer(20500), lazyEmployee.salary);
+		});
+		
+	}
+	
+	@Test
+	public void testLazyLoadMultipleRelations() throws Exception {
+		
+		h2.batch(
+			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
+			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			Employee employee = 
+				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
+			        .getUniqueResultAs(Employee.class);
+			
+			// Make sure it stays null until getter is called
+			assertNull(employee.offices);
+			List<Office> offices = employee.getOffices();
+			assertNotNull(offices);
+			
+			assertEquals(3, offices.size());
 		});
 		
 	}

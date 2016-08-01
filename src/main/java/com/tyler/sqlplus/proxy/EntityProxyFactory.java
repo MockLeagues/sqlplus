@@ -2,9 +2,18 @@ package com.tyler.sqlplus.proxy;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
+import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.SessionClosedException;
@@ -59,12 +68,42 @@ public class EntityProxyFactory {
 		return proxy;
 	}
 
-	// TODO: handle loading collections, not just raw types
-	private static Object lazyLoad(Object proxy, Field field, Session session) {
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private static Object lazyLoad(Object proxy, Field field, Session session) throws InstantiationException, IllegalAccessException {
+		
 		String loadSql = field.getDeclaredAnnotation(LoadQuery.class).value();
-		return session.createQuery(loadSql)
-		              .bind(proxy)
-		              .getUniqueResultAs(field.getType());
+		Query loadQuery = session.createQuery(loadSql).bind(proxy);
+		
+		if (Collection.class.isAssignableFrom(field.getType())) {
+			Class<Collection<?>> collectionType = (Class<Collection<?>>) field.getType();
+			Collection collectionImpl = chooseCollectionImpl(collectionType);
+			Class<?> collectionGenericType = ReflectionUtils.getGenericType(field);
+			loadQuery.streamAs(collectionGenericType).forEach(collectionImpl::add);
+			return collectionImpl;
+		}
+		else {
+			return loadQuery.getUniqueResultAs(field.getType());
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T extends Collection<?>> T chooseCollectionImpl(Class<T> collectionType) throws InstantiationException, IllegalAccessException {
+		
+		if (collectionType == Collection.class || collectionType == List.class) {
+			return (T) new ArrayList<>();
+		}
+		else if (collectionType == Set.class) {
+			return (T) new HashSet<>();
+		}
+		else if (collectionType == SortedSet.class) {
+			return (T) new TreeSet<>();
+		}
+		else if (collectionType == Deque.class || collectionType == Queue.class) {
+			return (T) new LinkedList<>();
+		}
+		else {
+			return collectionType.newInstance();
+		}
 	}
 	
 }
