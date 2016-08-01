@@ -57,6 +57,7 @@ public class EntityProxyFactory {
 						}
 						Object loadedValue = lazyLoad(self, fieldForGetter, session);
 						ReflectionUtils.set(fieldForGetter, self, loadedValue);
+						gettersAlreadyLoaded.add(methodName);
 					}
 				}
 				
