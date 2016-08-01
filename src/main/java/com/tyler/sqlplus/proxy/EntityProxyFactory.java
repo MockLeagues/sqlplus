@@ -40,7 +40,6 @@ public class EntityProxyFactory {
 		
 		((Proxy)proxy).setHandler(new MethodHandler() {
 			
-			// Tracks which getter methods have already been lazy loaded for this instance
 			private Set<String> gettersAlreadyLoaded = new HashSet<>();
 			
 			@Override
