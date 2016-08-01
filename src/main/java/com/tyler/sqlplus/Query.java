@@ -49,10 +49,10 @@ public class Query {
 	private ConversionPolicy conversionPolicy;
 	
 	public Query(String sql, Session session) {
-		this.paramLabel_paramIndex = parseParams(sql);
-		this.conversionPolicy = new ConversionPolicy();
 		this.session = session;
 		this.sql = sql;
+		this.paramLabel_paramIndex = parseParams(sql);
+		this.conversionPolicy = new ConversionPolicy();
 	}
 	
 	public <T> Query setConverter(Class<T> type, AttributeConverter<T> converter) {
@@ -169,7 +169,7 @@ public class Query {
 	
 	public <T> Stream<ResultSet> stream() {
 		try {
-			PreparedStatement ps = prepareStatement();
+			PreparedStatement ps = prepareStatement(false);
 			return ResultStream.stream(ps.executeQuery());
 		} catch (SQLException e) {
 			throw new SqlRuntimeException(e);
@@ -183,7 +183,7 @@ public class Query {
 	 */
 	public <T> T fetchScalar(Class<T> scalarClass) {
 		try {
-			PreparedStatement ps = prepareStatement();
+			PreparedStatement ps = prepareStatement(false);
 			ResultSet rs = ps.executeQuery();
 			if (!rs.next()) {
 				throw new NoResultsException();
@@ -211,7 +211,7 @@ public class Query {
 		
 		try {
 			
-			PreparedStatement ps = prepareStatement();
+			PreparedStatement ps = prepareStatement(true);
 			if (paramBatches.size() > 1) {
 				ps.executeBatch();
 			} else {
@@ -240,7 +240,7 @@ public class Query {
 	 * Queries with only 1 parameter batch will simply apply each parameter in the batch and then return
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private PreparedStatement prepareStatement() {
+	private PreparedStatement prepareStatement(boolean returnKeys) {
 		
 		if (!manualParamBatch.isEmpty()) {
 			finishBatch();
@@ -253,7 +253,13 @@ public class Query {
 		try {
 		
 			String formattedSql = sql.replaceAll(REGEX_PARAM, "?");
-			PreparedStatement ps = session.getJdbcConnection().prepareStatement(formattedSql, Statement.RETURN_GENERATED_KEYS);
+			PreparedStatement ps;
+			if (returnKeys) {
+				ps = session.getJdbcConnection().prepareStatement(formattedSql, Statement.RETURN_GENERATED_KEYS);
+			}
+			else {
+				ps = session.getJdbcConnection().prepareStatement(formattedSql);
+			}
 			
 			for (Map<Integer, Object> paramBatch : this.paramBatches) {
 			
