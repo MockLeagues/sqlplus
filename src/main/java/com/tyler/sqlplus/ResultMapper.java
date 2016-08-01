@@ -116,9 +116,13 @@ public interface ResultMapper<T> {
 					AttributeConverter<?> converterForField = conversionPolicy.findConverter(mappableField.getType());
 					
 					String nameOfFieldToMap = mappableField.getName();
-					String rsColumnName = fieldName_rsCol.containsKey(nameOfFieldToMap) ?
-					                               fieldName_rsCol.get(nameOfFieldToMap) :
-					                               nameOfFieldToMap;
+					String rsColumnName;
+					if (fieldName_rsCol.containsKey(nameOfFieldToMap)) {
+						rsColumnName = fieldName_rsCol.get(nameOfFieldToMap);
+					}
+					else {
+						rsColumnName = nameOfFieldToMap;
+					}
 					
 					Object fieldValue = converterForField.get(rs, rsColumnName);
 					try {
