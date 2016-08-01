@@ -19,7 +19,7 @@ public class SqlPlusTest {
 	@Test
 	public void testCurrentThreadSessionIDModeCorrectlyPullsCurrentSession() throws Exception {
 		
-		h2.getSQLPlus().setSessionIDMode(SessionIdMode.CURRENT_THREAD);
+		h2.getSQLPlus().setSessionIdMode(SessionIdMode.CURRENT_THREAD);
 		
 		List<Session> sessionsRetrieved = new ArrayList<>();
 		

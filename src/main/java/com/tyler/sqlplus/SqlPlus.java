@@ -63,7 +63,7 @@ public class SqlPlus {
 		this.sessionIDMode = idMode;
 	}
 
-	public void setSessionIDMode(SessionIdMode mode) {
+	public void setSessionIdMode(SessionIdMode mode) {
 		this.sessionIDMode = mode;
 	}
 	
