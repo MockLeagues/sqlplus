@@ -6,7 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.tyler.sqlplus.Session;
-import com.tyler.sqlplus.annotation.SqlPlusLoad;
+import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.SessionClosedException;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 
@@ -43,7 +43,7 @@ public class EntityProxyFactory {
 					String fieldName = ReflectionUtils.extractFieldName(methodName);
 					Field fieldForGetter = type.getDeclaredField(fieldName);
 					
-					if (fieldForGetter.isAnnotationPresent(SqlPlusLoad.class)) {
+					if (fieldForGetter.isAnnotationPresent(LoadQuery.class)) {
 						if (!session.isOpen()) {
 							throw new SessionClosedException("Cannot lazy-load field " + fieldForGetter + ", session is no longer open");
 						}
@@ -61,7 +61,7 @@ public class EntityProxyFactory {
 
 	// TODO: handle loading collections, not just raw types
 	private static Object lazyLoad(Object proxy, Field field, Session session) {
-		String loadSql = field.getDeclaredAnnotation(SqlPlusLoad.class).value();
+		String loadSql = field.getDeclaredAnnotation(LoadQuery.class).value();
 		return session.createQuery(loadSql)
 		              .bind(proxy)
 		              .getUniqueResultAs(field.getType());

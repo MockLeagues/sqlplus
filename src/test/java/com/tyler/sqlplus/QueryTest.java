@@ -17,7 +17,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.tyler.sqlplus.QueryTest.Employee.Type;
-import com.tyler.sqlplus.annotation.SqlPlusLoad;
+import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
 import com.tyler.sqlplus.exception.SessionClosedException;
@@ -77,7 +77,7 @@ public class QueryTest {
 		public String state;
 		public String zip;
 		
-		@SqlPlusLoad(
+		@LoadQuery(
 			"select employee_id as \"employee_id\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\"" +
 			"from employee e " +
 			"where e.address_id = :addressId"
