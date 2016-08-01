@@ -40,8 +40,8 @@ public class Query {
 
 	private static final String REGEX_PARAM = ":\\w+|\\?";
 	
-	private PreparedStatement ps;
 	private Session session;
+	private String sql;
 	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
@@ -49,14 +49,10 @@ public class Query {
 	private ConversionPolicy conversionPolicy;
 	
 	public Query(String sql, Session session) {
-		try {
-			this.paramLabel_paramIndex = parseParams(sql);
-			this.conversionPolicy = new ConversionPolicy();
-			this.session = session;
-			this.ps = session.getJdbcConnection().prepareStatement(sql.replaceAll(REGEX_PARAM, "?"), Statement.RETURN_GENERATED_KEYS);
-		} catch (SQLException e) {
-			throw new SqlRuntimeException(e);
-		}
+		this.paramLabel_paramIndex = parseParams(sql);
+		this.conversionPolicy = new ConversionPolicy();
+		this.session = session;
+		this.sql = sql;
 	}
 	
 	public <T> Query setConverter(Class<T> type, AttributeConverter<T> converter) {
@@ -173,7 +169,7 @@ public class Query {
 	
 	public <T> Stream<ResultSet> stream() {
 		try {
-			applyParameterBatches();
+			PreparedStatement ps = prepareStatement();
 			return ResultStream.stream(ps.executeQuery());
 		} catch (SQLException e) {
 			throw new SqlRuntimeException(e);
@@ -187,7 +183,7 @@ public class Query {
 	 */
 	public <T> T fetchScalar(Class<T> scalarClass) {
 		try {
-			applyParameterBatches();
+			PreparedStatement ps = prepareStatement();
 			ResultSet rs = ps.executeQuery();
 			if (!rs.next()) {
 				throw new NoResultsException();
@@ -214,8 +210,8 @@ public class Query {
 	public <T> List<T> executeUpdate(Class<T> targetKeyClass) {
 		
 		try {
-			applyParameterBatches();
 			
+			PreparedStatement ps = prepareStatement();
 			if (paramBatches.size() > 1) {
 				ps.executeBatch();
 			} else {
@@ -237,14 +233,14 @@ public class Query {
 	}
 
 	/**
-	 * Applies all parameter batches stored in this query to its PreparedStatement object. If there is a running manual parameter batch
+	 * Creates a PreparedStatement and then applies all parameter batches stored in this query to it. If there is a running manual parameter batch
 	 * that has not been queued yet, that will also be added to the batch queue.
 	 * 
 	 * Queries which have more than 1 parameter batch will result in a call to addBatch() on the underlying PreparedStatement object for each batch.
 	 * Queries with only 1 parameter batch will simply apply each parameter in the batch and then return
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private void applyParameterBatches() {
+	private PreparedStatement prepareStatement() {
 		
 		if (!manualParamBatch.isEmpty()) {
 			finishBatch();
@@ -255,6 +251,9 @@ public class Query {
 		}
 		
 		try {
+		
+			String formattedSql = sql.replaceAll(REGEX_PARAM, "?");
+			PreparedStatement ps = session.getJdbcConnection().prepareStatement(formattedSql, Statement.RETURN_GENERATED_KEYS);
 			
 			for (Map<Integer, Object> paramBatch : this.paramBatches) {
 			
@@ -274,6 +273,8 @@ public class Query {
 					ps.addBatch();
 				}
 			}
+			
+			return ps;
 		}
 		catch (SQLException e) {
 			throw new SqlRuntimeException(e);
