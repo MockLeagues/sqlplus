@@ -84,48 +84,6 @@ public class SqlPlus {
 	}
 
 	/**
-	 * Shortcut method for querying a single integer scalar value
-	 */
-	public int queryInt(String sql) {
-		return queryScalar(Integer.class, sql);
-	}
-
-	/**
-	 * Shortcut method for querying a single double scalar value
-	 */
-	public double queryDouble(String sql) {
-		return queryScalar(Double.class, sql);
-	}
-
-	/**
-	 * Shortcut method for querying a single boolean scalar value
-	 */
-	public boolean queryBoolean(String sql) {
-		return queryScalar(Boolean.class, sql);
-	}
-
-	/**
-	 * Shortcut method for querying a single string scalar value
-	 */
-	public String queryString(String sql) {
-		return queryScalar(String.class, sql);
-	}
-
-	/**
-	 * Shortcut method for querying a single character scalar value
-	 */
-	public char queryChar(String sql) {
-		return queryScalar(Character.class, sql);
-	}
-
-	/**
-	 * Shortcut method for pulling a scalar value from a query
-	 */
-	private <T> T queryScalar(Class<T> scalarClass, String sql) {
-		return query(conn -> conn.createQuery(sql).fetchScalar(scalarClass));
-	}
-	
-	/**
 	 * Executes an action against a database connection obtained from this instance's connection factory
 	 */
 	public void open(Work<Session> action) {

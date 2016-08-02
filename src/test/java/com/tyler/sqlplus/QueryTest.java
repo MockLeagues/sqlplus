@@ -288,20 +288,6 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void testQueryIntScalar() throws Exception {
-		h2.batch("insert into office(office_name, `primary`, employee_id) values ('Office A', 1, 1)");
-		Integer total = h2.getSQLPlus().queryInt("select sum(office_id) from office");
-		assertEquals(new Integer(1), total);
-	}
-	
-	@Test
-	public void testQueryDoubleScalar() throws Exception {
-		h2.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
-		Double salary = h2.getSQLPlus().queryDouble("select sum(salary) from employee");
-		assertEquals(new Double(42000), salary);
-	}
-	
-	@Test
 	public void testBatchesAreAddedWhenExplicitlyAdded() throws Exception {
 		
 		h2.getSQLPlus().open(conn -> {
