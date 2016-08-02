@@ -2,37 +2,22 @@ package com.tyler.sqlplus.utility;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+
+import com.tyler.sqlplus.exception.ReflectionException;
 
 public final class ReflectionUtils {
 
 	// It is important to cache reflective data since it can be costly to lookup in bulk
 	private static final Map<Field, Function<Object, Object>> FIELD_GETTER = new HashMap<>();
 	private static final Map<Field, BiConsumer<Object, Object>> FIELD_SETTER = new HashMap<>();
-	private static final Map<Field, Class<?>> FIELD_GENERIC = new HashMap<>();
 	
 	private ReflectionUtils() {}
 
-	public static Class<?> getGenericType(Field f) {
-		if (FIELD_GENERIC.containsKey(f)) {
-			return FIELD_GENERIC.get(f);
-		}
-		else {
-			Class<?> genericType = (Class<?>) ((ParameterizedType)f.getGenericType()).getActualTypeArguments()[0];
-			FIELD_GENERIC.put(f, genericType);
-			return genericType;
-		}
-	}
-	
-	public static Object get(String fieldName, Object instance) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
-		return get(instance.getClass().getDeclaredField(fieldName), instance);
-	}
-	
-	public static Object get(Field field, Object instance) throws IllegalArgumentException, IllegalAccessException, SecurityException {
+	public static Object get(Field field, Object instance) {
 		
 		if (FIELD_GETTER.containsKey(field)) {
 			return FIELD_GETTER.get(field).apply(instance);
@@ -42,27 +27,23 @@ public final class ReflectionUtils {
 		String capFieldName = capitalize(field.getName());
 		try {
 			Method getter = instance.getClass().getDeclaredMethod("get" + capFieldName);
-			getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new RuntimeException(e); } }; 
+			getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new ReflectionException(e); } }; 
 		}
 		catch (NoSuchMethodException e1) {
 			try {
 				Method getter = instance.getClass().getDeclaredMethod("is" + capFieldName);
-				getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new RuntimeException(e); } };
+				getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new ReflectionException(e); } };
 			}
 			catch (NoSuchMethodException e2) {
 				field.setAccessible(true);
-				getValue = (obj) -> { try { return field.get(obj); } catch (Exception e3) { throw new RuntimeException(e3); } };
+				getValue = (obj) -> { try { return field.get(obj); } catch (Exception e3) { throw new ReflectionException(e3); } };
 			}
 		}
 		FIELD_GETTER.put(field, getValue);
 		return getValue.apply(instance);
 	}
 
-	public static void set(String member, Object instance, Object value) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
-		set(instance.getClass().getDeclaredField(member), instance, value);
-	}
-
-	public static void set(Field field, Object instance, Object value) throws IllegalArgumentException, IllegalAccessException {
+	public static void set(Field field, Object instance, Object value) {
 		
 		if (FIELD_SETTER.containsKey(field)) {
 			FIELD_SETTER.get(field).accept(instance, value);
@@ -71,11 +52,11 @@ public final class ReflectionUtils {
 			BiConsumer<Object, Object> setValue = null;
 			try {
 				Method setter = instance.getClass().getDeclaredMethod("set" + capitalize(field.getName()));
-				setValue = (obj, val) -> { try { setter.invoke(obj, val); } catch (Exception e) { throw new RuntimeException(e); } }; 
+				setValue = (obj, val) -> { try { setter.invoke(obj, val); } catch (Exception e) { throw new ReflectionException(e); } }; 
 			}
 			catch (NoSuchMethodException e) {
 				field.setAccessible(true);
-				setValue = (obj, val) -> { try { field.set(obj, val); } catch (Exception e1) { throw new RuntimeException(e1); } };
+				setValue = (obj, val) -> { try { field.set(obj, val); } catch (Exception e1) { throw new ReflectionException(e1); } };
 			}
 			FIELD_SETTER.put(field, setValue);
 			setValue.accept(instance, value);

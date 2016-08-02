@@ -23,6 +23,7 @@ import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
+import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.BatchConsumer;
 import com.tyler.sqlplus.proxy.ProxyResultMapper;
@@ -313,8 +314,8 @@ public class Query {
 			try {
 				member = ReflectionUtils.get(mappedField, o);
 			}
-			catch (IllegalArgumentException | IllegalAccessException e) {
-				throw new POJOBindException(e);
+			catch (ReflectionException e) {
+				throw new POJOBindException("Error retrieving value for bind field " + mappedField, e);
 			}
 			
 			Integer paramIndex = paramLabel_paramIndex.get(paramLabel);

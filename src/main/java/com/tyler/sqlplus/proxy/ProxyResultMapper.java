@@ -15,6 +15,7 @@ import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.conversion.AttributeConverter;
 import com.tyler.sqlplus.conversion.ConversionPolicy;
 import com.tyler.sqlplus.exception.POJOBindException;
+import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 
 /**
@@ -51,7 +52,7 @@ public class ProxyResultMapper {
 				
 				E instance;
 				try {
-					instance = EntityProxyFactory.create(type, session);
+					instance = EntityProxy.create(type, session);
 				} catch (InstantiationException | IllegalAccessException e) {
 					throw new POJOBindException(
 						"Could not construct instance of class " + type.getName() + ", verify it has a public no-args constructor");
@@ -73,7 +74,7 @@ public class ProxyResultMapper {
 					Object fieldValue = converterForField.get(rs, rsColumnName);
 					try {
 						ReflectionUtils.set(mappableField, instance, fieldValue);
-					} catch (IllegalArgumentException | IllegalAccessException e) {
+					} catch (ReflectionException e) {
 						throw new POJOBindException("Unable to set field value for field " + mappableField, e);
 					}
 				}

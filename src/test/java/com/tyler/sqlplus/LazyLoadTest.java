@@ -1,17 +1,19 @@
 package com.tyler.sqlplus;
 
+import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static com.tyler.sqlplus.test.SqlPlusTesting.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Rule;
 import org.junit.Test;
 
 import com.tyler.sqlplus.annotation.LoadQuery;
+import com.tyler.sqlplus.annotation.MapKey;
 import com.tyler.sqlplus.exception.LazyLoadException;
 import com.tyler.sqlplus.exception.SessionClosedException;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
@@ -123,12 +125,12 @@ public class LazyLoadTest {
 		
 		h2.getSQLPlus().open(conn -> {
 			
-			EmployeeWildcardGeneric employeeNoGeneric =
+			EmployeeWildcardGeneric employeeWildcardGeneric =
 				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
 			        .getUniqueResultAs(EmployeeWildcardGeneric.class);
 			
-			assertThrows(() -> employeeNoGeneric.getOffices(), LazyLoadException.class, "Field " + EmployeeWildcardGeneric.class.getDeclaredField("offices") + " contains " +
-				"a wildcard ('?') generic type. This is not adequate for determining the type of lazy-loaded one to many relations");
+			assertThrows(() -> employeeWildcardGeneric.getOffices(), LazyLoadException.class, "Field " + EmployeeWildcardGeneric.class.getDeclaredField("offices") + " contains " +
+				"a wildcard ('?') generic type. This is not adequate for determining the type of lazy-loaded one to many collections");
 		});
 		
 	}
@@ -167,7 +169,57 @@ public class LazyLoadTest {
 			        .getUniqueResultAs(EmployeeNoGeneric.class);
 			
 			assertThrows(() -> employeeNoGeneric.getOffices(), LazyLoadException.class, "Field " + EmployeeNoGeneric.class.getDeclaredField("offices") + " does not contain generic type info. " +
-					"This is required for determining the type of lazy-loaded one to many relations");
+					"This is required for determining the types of lazy-loaded one to many relations");
+		});
+		
+	}
+
+	public static class EmployeeLazyLoadMaps {
+		
+		public Integer employeeId;
+
+		@LoadQuery(
+			"select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
+			"from office o " +
+			"where o.employee_id = :employeeId"
+		)
+		@MapKey("officeId")
+		public Map<Integer, Office> offices;
+		
+		public Map<Integer, Office> getOffices() {
+			return offices;
+		}
+		
+	}
+	
+	@Test
+	public void testLoadMapWithMapKeySpecified() throws Exception {
+		
+		h2.batch(
+			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
+			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			EmployeeLazyLoadMaps employee = 
+				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
+			        .getUniqueResultAs(EmployeeLazyLoadMaps.class);
+			
+			Map<Integer, Office> offices = employee.getOffices();
+			assertEquals(3, offices.size());
+			
+			Office officeA = offices.get(1);
+			assertEquals("Office A", officeA.officeName);
+			
+			Office officeB = offices.get(2);
+			assertEquals("Office B", officeB.officeName);
+			
+			Office officeC = offices.get(3);
+			assertEquals("Office C", officeC.officeName);
+			
 		});
 		
 	}
