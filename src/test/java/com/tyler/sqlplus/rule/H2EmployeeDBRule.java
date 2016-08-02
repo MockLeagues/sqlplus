@@ -3,7 +3,10 @@ package com.tyler.sqlplus.rule;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.List;
 
+import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 
 public class H2EmployeeDBRule extends AbstractDBRule {
@@ -23,6 +26,65 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 		} catch (SQLException e) {
 			throw new SqlRuntimeException(e);
 		}
+	}
+	
+	public static class Employee {
+		
+		public enum Type { HOURLY, SALARY; }
+		public Integer employeeId;
+		public Type type;
+		public String name;
+		public LocalDate hired;
+		public Integer salary;
+
+		@LoadQuery(
+			"select office_id as \"office_id\", office_name as \"office_name\", employee_id as \"employee_id\", `primary` as \"primary\" " +
+			"from office o " +
+			"where o.employee_id = :employeeId"
+		)
+		public List<Office> offices;
+		
+		public List<Office> getOffices() {
+			return offices;
+		}
+		
+	}
+
+	public static class Office {
+		public Integer officeId;
+		public String officeName;
+		public boolean primary;
+		public int employeeId;
+	}
+	
+	public static class Address {
+		
+		public Integer addressId;
+		public String street;
+		public String city;
+		public String state;
+		public String zip;
+		
+		@LoadQuery(
+			"select employee_id as \"employee_id\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" " +
+			"from employee e " +
+			"where e.address_id = :addressId"
+		)
+		public Employee employee;
+		
+		public Address() {}
+		
+		public Address(String street, String city, String state, String zip) {
+			this.street = street;
+			this.city = city;
+			this.state = state;
+			this.zip = zip;
+		}
+		
+		public Employee getEmployee() {
+			return employee;
+		}
+		
 	}
 	
 	@Override
@@ -76,32 +138,6 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 					")"
 				);
 				
-				conn.createStatement().executeUpdate(
-					"create table `order` (" +
-						"`order_id` int(11) not null auto_increment," +
-						"`date_submitted` date null," +
-						"`submitter` varchar(45) null," +
-						"primary key (`order_id`)" +
-					")"
-				);
-				
-				conn.createStatement().executeUpdate(
-					"create table `product` (" +
-						"`product_id` int(11) not null auto_increment," +
-						"`price` decimal(10,2) not null," +
-						"`uom` varchar(45) null," +
-						"primary key (`product_id`)" +
-					")"
-				);
-				
-				conn.createStatement().executeUpdate(
-					"create table `order_product_map` (" +
-						"`order_product_id` int(11) not null auto_increment," +
-						"`order_id` int(11) not null," +
-						"`product_id` int(11) not null," +
-						"primary key (`order_product_id`)" +
-					")"
-				);
 			}
 		} catch (SQLException e) {
 			throw new SqlRuntimeException(e);
@@ -116,9 +152,6 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 				conn.createStatement().executeUpdate("drop table meeting");
 				conn.createStatement().executeUpdate("drop table employee");
 				conn.createStatement().executeUpdate("drop table office");
-				conn.createStatement().executeUpdate("drop table product");
-				conn.createStatement().executeUpdate("drop table `order`");
-				conn.createStatement().executeUpdate("drop table order_product_map");
 			}
 		} catch (SQLException e) {
 			throw new SqlRuntimeException(e);

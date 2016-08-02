@@ -1,0 +1,175 @@
+package com.tyler.sqlplus;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static com.tyler.sqlplus.test.SqlPlusTesting.*;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import org.junit.Rule;
+import org.junit.Test;
+
+import com.tyler.sqlplus.annotation.LoadQuery;
+import com.tyler.sqlplus.exception.LazyLoadException;
+import com.tyler.sqlplus.exception.SessionClosedException;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee.Type;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Office;
+
+public class LazyLoadTest {
+
+	@Rule
+	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
+	
+	@Test
+	public void testLazyLoadSingleRelation() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			Address singleAddress = 
+				conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
+			        .getUniqueResultAs(Address.class);
+			
+			// Make sure it stays null until getter is called
+			assertNull(singleAddress.employee);
+			Employee lazyEmployee = singleAddress.getEmployee();
+			assertNotNull(lazyEmployee);
+			
+			assertEquals(Type.SALARY, lazyEmployee.type);
+			assertEquals("tester-1", lazyEmployee.name);
+			assertEquals(LocalDate.of(2015, 1, 1), lazyEmployee.hired);
+			assertEquals(new Integer(20500), lazyEmployee.salary);
+		});
+		
+	}
+	
+	@Test
+	public void testLazyLoadMultipleRelations() throws Exception {
+		
+		h2.batch(
+			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
+			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			Employee employee = 
+				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
+			        .getUniqueResultAs(Employee.class);
+			
+			// Make sure it stays null until getter is called
+			assertNull(employee.offices);
+			List<Office> offices = employee.getOffices();
+			assertNotNull(offices);
+			
+			assertEquals(3, offices.size());
+		});
+		
+	}
+	
+	@Test
+	public void testLazyLoadFailsOutsideSession() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
+		);
+		
+		Address foundAddress = h2.getSQLPlus().query(conn -> {
+			return conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
+			           .getUniqueResultAs(Address.class);
+		});
+		
+		assertThrows(() -> foundAddress.getEmployee(), SessionClosedException.class,
+			"Cannot lazy-load field " + Address.class.getDeclaredField("employee") + ", session is no longer open");
+	}
+	
+	public static class EmployeeWildcardGeneric {
+		
+		public Integer employeeId;
+
+		@LoadQuery(
+			"select office_id as \"office_id\", office_name as \"office_name\", employee_id as \"employee_id\", `primary` as \"primary\" " +
+			"from office o " +
+			"where o.employee_id = :employeeId"
+		)
+		public List<?> offices;
+		
+		@SuppressWarnings("unchecked")
+		public List<Office> getOffices() {
+			return (List<Office>) offices;
+		}
+		
+	}
+	
+	@Test
+	public void testErrorThrownWhenLazyLoadWildcardGeneric() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			EmployeeWildcardGeneric employeeNoGeneric =
+				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
+			        .getUniqueResultAs(EmployeeWildcardGeneric.class);
+			
+			assertThrows(() -> employeeNoGeneric.getOffices(), LazyLoadException.class, "Field " + EmployeeWildcardGeneric.class.getDeclaredField("offices") + " contains " +
+				"a wildcard ('?') generic type. This is not adequate for determining the type of lazy-loaded one to many relations");
+		});
+		
+	}
+	
+	public static class EmployeeNoGeneric {
+		
+		public Integer employeeId;
+
+		@SuppressWarnings("rawtypes")
+		@LoadQuery(
+			"select office_id as \"office_id\", office_name as \"office_name\", employee_id as \"employee_id\", `primary` as \"primary\" " +
+			"from office o " +
+			"where o.employee_id = :employeeId"
+		)
+		public List offices;
+		
+		@SuppressWarnings("unchecked")
+		public List<Office> getOffices() {
+			return (List<Office>) offices;
+		}
+		
+	}
+	
+	@Test
+	public void testErrorThrownWhenLazyLoadUntypedCollection() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			EmployeeNoGeneric employeeNoGeneric =
+				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
+			        .getUniqueResultAs(EmployeeNoGeneric.class);
+			
+			assertThrows(() -> employeeNoGeneric.getOffices(), LazyLoadException.class, "Field " + EmployeeNoGeneric.class.getDeclaredField("offices") + " does not contain generic type info. " +
+					"This is required for determining the type of lazy-loaded one to many relations");
+		});
+		
+	}
+	
+}

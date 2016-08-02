@@ -4,111 +4,29 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static com.tyler.sqlplus.test.SqlPlusTesting.*;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.tyler.sqlplus.QueryTest.Employee.Type;
-import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
-import com.tyler.sqlplus.exception.SessionClosedException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
-import com.tyler.sqlplus.functional.Task;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee.Type;
 
 public class QueryTest {
 
 	@Rule
 	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
-	
-	protected static void assertThrows(Task t, Class<? extends Throwable> expectType) {
-		assertThrows(t, expectType, null);
-	}
-	
-	protected static void assertThrows(Task t, Class<? extends Throwable> expectType, String expectMsg) {
-		try {
-			t.run();
-			fail("Expected test to throw instance of " + expectType.getName() + " but no error was thrown");
-		}
-		catch (Throwable thrownError) {
-			if (!expectType.equals(thrownError.getClass())) {
-				fail("Expected test to throw instance of " + expectType.getName() + " but no instead got error of type " + thrownError.getClass().getName());
-			}
-			if (expectMsg != null) {
-				if (!Objects.equals(thrownError.getMessage(), expectMsg)) {
-					fail("Expected error with message " + expectMsg + ", instead got message " + thrownError.getMessage());
-				}
-			}
-		}
-	}
-	
-	public static class Employee {
-		
-		public enum Type { HOURLY, SALARY; }
-		public Integer employeeId;
-		public Type type;
-		public String name;
-		public LocalDate hired;
-		public Integer salary;
-
-		@LoadQuery(
-			"select office_id as \"office_id\", office_name as \"office_name\", employee_id as \"employee_id\", `primary` as \"primary\" " +
-			"from office o " +
-			"where o.employee_id = :employeeId"
-		)
-		public List<Office> offices;
-		
-		public List<Office> getOffices() {
-			return offices;
-		}
-		
-	}
-
-	public static class Office {
-		public Integer officeId;
-		public String officeName;
-		public boolean primary;
-		public int employeeId;
-	}
-	
-	public static class Address {
-		
-		public Integer addressId;
-		public String street;
-		public String city;
-		public String state;
-		public String zip;
-		
-		@LoadQuery(
-			"select employee_id as \"employee_id\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" " +
-			"from employee e " +
-			"where e.address_id = :addressId"
-		)
-		public Employee employee;
-		
-		public Address() {}
-		
-		public Address(String street, String city, String state, String zip) {
-			this.street = street;
-			this.city = city;
-			this.state = state;
-			this.zip = zip;
-		}
-		
-		public Employee getEmployee() {
-			return employee;
-		}
-		
-	}
 	
 	@Test
 	public void testErrorThrownIfUnkownParamAdded() throws SQLException {
@@ -495,7 +413,7 @@ public class QueryTest {
 	}
 	
 	public static class EmployeeMissingBindParam {
-		public com.tyler.sqlplus.QueryTest.Employee.Type type;
+		public Type type;
 		public String name;
 		public Integer salary;
 	}
@@ -546,76 +464,6 @@ public class QueryTest {
 			assertEquals(TransactionException.class, e.getCause().getClass()); // Make sure the error we got was from us throwing the transaction exception
 			assertArrayEquals(new String[][]{}, h2.query("select * from employee"));
 		}
-	}
-	
-	@Test
-	public void testLazyLoadSingleRelation() throws Exception {
-		
-		h2.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
-		);
-		
-		h2.getSQLPlus().open(conn -> {
-			
-			Address singleAddress = 
-				conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
-			        .getUniqueResultAs(Address.class);
-			
-			// Make sure it stays null until getter is called
-			assertNull(singleAddress.employee);
-			Employee lazyEmployee = singleAddress.getEmployee();
-			assertNotNull(lazyEmployee);
-			
-			assertEquals(Type.SALARY, lazyEmployee.type);
-			assertEquals("tester-1", lazyEmployee.name);
-			assertEquals(LocalDate.of(2015, 1, 1), lazyEmployee.hired);
-			assertEquals(new Integer(20500), lazyEmployee.salary);
-		});
-		
-	}
-	
-	@Test
-	public void testLazyLoadMultipleRelations() throws Exception {
-		
-		h2.batch(
-			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
-			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
-			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
-			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
-		);
-		
-		h2.getSQLPlus().open(conn -> {
-			
-			Employee employee = 
-				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
-			        .getUniqueResultAs(Employee.class);
-			
-			// Make sure it stays null until getter is called
-			assertNull(employee.offices);
-			List<Office> offices = employee.getOffices();
-			assertNotNull(offices);
-			
-			assertEquals(3, offices.size());
-		});
-		
-	}
-	
-	@Test
-	public void testLazyLoadFailsOutsideSession() throws Exception {
-		
-		h2.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
-		);
-		
-		Address foundAddress = h2.getSQLPlus().query(conn -> {
-			return conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
-			           .getUniqueResultAs(Address.class);
-		});
-		
-		assertThrows(() -> foundAddress.getEmployee(), SessionClosedException.class,
-			"Cannot lazy-load field " + Address.class.getDeclaredField("employee") + ", session is no longer open");
 	}
 	
 }

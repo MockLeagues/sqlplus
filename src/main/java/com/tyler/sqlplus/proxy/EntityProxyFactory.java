@@ -2,6 +2,8 @@ package com.tyler.sqlplus.proxy;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
@@ -16,6 +18,7 @@ import java.util.TreeSet;
 import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
+import com.tyler.sqlplus.exception.LazyLoadException;
 import com.tyler.sqlplus.exception.SessionClosedException;
 import com.tyler.sqlplus.utility.ReflectionUtils;
 
@@ -69,16 +72,34 @@ public class EntityProxyFactory {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static Object lazyLoad(Object proxy, Field field, Session session) throws InstantiationException, IllegalAccessException {
+	private static Object lazyLoad(Object proxy, Field field, Session session) throws InstantiationException, IllegalAccessException, ReflectiveOperationException {
 		
 		String loadSql = field.getDeclaredAnnotation(LoadQuery.class).value();
 		Query loadQuery = session.createQuery(loadSql).bind(proxy);
 		
 		if (Collection.class.isAssignableFrom(field.getType())) {
+			
 			Class<Collection<?>> collectionType = (Class<Collection<?>>) field.getType();
 			Collection collectionImpl = chooseCollectionImpl(collectionType);
-			Class<?> collectionGenericType = ReflectionUtils.getGenericType(field);
-			loadQuery.streamAs(collectionGenericType).forEach(collectionImpl::add);
+
+			// Figure out our generic type of the collection
+			ParameterizedType parameterizedType = null;
+			try {
+				parameterizedType = (ParameterizedType) field.getGenericType();
+			}
+			catch (ClassCastException cce) {
+				throw new LazyLoadException(
+					"Field " + field + " does not contain generic type info. This is required for determining the type of lazy-loaded one to many relations");
+			}
+			Type[] genericTypes = parameterizedType.getActualTypeArguments();
+			
+			if ("?".equals(genericTypes[0].toString())) {
+				throw new LazyLoadException(
+					"Field " + field + " contains a wildcard ('?') generic type. This is not adequate for determining the type of lazy-loaded one to many relations");
+			}
+			
+			Class<?> genericType = (Class<?>) genericTypes[0];
+			loadQuery.streamAs(genericType).forEach(collectionImpl::add);
 			return collectionImpl;
 		}
 		else {
