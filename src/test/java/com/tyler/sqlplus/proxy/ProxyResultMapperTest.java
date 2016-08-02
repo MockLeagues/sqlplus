@@ -86,7 +86,7 @@ public class ProxyResultMapperTest {
 		when(rsToMap.getString("enumField")).thenReturn("SMALL");
 		when(rsToMap.getString("localDateField")).thenReturn("2015-01-01");
 		
-		MyPOJO pojo = ProxyResultMapper.forType(MyPOJO.class, mock(Session.class)).map(rsToMap);
+		MyPOJO pojo = ProxyMapper.forType(MyPOJO.class, mock(Session.class)).map(rsToMap);
 		
 		assertEquals(1, pojo.intField);
 		assertEquals(new Float(1.5), new Float(pojo.floatField));
@@ -125,7 +125,7 @@ public class ProxyResultMapperTest {
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		when(rsToMap.getInt("presentField")).thenReturn(1);
 		
-		POJOWithNullFields pojo = ProxyResultMapper.forType(POJOWithNullFields.class, mock(Session.class)).map(rsToMap);
+		POJOWithNullFields pojo = ProxyMapper.forType(POJOWithNullFields.class, mock(Session.class)).map(rsToMap);
 		
 		assertEquals(new Integer(1), pojo.presentField);
 		assertNull(pojo.nonPresentField);
@@ -146,7 +146,7 @@ public class ProxyResultMapperTest {
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		
-		Set<Field> mappableFields = ProxyResultMapper.determineMappableFields(rsToMap, POJOMappableFields.class, new HashMap<>());
+		Set<Field> mappableFields = ProxyMapper.determineMappableFields(rsToMap, POJOMappableFields.class, new HashMap<>());
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertFalse(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
@@ -165,7 +165,7 @@ public class ProxyResultMapperTest {
 		
 		Map<String, String> customMappings = new HashMap<>();
 		customMappings.put("customField", "mappableB");
-		Set<Field> mappableFields = ProxyResultMapper.determineMappableFields(rsToMap, POJOMappableFields.class, customMappings);
+		Set<Field> mappableFields = ProxyMapper.determineMappableFields(rsToMap, POJOMappableFields.class, customMappings);
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));

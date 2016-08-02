@@ -21,7 +21,7 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
 /**
  * Creates {@link ResultMapper} objects which map rows of a result set to entity proxies
  */
-public class ProxyResultMapper {
+public class ProxyMapper {
 
 	@SuppressWarnings("unchecked")
 	public static <E> ResultMapper<E> forType(Class<E> type, Session session) throws SQLException {
