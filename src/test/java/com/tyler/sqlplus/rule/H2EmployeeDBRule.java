@@ -38,7 +38,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 		public Integer salary;
 
 		@LoadQuery(
-			"select office_id as \"office_id\", office_name as \"office_name\", employee_id as \"employee_id\", `primary` as \"primary\" " +
+			"select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
 			"from office o " +
 			"where o.employee_id = :employeeId"
 		)

@@ -107,7 +107,10 @@ public class Query {
 	 */
 	public <T> T getUniqueResultAs(Class<T> resultClass) {
 		List<T> results = fetchAs(resultClass);
-		if (results.size() != 1) {
+		if (results.isEmpty()) {
+			throw new NoResultsException();
+		}
+		if (results.size() > 1) {
 			throw new NonUniqueResultException();
 		}
 		return results.get(0);

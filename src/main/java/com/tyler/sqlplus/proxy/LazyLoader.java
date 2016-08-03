@@ -1,6 +1,6 @@
 package com.tyler.sqlplus.proxy;
 
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -83,9 +83,7 @@ public class LazyLoader {
 				"Field " + fieldToLoadTo + " contains a wildcard ('?') generic type. This is not adequate for determining the type of lazy-loaded one to many collections");
 		}
 		
-		loadQuery.streamAs((Class<?>) genericType).forEach(collectionImpl::add);
-		return collectionImpl;
-		
+		return loadQuery.streamAs((Class<?>) genericType).collect(toCollection(() -> collectionImpl));
 	}
 	
 	@SuppressWarnings("rawtypes")

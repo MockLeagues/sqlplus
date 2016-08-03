@@ -76,6 +76,9 @@ public class LazyLoadTest {
 			assertNotNull(offices);
 			
 			assertEquals(3, offices.size());
+			assertEquals("Office A", offices.get(0).officeName);
+			assertEquals("Office B", offices.get(1).officeName);
+			assertEquals("Office C", offices.get(2).officeName);
 		});
 		
 	}
