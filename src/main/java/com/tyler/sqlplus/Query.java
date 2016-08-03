@@ -116,15 +116,9 @@ public class Query {
 	/**
 	 * Executes this query, mapping the results to the given POJO class. ResultSet columns will directly map
 	 * to the POJO's field names unless they are annoted with an @Column annotation to specify the mapped field.
-	 * 
-	 * A NoResultsException is thrown if there are no results
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
-		List<T> results = streamAs(resultClass).collect(toList());
-		if (results.isEmpty()) {
-			throw new NoResultsException();
-		}
-		return results;
+		return streamAs(resultClass).collect(toList());
 	}
 	
 	/**
