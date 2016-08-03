@@ -66,7 +66,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 		public String zip;
 		
 		@LoadQuery(
-			"select employee_id as \"employee_id\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" " +
+			"select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" " +
 			"from employee e " +
 			"where e.address_id = :addressId"
 		)
