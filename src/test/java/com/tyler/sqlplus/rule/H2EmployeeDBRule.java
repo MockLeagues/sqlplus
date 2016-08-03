@@ -3,6 +3,7 @@ package com.tyler.sqlplus.rule;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -90,70 +91,68 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 	@Override
 	public void setupSchema() {
 		
-		try {
+		try (Connection conn = getConnection()) {
 			
-			try (Connection conn = getConnection()) {
-				
-				conn.createStatement().executeUpdate(
-					"create table `address` (" +
-						"`address_id` int(11) not null auto_increment," +
-						"`street` varchar(45) default null," +
-						"`city` varchar(45) default null," +
-						"`state` varchar(45) default null," +
-						"`zip` varchar(45) default null," +
-						"primary key (`address_id`)" +
-					")"
-				);
-				
-				conn.createStatement().executeUpdate(
-					"create table `meeting` (" +
-						"`meeting_id` int(11) not null auto_increment," +
-						"`office_id` int(11) not null," +
-						"`start_time` int(11) not null," +
-						"`end_time` int(11) not null," +
-						"`topic` varchar(45) not null," +
-						"primary key (`meeting_id`)" +
-					")"
-				);
-				
-				conn.createStatement().executeUpdate(
-					"create table `employee` (" +
-						"`employee_id` int(11) not null auto_increment," +
-						"`type` varchar(45) not null," +
-						"`name` varchar(45) not null," +
-						"`salary` int(11) null," +
-						"`hired` date null," +
-						"`address_id` int(11) default null," +
-						"primary key (`employee_id`)" +
-					")"
-				);
-				
-				conn.createStatement().executeUpdate(
-					"create table `office` (" +
-						"`office_id` int(11) not null auto_increment," +
-						"`office_name` varchar(45) not null," +
-						"`primary` tinyint(4) not null," +
-						"`employee_id` int(11) default null," +
-						"primary key (`office_id`)" +
-					")"
-				);
-				
-			}
-		} catch (SQLException e) {
+			Statement st = conn.createStatement();
+			st.executeUpdate(
+				"create table `address` (" +
+					"`address_id` int(11) not null auto_increment," +
+					"`street` varchar(45) default null," +
+					"`city` varchar(45) default null," +
+					"`state` varchar(45) default null," +
+					"`zip` varchar(45) default null," +
+					"primary key (`address_id`)" +
+				")"
+			);
+			
+			st.executeUpdate(
+				"create table `meeting` (" +
+					"`meeting_id` int(11) not null auto_increment," +
+					"`office_id` int(11) not null," +
+					"`start_time` int(11) not null," +
+					"`end_time` int(11) not null," +
+					"`topic` varchar(45) not null," +
+					"primary key (`meeting_id`)" +
+				")"
+			);
+			
+			st.executeUpdate(
+				"create table `employee` (" +
+					"`employee_id` int(11) not null auto_increment," +
+					"`type` varchar(45) not null," +
+					"`name` varchar(45) not null," +
+					"`salary` int(11) null," +
+					"`hired` date null," +
+					"`address_id` int(11) default null," +
+					"primary key (`employee_id`)" +
+				")"
+			);
+			
+			st.executeUpdate(
+				"create table `office` (" +
+					"`office_id` int(11) not null auto_increment," +
+					"`office_name` varchar(45) not null," +
+					"`primary` tinyint(4) not null," +
+					"`employee_id` int(11) default null," +
+					"primary key (`office_id`)" +
+				")"
+			);
+		}
+		catch (SQLException e) {
 			throw new SqlRuntimeException(e);
 		}
 	}
 	
 	@Override
 	public void destroySchema() {
-		try {
-			try (Connection conn = getConnection()) {
-				conn.createStatement().executeUpdate("drop table address");
-				conn.createStatement().executeUpdate("drop table meeting");
-				conn.createStatement().executeUpdate("drop table employee");
-				conn.createStatement().executeUpdate("drop table office");
-			}
-		} catch (SQLException e) {
+		try (Connection conn = getConnection()) {
+			Statement st = conn.createStatement();
+			st.executeUpdate("drop table address");
+			st.executeUpdate("drop table meeting");
+			st.executeUpdate("drop table employee");
+			st.executeUpdate("drop table office");
+		}
+		catch (SQLException e) {
 			throw new SqlRuntimeException(e);
 		}
 	}
