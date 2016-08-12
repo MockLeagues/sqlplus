@@ -23,15 +23,6 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
  */
 public class ProxyMapper {
 
-	@SuppressWarnings("unchecked")
-	public static <E> ResultMapper<E> forType(Class<E> type, Session session) throws SQLException {
-		return forType(type, Collections.EMPTY_MAP, session);
-	}
-	
-	public static <E> ResultMapper<E> forType(Class<E> type, Map<String, String> rsCol_fieldName, Session session) throws SQLException {
-		return forType(type, ConversionPolicy.DEFAULT, rsCol_fieldName, session);
-	}
-	
 	public static <E> ResultMapper<E> forType(Class<E> type, ConversionPolicy conversionPolicy, Map<String, String> rsCol_fieldName, Session session) {
 
 		// Since we iterate over the POJO class fields when mapping them from the result set, we need to invert the given map

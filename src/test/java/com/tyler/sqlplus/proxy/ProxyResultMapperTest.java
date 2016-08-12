@@ -18,6 +18,7 @@ import java.util.Set;
 import org.junit.Test;
 
 import com.tyler.sqlplus.Session;
+import com.tyler.sqlplus.conversion.ConversionPolicy;
 import com.tyler.sqlplus.proxy.ProxyResultMapperTest.MyPOJO.Size;
 
 public class ProxyResultMapperTest {
@@ -86,7 +87,7 @@ public class ProxyResultMapperTest {
 		when(rsToMap.getString("enumField")).thenReturn("SMALL");
 		when(rsToMap.getString("localDateField")).thenReturn("2015-01-01");
 		
-		MyPOJO pojo = ProxyMapper.forType(MyPOJO.class, mock(Session.class)).map(rsToMap);
+		MyPOJO pojo = ProxyMapper.forType(MyPOJO.class, ConversionPolicy.DEFAULT, new HashMap<>(), mock(Session.class)).map(rsToMap);
 		
 		assertEquals(1, pojo.intField);
 		assertEquals(new Float(1.5), new Float(pojo.floatField));
@@ -125,7 +126,7 @@ public class ProxyResultMapperTest {
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		when(rsToMap.getInt("presentField")).thenReturn(1);
 		
-		POJOWithNullFields pojo = ProxyMapper.forType(POJOWithNullFields.class, mock(Session.class)).map(rsToMap);
+		POJOWithNullFields pojo = ProxyMapper.forType(POJOWithNullFields.class, ConversionPolicy.DEFAULT, new HashMap<>(), mock(Session.class)).map(rsToMap);
 		
 		assertEquals(new Integer(1), pojo.presentField);
 		assertNull(pojo.nonPresentField);
