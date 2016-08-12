@@ -41,13 +41,13 @@ public class ProxyMapper {
 		
 		return new ResultMapper<E>() {
 
-			private Set<Field> mappableFields;
+			private Set<Field> loadableFields;
 			
 			@Override
 			public E map(ResultSet rs) throws SQLException {
 				
-				if (mappableFields == null) {
-					mappableFields = determineMappableFields(rs, type, rsCol_fieldName);
+				if (loadableFields == null) {
+					loadableFields = determineLoadableFields(rs, type, rsCol_fieldName);
 				}
 				
 				E instance;
@@ -58,24 +58,24 @@ public class ProxyMapper {
 						"Could not construct instance of class " + type.getName() + ", verify it has a public no-args constructor");
 				}
 				
-				for (Field mappableField : mappableFields) {
+				for (Field loadableField : loadableFields) {
 					
-					AttributeConverter<?> converterForField = conversionPolicy.findConverter(mappableField.getType());
+					AttributeConverter<?> converterForField = conversionPolicy.findConverter(loadableField.getType());
 					
-					String nameOfFieldToMap = mappableField.getName();
+					String nameOfFieldToLoad = loadableField.getName();
 					String rsColumnName;
-					if (fieldName_rsCol.containsKey(nameOfFieldToMap)) {
-						rsColumnName = fieldName_rsCol.get(nameOfFieldToMap);
+					if (fieldName_rsCol.containsKey(nameOfFieldToLoad)) {
+						rsColumnName = fieldName_rsCol.get(nameOfFieldToLoad);
 					}
 					else {
-						rsColumnName = nameOfFieldToMap;
+						rsColumnName = nameOfFieldToLoad;
 					}
 					
 					Object fieldValue = converterForField.get(rs, rsColumnName);
 					try {
-						ReflectionUtils.set(mappableField, instance, fieldValue);
+						ReflectionUtils.set(loadableField, instance, fieldValue);
 					} catch (ReflectionException e) {
-						throw new POJOBindException("Unable to set field value for field " + mappableField, e);
+						throw new POJOBindException("Unable to set field value for field " + loadableField, e);
 					}
 				}
 				
@@ -87,13 +87,13 @@ public class ProxyMapper {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static Set<Field> determineMappableFields(ResultSet rs, Class<?> type) throws SQLException {
-		return determineMappableFields(rs, type, Collections.EMPTY_MAP);
+	public static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type) throws SQLException {
+		return determineLoadableFields(rs, type, Collections.EMPTY_MAP);
 	}
 	
-	public static Set<Field> determineMappableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName) throws SQLException {
+	public static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName) throws SQLException {
 		
-		Set<Field> mappableFields = new HashSet<>();
+		Set<Field> loadableFields = new HashSet<>();
 		ResultSetMetaData meta = rs.getMetaData();
 		
 		for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
@@ -110,8 +110,8 @@ public class ProxyMapper {
 			}
 			
 			try {
-				Field mappableField = type.getDeclaredField(mappedFieldName);
-				mappableFields.add(mappableField);
+				Field loadableField = type.getDeclaredField(mappedFieldName);
+				loadableFields.add(loadableField);
 			} catch (NoSuchFieldException e) {
 				// Not mappable. If the mapped field name was pulled from a custom mapping, we should throw an error
 				// letting the user know they messed up their field name; otherwise would be hard to track down
@@ -122,7 +122,7 @@ public class ProxyMapper {
 			}
 		}
 		
-		return mappableFields;
+		return loadableFields;
 	}
 	
 }

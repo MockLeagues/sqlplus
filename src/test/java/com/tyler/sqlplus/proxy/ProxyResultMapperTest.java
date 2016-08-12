@@ -146,7 +146,7 @@ public class ProxyResultMapperTest {
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		
-		Set<Field> mappableFields = ProxyMapper.determineMappableFields(rsToMap, POJOMappableFields.class, new HashMap<>());
+		Set<Field> mappableFields = ProxyMapper.determineLoadableFields(rsToMap, POJOMappableFields.class, new HashMap<>());
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertFalse(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
@@ -165,7 +165,7 @@ public class ProxyResultMapperTest {
 		
 		Map<String, String> customMappings = new HashMap<>();
 		customMappings.put("customField", "mappableB");
-		Set<Field> mappableFields = ProxyMapper.determineMappableFields(rsToMap, POJOMappableFields.class, customMappings);
+		Set<Field> mappableFields = ProxyMapper.determineLoadableFields(rsToMap, POJOMappableFields.class, customMappings);
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
