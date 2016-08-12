@@ -31,7 +31,7 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
  */
 public class LazyLoader {
 
-	static void load(Object proxy, Field loadField, Session session) throws InstantiationException, IllegalAccessException {
+	static Object load(Object proxy, Field loadField, Session session) throws InstantiationException, IllegalAccessException {
 		
 		if (!session.isOpen()) {
 			throw new SessionClosedException("Cannot lazy-load field " + loadField + ", session is no longer open");
@@ -51,7 +51,7 @@ public class LazyLoader {
 			loadedResult = loadQuery.getUniqueResultAs(loadField.getType());
 		}
 		
-		ReflectionUtils.set(loadField, proxy, loadedResult);
+		return loadedResult;
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })

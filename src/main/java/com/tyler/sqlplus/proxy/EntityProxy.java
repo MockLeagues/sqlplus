@@ -42,7 +42,8 @@ public class EntityProxy {
 					Field loadField = type.getDeclaredField(fieldName);
 					
 					if (loadField.isAnnotationPresent(LoadQuery.class)) {
-						LazyLoader.load(self, loadField, session);
+						Object loadedResult = LazyLoader.load(self, loadField, session);
+						ReflectionUtils.set(loadField, self, loadedResult);
 						gettersAlreadyLoaded.add(methodName);
 					}
 				}
