@@ -116,7 +116,7 @@ public class SqlPlus {
 			if (transactional) {
 				conn.setAutoCommit(false);
 			}
-			Session newSession = new Session(conn);
+			Session newSession = new Session(conn, this);
 			id_currentSession.putIfAbsent(currentSessionId, newSession);
 			result = action.doReturningWork(newSession);
 			if (transactional) {

@@ -1,10 +1,10 @@
 package com.tyler.sqlplus;
 
+import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static com.tyler.sqlplus.test.SqlPlusTesting.*;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -452,4 +452,20 @@ public class QueryTest {
 		}
 	}
 	
+	@Test
+	public void testConvertUnderscoreToCamelCaseFieldNames() throws Exception {
+		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+		h2.getSQLPlus().open(conn -> {
+			
+			Address result = conn.createQuery("select * from address")
+			                     .setConvertUnderscoreToCamelCase(true)
+			                     .getUniqueResultAs(Address.class);
+			
+			assertEquals(new Integer(1), result.addressId);
+			assertEquals("Maple Street", result.street);
+			assertEquals("Anytown", result.city);
+			assertEquals("12345", result.zip);
+			assertEquals("MN", result.state);
+		});
+	}
 }

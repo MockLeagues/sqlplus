@@ -87,7 +87,7 @@ public class ProxyResultMapperTest {
 		when(rsToMap.getString("enumField")).thenReturn("SMALL");
 		when(rsToMap.getString("localDateField")).thenReturn("2015-01-01");
 		
-		MyPOJO pojo = ProxyMapper.forType(MyPOJO.class, ConversionPolicy.DEFAULT, new HashMap<>(), mock(Session.class)).map(rsToMap);
+		MyPOJO pojo = ProxyMapper.forType(MyPOJO.class, ConversionPolicy.DEFAULT, new HashMap<>(), mock(Session.class), false).map(rsToMap);
 		
 		assertEquals(1, pojo.intField);
 		assertEquals(new Float(1.5), new Float(pojo.floatField));
@@ -126,7 +126,7 @@ public class ProxyResultMapperTest {
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		when(rsToMap.getInt("presentField")).thenReturn(1);
 		
-		POJOWithNullFields pojo = ProxyMapper.forType(POJOWithNullFields.class, ConversionPolicy.DEFAULT, new HashMap<>(), mock(Session.class)).map(rsToMap);
+		POJOWithNullFields pojo = ProxyMapper.forType(POJOWithNullFields.class, ConversionPolicy.DEFAULT, new HashMap<>(), mock(Session.class), false).map(rsToMap);
 		
 		assertEquals(new Integer(1), pojo.presentField);
 		assertNull(pojo.nonPresentField);
@@ -147,7 +147,7 @@ public class ProxyResultMapperTest {
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		
-		Set<Field> mappableFields = ProxyMapper.determineLoadableFields(rsToMap, POJOMappableFields.class, new HashMap<>());
+		Set<Field> mappableFields = ProxyMapper.determineLoadableFields(rsToMap, POJOMappableFields.class, new HashMap<>(), false);
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertFalse(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
@@ -166,7 +166,7 @@ public class ProxyResultMapperTest {
 		
 		Map<String, String> customMappings = new HashMap<>();
 		customMappings.put("customField", "mappableB");
-		Set<Field> mappableFields = ProxyMapper.determineLoadableFields(rsToMap, POJOMappableFields.class, customMappings);
+		Set<Field> mappableFields = ProxyMapper.determineLoadableFields(rsToMap, POJOMappableFields.class, customMappings, false);
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));

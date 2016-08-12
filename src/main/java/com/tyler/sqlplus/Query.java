@@ -42,17 +42,17 @@ public class Query {
 	
 	private Session session;
 	private String sql;
+	private boolean underscoreCamelCaseConvert = false;
 	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
 	private Map<String, String> rsColumn_classFieldName = new HashMap<>();
-	private ConversionPolicy conversionPolicy;
+	private ConversionPolicy conversionPolicy = new ConversionPolicy();
 	
 	public Query(String sql, Session session) {
 		this.session = session;
 		this.sql = sql;
 		this.paramLabel_paramIndex = parseParams(sql);
-		this.conversionPolicy = new ConversionPolicy();
 	}
 	
 	public <T> Query setConverter(Class<T> type, AttributeConverter<T> converter) {
@@ -79,6 +79,15 @@ public class Query {
 		}
 		Integer paramIndex = paramLabel_paramIndex.get(key);
 		manualParamBatch.put(paramIndex, val);
+		return this;
+	}
+	
+	/**
+	 * Sets whether the column names of this query's result set should be converted from underscore to camel-case when mapping
+	 * them to POJO fields
+	 */
+	public Query setConvertUnderscoreToCamelCase(boolean convert) {
+		this.underscoreCamelCaseConvert = convert;
 		return this;
 	}
 	
@@ -151,7 +160,7 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		ResultMapper<T> pojoMapper = ProxyMapper.forType(klass, conversionPolicy, rsColumn_classFieldName, session);
+		ResultMapper<T> pojoMapper = ProxyMapper.forType(klass, conversionPolicy, rsColumn_classFieldName, session, underscoreCamelCaseConvert);
 		return stream().map(rs -> {
 			try {
 				return pojoMapper.map(rs);

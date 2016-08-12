@@ -13,10 +13,12 @@ import com.tyler.sqlplus.exception.SqlRuntimeException;
  */
 public class Session implements Closeable {
 
+	private SqlPlus context;
 	private Connection conn;
 	
-	public Session(Connection conn) {
+	public Session(Connection conn, SqlPlus context) {
 		this.conn = conn;
+		this.context = context;
 	}
 	
 	/**
@@ -45,6 +47,10 @@ public class Session implements Closeable {
 	
 	Connection getJdbcConnection() {
 		return conn;
+	}
+	
+	public SqlPlus getContext() {
+		return context;
 	}
 	
 	@Override

@@ -4,7 +4,6 @@ import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -23,13 +22,13 @@ import com.tyler.sqlplus.utility.ReflectionUtils;
  */
 public class ProxyMapper {
 
-	public static <E> ResultMapper<E> forType(Class<E> type, ConversionPolicy conversionPolicy, Map<String, String> rsCol_fieldName, Session session) {
+	public static <E> ResultMapper<E> forType(Class<E> type, ConversionPolicy conversionPolicy, Map<String, String> rsCol_fieldName, Session session, boolean underscoreCamelCaseConvert) {
 
 		// Since we iterate over the POJO class fields when mapping them from the result set, we need to invert the given map
 		// to ensure the keys are the POJO class field names, not the result set columns
 		Map<String, String> fieldName_rsCol = new HashMap<>();
 		rsCol_fieldName.forEach((rsCol, fieldName) -> fieldName_rsCol.put(fieldName, rsCol));
-		
+
 		return new ResultMapper<E>() {
 
 			private Set<Field> loadableFields;
@@ -38,7 +37,7 @@ public class ProxyMapper {
 			public E map(ResultSet rs) throws SQLException {
 				
 				if (loadableFields == null) {
-					loadableFields = determineLoadableFields(rs, type, rsCol_fieldName);
+					loadableFields = determineLoadableFields(rs, type, rsCol_fieldName, underscoreCamelCaseConvert);
 				}
 				
 				E instance;
@@ -57,6 +56,9 @@ public class ProxyMapper {
 					String rsColumnName;
 					if (fieldName_rsCol.containsKey(nameOfFieldToLoad)) {
 						rsColumnName = fieldName_rsCol.get(nameOfFieldToLoad);
+					}
+					else if (underscoreCamelCaseConvert) {
+						rsColumnName = ReflectionUtils.camelCaseToUnderscore(nameOfFieldToLoad);
 					}
 					else {
 						rsColumnName = nameOfFieldToLoad;
@@ -77,12 +79,7 @@ public class ProxyMapper {
 		
 	}
 
-	@SuppressWarnings("unchecked")
-	public static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type) throws SQLException {
-		return determineLoadableFields(rs, type, Collections.EMPTY_MAP);
-	}
-	
-	public static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName) throws SQLException {
+	public static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName, boolean underscoreCamelCaseConvert) throws SQLException {
 		
 		Set<Field> loadableFields = new HashSet<>();
 		ResultSetMetaData meta = rs.getMetaData();
@@ -95,6 +92,9 @@ public class ProxyMapper {
 			boolean customMappingPresent = rsColName_fieldName.containsKey(rsColName);
 			if (customMappingPresent) {
 				mappedFieldName = rsColName_fieldName.get(rsColName);
+			}
+			else if (underscoreCamelCaseConvert) {
+				mappedFieldName = ReflectionUtils.underscoreToCamelCase(rsColName);
 			}
 			else {
 				mappedFieldName = rsColName;

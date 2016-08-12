@@ -1,8 +1,12 @@
 package com.tyler.sqlplus.utility;
 
+import static java.util.stream.Collectors.*;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -81,6 +85,32 @@ public final class ReflectionUtils {
 		}
 		
 		return Character.toLowerCase(fieldName.charAt(0)) + fieldName.substring(1);
+	}
+	
+	/**
+	 * Converts a database field name in underscore format to the equivalent camel-case format.
+	 * This method first converts the database field name to lowercase before converting to camelcase. For instance,
+	 * both the columns "MY_FIELD" and "my_field" would get converted to the field name "myField"
+	 */
+	public static String underscoreToCamelCase(String dbField) {
+		if (dbField == null || dbField.isEmpty()) {
+			return "";
+		}
+		List<String> fieldWords = Arrays.asList(dbField.trim().toLowerCase().split("_"));
+		String firstWord = fieldWords.get(0);
+		if (fieldWords.size() == 1) {
+			return firstWord;
+		}
+		else {
+			return firstWord + fieldWords.subList(1, fieldWords.size()).stream().map(ReflectionUtils::capitalize).collect(joining());
+		}
+	}
+	
+	public static String camelCaseToUnderscore(String javaField) {
+		if (javaField == null || javaField.isEmpty()) {
+			return "";
+		}
+		return javaField.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
 	}
 	
 	private static String capitalize(String s) {
