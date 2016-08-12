@@ -13,6 +13,7 @@ import com.tyler.sqlplus.exception.ConfigurationException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.ReturningWork;
 import com.tyler.sqlplus.functional.Work;
+import com.tyler.sqlplus.proxy.TransactionAwareService;
 
 /**
  * This class is the primary entry point to the SQLPlus API.
@@ -63,6 +64,10 @@ public class SqlPlus {
 		this.sessionIDMode = idMode;
 	}
 
+	public <T> T createTransactionAwareService(Class<T> klass) throws InstantiationException, IllegalAccessException {
+		return TransactionAwareService.create(klass, this);
+	}
+	
 	public void setSessionIdMode(SessionIdMode mode) {
 		this.sessionIDMode = mode;
 	}
