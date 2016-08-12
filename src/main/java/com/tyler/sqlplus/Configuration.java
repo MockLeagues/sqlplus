@@ -38,7 +38,7 @@ public class Configuration {
 		return convertCamelCaseToUnderscore;
 	}
 
-	public Configuration setConvertCamelCaseToUnderscore(boolean convertCamelCaseToUnderscore) {
+	public Configuration setConvertUnderscoreToCamelCase(boolean convertCamelCaseToUnderscore) {
 		this.convertCamelCaseToUnderscore = convertCamelCaseToUnderscore;
 		return this;
 	}

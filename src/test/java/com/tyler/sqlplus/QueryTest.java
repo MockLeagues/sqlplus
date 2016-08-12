@@ -474,7 +474,7 @@ public class QueryTest {
 		
 		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		
-		SqlPlus sqlPlus = h2.buildSqlPlus(new Configuration().setConvertCamelCaseToUnderscore(true));
+		SqlPlus sqlPlus = h2.buildSqlPlus(new Configuration().setConvertUnderscoreToCamelCase(true));
 		
 		sqlPlus.open(conn -> {
 			Address result = conn.createQuery("select * from address").getUniqueResultAs(Address.class);
