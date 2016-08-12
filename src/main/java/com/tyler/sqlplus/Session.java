@@ -13,12 +13,12 @@ import com.tyler.sqlplus.exception.SqlRuntimeException;
  */
 public class Session implements Closeable {
 
-	private SqlPlus context;
 	private Connection conn;
+	private Configuration config;
 	
-	public Session(Connection conn, SqlPlus context) {
+	public Session(Connection conn, Configuration config) {
 		this.conn = conn;
-		this.context = context;
+		this.config = config;
 	}
 	
 	/**
@@ -33,7 +33,9 @@ public class Session implements Closeable {
 		} catch (SQLException e) {
 			throw new SqlRuntimeException(e);
 		}
-		return new Query(sql, this);
+		Query q = new Query(sql, this);
+		q.setConvertUnderscoreToCamelCase(config.isConvertCamelCaseToUnderscore());
+		return q;
 	}
 
 	public boolean isOpen() {
@@ -47,10 +49,6 @@ public class Session implements Closeable {
 	
 	Connection getJdbcConnection() {
 		return conn;
-	}
-	
-	public SqlPlus getContext() {
-		return context;
 	}
 	
 	@Override

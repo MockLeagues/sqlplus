@@ -4,10 +4,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
-
-import javax.sql.DataSource;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
@@ -22,15 +21,16 @@ import com.tyler.sqlplus.proxy.TransactionAwareService;
  */
 public class SqlPlus {
 
+	private Configuration config;
 	private Supplier<Connection> connectionFactory;
-	private ConcurrentHashMap<Object, Session> id_currentSession = new ConcurrentHashMap<>();
+	private Map<Long, Session> id_currentSession = new HashMap<>();
 	
 	public SqlPlus(String url, String user, String pass) {
 		this(new Configuration().setUrl(url).setUsername(user).setPassword(pass));
 	}
 
 	public SqlPlus(Configuration config) {
-		this(() -> {
+		this(config, () -> {
 			try {
 				return DriverManager.getConnection(config.getUrl(), config.getUsername(), config.getPassword());
 			}
@@ -39,18 +39,13 @@ public class SqlPlus {
 			}
 		});
 	}
-	
-	public SqlPlus(DataSource src) {
-		this(() -> {
-			try {
-				return src.getConnection();
-			} catch (SQLException e) {
-				throw new SqlRuntimeException(e);
-			}
-		});
-	}
 
 	public SqlPlus(Supplier<Connection> factory) {
+		this(new Configuration(), factory);
+	}
+	
+	public SqlPlus(Configuration config, Supplier<Connection> factory) {
+		this.config = config;
 		this.connectionFactory = factory;
 	}
 
@@ -98,7 +93,7 @@ public class SqlPlus {
 	 */
 	private <T> T exec(ReturningWork<Session, T> action, boolean transactional) {
 
-		Object currentSessionId = Thread.currentThread().getId();
+		Long currentSessionId = Thread.currentThread().getId();
 		if (id_currentSession.containsKey(currentSessionId)) {
 			Session currentSession = id_currentSession.get(currentSessionId);
 			try {
@@ -116,8 +111,8 @@ public class SqlPlus {
 			if (transactional) {
 				conn.setAutoCommit(false);
 			}
-			Session newSession = new Session(conn, this);
-			id_currentSession.putIfAbsent(currentSessionId, newSession);
+			Session newSession = new Session(conn, config);
+			id_currentSession.put(currentSessionId, newSession);
 			result = action.doReturningWork(newSession);
 			if (transactional) {
 				conn.commit();
