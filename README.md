@@ -1,9 +1,9 @@
-# sqlplus
-Utility library for working with JDBC
+# Overview
+sqlplus is a developer-friendly utility library for working with JDBC. It does not implement ORM features such as SQL generation or automatic cascading; rather, it provides a clean and relatively low-level layer of abstraction for managing persistence in your application.
 
 ## Why another database library?
-Why make another database utility library, when we already have things like JDBI or MyBatis? 2 main reasons:
-* For some reason, this is a topic that greatly interests me. I attempted to create my own ORM a la Hibernate awhile back but quickly realized I bit off way more than I could chew, so this is the perfect middle ground. I guess at the root of it all, this is something I made purely for fun and for the challenge
+Why make another database utility library, when we already have things like JDBI or MyBatis? True enough, there are already great libraries out there that get the job done (and have more development manpower than just myself). However, there were 2 main reasons I went ahead and created sqplus anyways:
+* Database persistence is a topic that naturally interests me. I attempted to create my own ORM (in the spirit of Hibernate) awhile back but quickly realized I bit off way more than I could chew, so this is my middle ground
 * I wanted to create a JDBC library which leveraged the power of Java 8's functional features. The ResultSet object is just screaming for Java 8's streaming features since it is, at its core, basically a collection
 
 ## Basic Usage
@@ -79,9 +79,9 @@ Map<String, List<Widget>> widgetsByColor = sqlPlus.query(session -> {
 
 ## Working with collections
 
-In any serious application, you'll find yourself working with entities which have relations to one or multiple other entities. sqlplus solves this problem via a lazy-loading solution which will load related entities on-demand (i.e. the first time they are accessed via a getter method inside of a session). If you've worked with Hibernate, this should sound very familiar; in fact, it works exactly the same!
+In any serious application, you'll find yourself working with entities which have relations to one or multiple other entities. sqlplus solves this problem via a lazy-loading solution which will load related entities on-demand (i.e. the first time they are accessed via a getter method inside of a session).
 
-Lazy-loaded relations are specified on the class member with a @LoadQuery annotation, which specifies the sql which will load the appropriate relation(s):
+Lazy-loaded relations are specified on the class member with a @LoadQuery annotation, which specifies the sql which will load the appropriate relation(s). Any parameters referenced in the load query are bound to the enclosing object. In the following example, this means the 'orderId' parameter will be bound to the value of the orderId field of the order object which caused the related collection to be loaded:
 ```java
 
 class Order {
@@ -109,7 +109,8 @@ sqlPlus.open(session -> {
 										  
 	Order myFirstOrder = myOrders.get(0);
   
-	// Order comments will be loaded on-demand on invocation of this method
+	// Order comments will be loaded on-demand on invocation of this method. Note that the 'orderId' parameter of the load query
+	// will be bound to the value of 'myFirstOrder's orderId
 	List<OrderComments> comments = myFirstOrder.getComments();
 	
 	// Do work with comments
@@ -117,7 +118,40 @@ sqlPlus.open(session -> {
 });
 ```
 
-Note that if you make a call to getComments() outside of a session, an exception will be thrown.
+You may also load a collection into a map whose keys will be the values of a given field of the related class. In the following example, each order comment will be added to the map using the value of its 'orderCommentId' field as the key:
+```java
+class Order {
+
+  private String orderId;
+  
+  private String issuer;
+  
+  private LocalDate dateCreated;
+  
+  @MapKey("orderCommentId")
+  @LoadQuery("select * from order_comment oc where oc.order_id = :orderId")
+  private Map<String, OrderComment> commentsById;
+
+  public Map<String, OrderComment> getCommentsById() {
+    return Collections.unmodifiableMap(commentsById);
+  }
+
+}
+
+SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
+sqlPlus.open(session -> {
+	List<Order> myOrders = session.createQuery("select * from order o where o.issuer = :name")
+	                              .setParameter("name", "twill")
+	                              .fetchAs(Order.class);
+										  
+	Order myFirstOrder = myOrders.get(0);
+	OrderComment commentABC123 = myFirstOrder.getCommentsById().get("ABC123");
+});
+```
+
+sqlplus is currently very unforgiving as far as naming conventions go - in order for a field to lazy-load correctly, you must use standard 'java beans' naming conventions on your getter methods; that is, 'get' followed by the capitalized field name you want to lazy-load. There may be a feature later on which will make this more configurable, but in the spirit of keeping things simple this works well enough for the time being.
+
+Note that if you make a call to a lazy-loading getter method outside of a session without having loaded its associated data, an exception will be thrown.
 
 ## Creating service classes
 
