@@ -23,63 +23,39 @@ import com.tyler.sqlplus.proxy.TransactionAwareService;
 public class SqlPlus {
 
 	private Supplier<Connection> connectionFactory;
-	private SessionIdMode sessionIDMode;
 	private ConcurrentHashMap<Object, Session> id_currentSession = new ConcurrentHashMap<>();
 	
 	public SqlPlus(String url, String user, String pass) {
-		this(url, user, pass, SessionIdMode.CURRENT_THREAD);
+		this(new Configuration().setUrl(url).setUsername(user).setPassword(pass));
 	}
-	
-	public SqlPlus(String url, String user, String pass, SessionIdMode idMode) {
+
+	public SqlPlus(Configuration config) {
 		this(() -> {
 			try {
-				return DriverManager.getConnection(url, user, pass);
+				return DriverManager.getConnection(config.getUrl(), config.getUsername(), config.getPassword());
 			}
 			catch (Exception ex) {
 				throw new ConfigurationException("Failed to connect to database", ex);
 			}
-		}, idMode);
-	}
-
-	public SqlPlus(DataSource src) {
-		this(src, SessionIdMode.CURRENT_THREAD);
+		});
 	}
 	
-	public SqlPlus(DataSource src, SessionIdMode idMode) {
+	public SqlPlus(DataSource src) {
 		this(() -> {
 			try {
 				return src.getConnection();
 			} catch (SQLException e) {
 				throw new SqlRuntimeException(e);
 			}
-		}, idMode);
+		});
 	}
 
 	public SqlPlus(Supplier<Connection> factory) {
-		this(factory, SessionIdMode.CURRENT_THREAD);
-	}
-	
-	public SqlPlus(Supplier<Connection> factory, SessionIdMode idMode) {
 		this.connectionFactory = factory;
-		this.sessionIDMode = idMode;
 	}
 
 	public <T> T createTransactionAwareService(Class<T> klass) throws InstantiationException, IllegalAccessException {
 		return TransactionAwareService.create(klass, this);
-	}
-	
-	public void setSessionIdMode(SessionIdMode mode) {
-		this.sessionIDMode = mode;
-	}
-	
-	public Object getCurrentSessionId() {
-		switch (sessionIDMode) {
-//		case DATA_SOURCE:
-//			return hashCode();
-		case CURRENT_THREAD:
-		default:
-			 return Thread.currentThread().getId();
-		}
 	}
 	
 	public void testConnection() {
@@ -122,7 +98,7 @@ public class SqlPlus {
 	 */
 	private <T> T exec(ReturningWork<Session, T> action, boolean transactional) {
 
-		Object currentSessionId = getCurrentSessionId();
+		Object currentSessionId = Thread.currentThread().getId();
 		if (id_currentSession.containsKey(currentSessionId)) {
 			Session currentSession = id_currentSession.get(currentSessionId);
 			try {

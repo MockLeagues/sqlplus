@@ -22,9 +22,7 @@ public class SqlPlusTest {
 	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
 	
 	@Test
-	public void testCurrentThreadSessionIDModeCorrectlyPullsCurrentSession() throws Exception {
-		
-		h2.getSQLPlus().setSessionIdMode(SessionIdMode.CURRENT_THREAD);
+	public void testCurrentThreadCorrectlyPullsCurrentSession() throws Exception {
 		
 		List<Session> sessionsRetrieved = new ArrayList<>();
 		
@@ -46,32 +44,6 @@ public class SqlPlusTest {
 		parentCall.call();
 		assertTrue(sessionsRetrieved.get(0) == sessionsRetrieved.get(1));
 	}
-	
-//	@Test
-//	public void testDataSourceSessionIDModeCorrectlyPullsCurrentSession() throws Exception {
-//		
-//		h2.getSQLPlus().setSessionIDMode(SessionIDMode.DATA_SOURCE);
-//		
-//		List<SqlPlusSession> sessionsRetrieved = new ArrayList<>();
-//		
-//		CountDownLatch latch = new CountDownLatch(2);
-//		
-//		Thread t1 = new Thread(() -> {
-//			h2.getSQLPlus().open(sessionsRetrieved::add);
-//			latch.countDown();
-//		});
-//		
-//		Thread t2 = new Thread(() -> {
-//			h2.getSQLPlus().open(sessionsRetrieved::add);
-//			latch.countDown();
-//		});
-//		
-//		t1.start();
-//		t2.start();
-//		latch.await();
-//		System.out.println(sessionsRetrieved);
-//		assertTrue(sessionsRetrieved.get(0) == sessionsRetrieved.get(1));
-//	}
 	
 	static class TransactionAwareService {
 		
