@@ -113,7 +113,8 @@ public class Query {
 	
 	/**
 	 * Executes this query, mapping the results to the given POJO class. ResultSet columns will directly map
-	 * to the POJO's field names unless they are annoted with an @Column annotation to specify the mapped field.
+	 * to the POJO's field names unless custom field mappings are present for this query or custom column names
+	 * are specified in 'as' clauses
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
 		return streamAs(resultClass).collect(toList());
