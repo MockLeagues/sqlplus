@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -81,10 +80,6 @@ public class Query {
 		Integer paramIndex = paramLabel_paramIndex.get(key);
 		manualParamBatch.put(paramIndex, val);
 		return this;
-	}
-	
-	public Set<String> getParameterLabels() {
-		return paramLabel_paramIndex.keySet();
 	}
 	
 	/**
@@ -359,7 +354,7 @@ public class Query {
 	 * 'select fieldA from table1 where fieldA = ? and fieldB = ?', a mapping would be produced with the keys
 	 * "1" and "2" and the values 1 and 2.
 	 */
-	public static Map<String, Integer> parseParams(String sql) {
+	private static Map<String, Integer> parseParams(String sql) {
 		
 		Map<String, Integer> paramLabel_index = new HashMap<>();
 		
