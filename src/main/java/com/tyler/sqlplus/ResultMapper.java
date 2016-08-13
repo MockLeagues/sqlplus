@@ -167,7 +167,7 @@ public interface ResultMapper<T> {
 		             .isPresent();
 	}
 	
-	public static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName, boolean underscoreCamelCaseConvert) throws SQLException {
+	static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName, boolean underscoreCamelCaseConvert) throws SQLException {
 		
 		Set<Field> loadableFields = new HashSet<>();
 		ResultSetMetaData meta = rs.getMetaData();
