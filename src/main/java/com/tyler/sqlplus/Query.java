@@ -255,13 +255,7 @@ public class Query {
 		try {
 		
 			String formattedSql = sql.replaceAll(REGEX_PARAM, "?");
-			PreparedStatement ps;
-			if (returnKeys) {
-				ps = session.getJdbcConnection().prepareStatement(formattedSql, Statement.RETURN_GENERATED_KEYS);
-			}
-			else {
-				ps = session.getJdbcConnection().prepareStatement(formattedSql);
-			}
+			PreparedStatement ps = session.getJdbcConnection().prepareStatement(formattedSql, returnKeys ? 0 : Statement.RETURN_GENERATED_KEYS);
 			
 			for (Map<Integer, Object> paramBatch : this.paramBatches) {
 			
