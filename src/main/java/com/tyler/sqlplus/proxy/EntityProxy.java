@@ -7,7 +7,7 @@ import java.util.Set;
 
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.utility.ReflectionUtils;
+import com.tyler.sqlplus.utility.Reflections;
 
 import javassist.util.proxy.MethodHandler;
 import javassist.util.proxy.Proxy;
@@ -38,12 +38,12 @@ public class EntityProxy {
 				String methodName = superclassMethod.getName();
 				if (methodName.startsWith("get") && !gettersAlreadyLoaded.contains(methodName)) {
 					
-					String fieldName = ReflectionUtils.extractFieldName(methodName);
+					String fieldName = Reflections.extractFieldName(methodName);
 					Field loadField = type.getDeclaredField(fieldName);
 					
 					if (loadField.isAnnotationPresent(LoadQuery.class)) {
 						Object loadedResult = LazyLoader.load(self, loadField, session);
-						ReflectionUtils.set(loadField, self, loadedResult);
+						Reflections.set(loadField, self, loadedResult);
 						gettersAlreadyLoaded.add(methodName);
 					}
 				}

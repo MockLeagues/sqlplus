@@ -1,6 +1,6 @@
 package com.tyler.sqlplus.utility;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.joining;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -8,62 +8,75 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.functional.ReturningWork;
+import com.tyler.sqlplus.functional.ThrowingBiConsumer;
 
-public final class ReflectionUtils {
+public final class Reflections {
 
-	// It is important to cache reflective data since it can be costly to lookup in bulk
-	private static final Map<Field, Function<Object, Object>> FIELD_GETTER = new HashMap<>();
-	private static final Map<Field, BiConsumer<Object, Object>> FIELD_SETTER = new HashMap<>();
+	// It is important to cache reflective data since it is costly to lookup
+	private static final Map<Field, ReturningWork<Object, Object>> FIELD_GETTER = new HashMap<>();
+	private static final Map<Field, ThrowingBiConsumer<Object, Object>> FIELD_SETTER = new HashMap<>();
 	
-	private ReflectionUtils() {}
+	private Reflections() {}
 
 	public static Object get(Field field, Object instance) {
 		
+		ReturningWork<Object, Object> getterFunction;
+		
 		if (FIELD_GETTER.containsKey(field)) {
-			return FIELD_GETTER.get(field).apply(instance);
+			getterFunction = FIELD_GETTER.get(field);
+		}
+		else {
+			String capFieldName = capitalize(field.getName());
+			try {
+				Method getter = instance.getClass().getDeclaredMethod("get" + capFieldName);
+				getterFunction = getter::invoke; 
+			}
+			catch (NoSuchMethodException e1) {
+				try {
+					Method getter = instance.getClass().getDeclaredMethod("is" + capFieldName);
+					getterFunction = getter::invoke;
+				}
+				catch (NoSuchMethodException e2) {
+					field.setAccessible(true);
+					getterFunction = field::get;
+				}
+			}
+			FIELD_GETTER.put(field, getterFunction);
 		}
 		
-		Function<Object, Object> getValue = null;
-		String capFieldName = capitalize(field.getName());
 		try {
-			Method getter = instance.getClass().getDeclaredMethod("get" + capFieldName);
-			getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new ReflectionException(e); } }; 
+			return getterFunction.doReturningWork(instance);
+		} catch (Exception e) {
+			throw new ReflectionException(e);
 		}
-		catch (NoSuchMethodException e1) {
-			try {
-				Method getter = instance.getClass().getDeclaredMethod("is" + capFieldName);
-				getValue = (obj) -> { try { return getter.invoke(obj); } catch (Exception e) { throw new ReflectionException(e); } };
-			}
-			catch (NoSuchMethodException e2) {
-				field.setAccessible(true);
-				getValue = (obj) -> { try { return field.get(obj); } catch (Exception e3) { throw new ReflectionException(e3); } };
-			}
-		}
-		FIELD_GETTER.put(field, getValue);
-		return getValue.apply(instance);
 	}
 
 	public static void set(Field field, Object instance, Object value) {
 		
+		ThrowingBiConsumer<Object, Object> setterFunction;
+		
 		if (FIELD_SETTER.containsKey(field)) {
-			FIELD_SETTER.get(field).accept(instance, value);
+			setterFunction = FIELD_SETTER.get(field);
 		}
 		else {
-			BiConsumer<Object, Object> setValue = null;
 			try {
 				Method setter = instance.getClass().getDeclaredMethod("set" + capitalize(field.getName()));
-				setValue = (obj, val) -> { try { setter.invoke(obj, val); } catch (Exception e) { throw new ReflectionException(e); } }; 
+				setterFunction = setter::invoke; 
 			}
 			catch (NoSuchMethodException e) {
 				field.setAccessible(true);
-				setValue = (obj, val) -> { try { field.set(obj, val); } catch (Exception e1) { throw new ReflectionException(e1); } };
+				setterFunction = field::set;
 			}
-			FIELD_SETTER.put(field, setValue);
-			setValue.accept(instance, value);
+			FIELD_SETTER.put(field, setterFunction);
+		}
+		
+		try {
+			setterFunction.accept(instance, value);
+		} catch (Exception e) {
+			throw new ReflectionException(e);
 		}
 	}
 
@@ -102,7 +115,7 @@ public final class ReflectionUtils {
 			return firstWord;
 		}
 		else {
-			return firstWord + fieldWords.subList(1, fieldWords.size()).stream().map(ReflectionUtils::capitalize).collect(joining());
+			return firstWord + fieldWords.subList(1, fieldWords.size()).stream().map(Reflections::capitalize).collect(joining());
 		}
 	}
 	

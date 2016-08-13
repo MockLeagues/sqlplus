@@ -15,7 +15,7 @@ import com.tyler.sqlplus.conversion.AttributeConverter;
 import com.tyler.sqlplus.conversion.ConversionPolicy;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.utility.ReflectionUtils;
+import com.tyler.sqlplus.utility.Reflections;
 
 /**
  * Creates {@link ResultMapper} objects which map rows of a result set to entity proxies
@@ -58,7 +58,7 @@ public class ProxyMapper {
 						rsColumnName = fieldName_rsCol.get(nameOfFieldToLoad);
 					}
 					else if (underscoreCamelCaseConvert) {
-						rsColumnName = ReflectionUtils.camelCaseToUnderscore(nameOfFieldToLoad);
+						rsColumnName = Reflections.camelCaseToUnderscore(nameOfFieldToLoad);
 					}
 					else {
 						rsColumnName = nameOfFieldToLoad;
@@ -66,7 +66,7 @@ public class ProxyMapper {
 					
 					Object fieldValue = converterForField.get(rs, rsColumnName);
 					try {
-						ReflectionUtils.set(loadableField, instance, fieldValue);
+						Reflections.set(loadableField, instance, fieldValue);
 					} catch (ReflectionException e) {
 						throw new POJOBindException("Unable to set field value for field " + loadableField, e);
 					}
@@ -94,7 +94,7 @@ public class ProxyMapper {
 				mappedFieldName = rsColName_fieldName.get(rsColName);
 			}
 			else if (underscoreCamelCaseConvert) {
-				mappedFieldName = ReflectionUtils.underscoreToCamelCase(rsColName);
+				mappedFieldName = Reflections.underscoreToCamelCase(rsColName);
 			}
 			else {
 				mappedFieldName = rsColName;

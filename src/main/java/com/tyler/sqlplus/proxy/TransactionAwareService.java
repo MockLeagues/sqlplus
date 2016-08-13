@@ -9,7 +9,7 @@ import com.tyler.sqlplus.SqlPlus;
 import com.tyler.sqlplus.annotation.ServiceSession;
 import com.tyler.sqlplus.annotation.Transactional;
 import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.utility.ReflectionUtils;
+import com.tyler.sqlplus.utility.Reflections;
 
 import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
@@ -44,7 +44,7 @@ public class TransactionAwareService {
 			Object[] result = { null };
 			sqlPlus.transact(session -> {
 				if (sessionField.isPresent()) {
-					ReflectionUtils.set(sessionField.get(), self, session);
+					Reflections.set(sessionField.get(), self, session);
 				}
 				result[0] = proceed.invoke(self, args);
 			});

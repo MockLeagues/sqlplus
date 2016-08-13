@@ -26,7 +26,7 @@ import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.BatchConsumer;
 import com.tyler.sqlplus.proxy.ProxyMapper;
-import com.tyler.sqlplus.utility.ReflectionUtils;
+import com.tyler.sqlplus.utility.Reflections;
 import com.tyler.sqlplus.utility.ResultStream;
 
 import javassist.util.proxy.Proxy;
@@ -314,7 +314,7 @@ public class Query {
 			
 			Object member = null;
 			try {
-				member = ReflectionUtils.get(mappedField, o);
+				member = Reflections.get(mappedField, o);
 			}
 			catch (ReflectionException e) {
 				throw new POJOBindException("Error retrieving value for bind field " + mappedField, e);
