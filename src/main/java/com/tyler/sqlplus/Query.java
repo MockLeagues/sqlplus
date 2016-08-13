@@ -25,7 +25,6 @@ import com.tyler.sqlplus.exception.QuerySyntaxException;
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.BatchConsumer;
-import com.tyler.sqlplus.proxy.ProxyMapper;
 import com.tyler.sqlplus.utility.Reflections;
 import com.tyler.sqlplus.utility.ResultStream;
 
@@ -160,7 +159,7 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		ResultMapper<T> pojoMapper = ProxyMapper.forType(klass, conversionPolicy, rsColumn_classFieldName, session, underscoreCamelCaseConvert);
+		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionPolicy, rsColumn_classFieldName, session, underscoreCamelCaseConvert);
 		return stream().map(rs -> {
 			try {
 				return pojoMapper.map(rs);
