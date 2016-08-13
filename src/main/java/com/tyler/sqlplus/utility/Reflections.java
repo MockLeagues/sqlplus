@@ -23,29 +23,23 @@ public final class Reflections {
 
 	public static Object get(Field field, Object instance) {
 		
-		ReturningWork<Object, Object> getterFunction;
-		
-		if (FIELD_GETTER.containsKey(field)) {
-			getterFunction = FIELD_GETTER.get(field);
-		}
-		else {
+		ReturningWork<Object, Object> getterFunction = FIELD_GETTER.computeIfAbsent(field, f -> {
 			String capFieldName = capitalize(field.getName());
 			try {
 				Method getter = instance.getClass().getDeclaredMethod("get" + capFieldName);
-				getterFunction = getter::invoke; 
+				return getter::invoke; 
 			}
 			catch (NoSuchMethodException e1) {
 				try {
 					Method getter = instance.getClass().getDeclaredMethod("is" + capFieldName);
-					getterFunction = getter::invoke;
+					return getter::invoke;
 				}
 				catch (NoSuchMethodException e2) {
 					field.setAccessible(true);
-					getterFunction = field::get;
+					return field::get;
 				}
 			}
-			FIELD_GETTER.put(field, getterFunction);
-		}
+		});
 		
 		try {
 			return getterFunction.doReturningWork(instance);
@@ -56,22 +50,16 @@ public final class Reflections {
 
 	public static void set(Field field, Object instance, Object value) {
 		
-		ThrowingBiConsumer<Object, Object> setterFunction;
-		
-		if (FIELD_SETTER.containsKey(field)) {
-			setterFunction = FIELD_SETTER.get(field);
-		}
-		else {
+		ThrowingBiConsumer<Object, Object> setterFunction = FIELD_SETTER.computeIfAbsent(field, f -> {
 			try {
 				Method setter = instance.getClass().getDeclaredMethod("set" + capitalize(field.getName()));
-				setterFunction = setter::invoke; 
+				return setter::invoke; 
 			}
 			catch (NoSuchMethodException e) {
 				field.setAccessible(true);
-				setterFunction = field::set;
+				return field::set;
 			}
-			FIELD_SETTER.put(field, setterFunction);
-		}
+		});
 		
 		try {
 			setterFunction.accept(instance, value);

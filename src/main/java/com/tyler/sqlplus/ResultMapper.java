@@ -97,14 +97,7 @@ public interface ResultMapper<T> {
 		rsCol_fieldName.forEach((rsCol, fieldName) -> fieldName_rsCol.put(fieldName, rsCol));
 
 		// Determine whether this mapper should return proxies or raw class instances
-		boolean proxiable;
-		if (TYPE_PROXIABLE.containsKey(type)) {
-			proxiable = TYPE_PROXIABLE.get(type);
-		}
-		else {
-			proxiable = isProxiable(type);
-			TYPE_PROXIABLE.put(type, proxiable);
-		}
+		boolean proxiable = TYPE_PROXIABLE.computeIfAbsent(type, ResultMapper::isProxiable);
 		
 		return new ResultMapper<E>() {
 
