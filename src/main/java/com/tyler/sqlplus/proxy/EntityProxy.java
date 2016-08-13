@@ -53,7 +53,13 @@ public class EntityProxy {
 						}
 						else if (hasGetPrefix) {
 							String loadFieldName = Fields.extractFieldName(methodName);
-							loadField = type.getDeclaredField(loadFieldName);
+							try {
+								loadField = type.getDeclaredField(loadFieldName);
+							}
+							catch (NoSuchFieldException ex) {
+								throw new LazyLoadException(
+									"Inferred lazy-load field '" + loadFieldName + "' not found when executing method " + invokedMethod);
+							}
 						}
 						else {
 							throw new LazyLoadException("Could not determine field to lazy-load to");

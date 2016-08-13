@@ -170,6 +170,41 @@ public class LazyLoadTest {
 		});
 	}
 	
+	static class EmployeeLoadFromMethodWithUnresolvableField {
+		
+		public Integer employeeId;
+
+		public List<Office> randomFieldName;
+		
+		@LoadQuery(
+			value = "select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
+			        "from office o " +
+			        "where o.employee_id = :employeeId"
+		)
+		public List<Office> getOffices() {
+			return randomFieldName;
+		}
+		
+	}
+	
+	@Test
+	public void testErrorThrownIfLoadQueryOnMethodWithUnresolvableField() throws Exception {
+		h2.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
+		h2.getSQLPlus().open(conn -> {
+			
+			EmployeeLoadFromMethodWithUnresolvableField employee = 
+				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
+			        .getUniqueResultAs(EmployeeLoadFromMethodWithUnresolvableField.class);
+			
+			assertThrows(
+				() -> employee.getOffices(),
+				LazyLoadException.class,
+				"Inferred lazy-load field 'offices' not found when executing method " + EmployeeLoadFromMethodWithUnresolvableField.class.getDeclaredMethod("getOffices")
+			);
+			
+		});
+	}
+	
 	public static class EmployeeLazyLoadMaps {
 		
 		public Integer employeeId;
