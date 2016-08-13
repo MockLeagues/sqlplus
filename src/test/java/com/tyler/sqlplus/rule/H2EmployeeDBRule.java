@@ -12,14 +12,6 @@ import com.tyler.sqlplus.exception.SqlRuntimeException;
 
 public class H2EmployeeDBRule extends AbstractDBRule {
 
-	static {
-		try {
-			Class.forName(org.h2.Driver.class.getName());
-		} catch (ClassNotFoundException e) {
-			throw new ExceptionInInitializerError(e);
-		}
-	}
-	
 	@Override
 	public Connection getConnection() {
 		try {

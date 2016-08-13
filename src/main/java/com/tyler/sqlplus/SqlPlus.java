@@ -45,6 +45,16 @@ public class SqlPlus {
 	}
 	
 	public SqlPlus(Configuration config, Supplier<Connection> factory) {
+		
+		String driverClass = config.getDriverClass();
+		if (driverClass != null) {
+			try {
+				Class.forName(driverClass);
+			} catch (ClassNotFoundException e) {
+				throw new ConfigurationException("Driver class " + driverClass + " not found", e);
+			}
+		}
+		
 		this.config = config;
 		this.connectionFactory = factory;
 	}
