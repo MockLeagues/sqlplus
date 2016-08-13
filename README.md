@@ -1,10 +1,7 @@
 # Overview
 sqlplus is a developer-friendly utility library for working with JDBC. It does not implement ORM features such as SQL generation or automatic cascading; rather, it provides a clean and relatively low-level layer of abstraction for managing persistence in your application.
 
-# Why another database library?
-Why make another database utility library, when we already have things like JDBI or MyBatis? True enough, there are already great libraries out there that get the job done, but there were 2 main reasons I went ahead and created sqplus anyways:
-* Database persistence is a topic that naturally interests me. I attempted to create my own ORM awhile back but quickly realized I bit off way more than I could chew, so this is my middle ground
-* I wanted to create a JDBC library which leveraged the enormous power of Java 8's functional features
+While there are already  a number of great libraries out there for this sort of thing (JDBI, MyBatis, etc.), I wanted to build something that leveraged the full power of Java 8's functional features.
 
 # Basic Usage
 
