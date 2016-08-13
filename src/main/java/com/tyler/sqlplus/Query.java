@@ -59,25 +59,8 @@ public class Query {
 		return this;
 	}
 	
-	public Query setParameter(Integer index, Object val) {
-		if (index > paramLabel_paramIndex.size()) {
-			throw new QuerySyntaxException(
-				"Parameter index " + index + " is out of range of this query's parameters (max parameters: " + paramLabel_paramIndex.size() + ")");
-		}
-		return setParameter(index + "", val);
-	}
-	
 	public Query addColumnMapping(String resultSetColumnName, String classFieldName) {
 		rsColumn_classFieldName.put(resultSetColumnName, classFieldName);
-		return this;
-	}
-	
-	public Query setParameter(String key, Object val) {
-		if (!paramLabel_paramIndex.containsKey(key)) {
-			throw new QuerySyntaxException("Unknown query parameter: " + key);
-		}
-		Integer paramIndex = paramLabel_paramIndex.get(key);
-		manualParamBatch.put(paramIndex, val);
 		return this;
 	}
 	
@@ -87,6 +70,23 @@ public class Query {
 	 */
 	public Query setConvertUnderscoreToCamelCase(boolean convert) {
 		this.underscoreCamelCaseConvert = convert;
+		return this;
+	}
+	
+	public Query setParameter(Integer index, Object val) {
+		if (index > paramLabel_paramIndex.size()) {
+			throw new QuerySyntaxException(
+				"Parameter index " + index + " is out of range of this query's parameters (max parameters: " + paramLabel_paramIndex.size() + ")");
+		}
+		return setParameter(index + "", val);
+	}
+	
+	public Query setParameter(String key, Object val) {
+		if (!paramLabel_paramIndex.containsKey(key)) {
+			throw new QuerySyntaxException("Unknown query parameter: " + key);
+		}
+		Integer paramIndex = paramLabel_paramIndex.get(key);
+		manualParamBatch.put(paramIndex, val);
 		return this;
 	}
 	
