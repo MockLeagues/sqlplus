@@ -13,13 +13,16 @@ import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.functional.ReturningWork;
 import com.tyler.sqlplus.functional.ThrowingBiConsumer;
 
-public final class Reflections {
+/**
+ * Utilities for working with {@link Field} objects
+ */
+public final class Fields {
 
 	// It is important to cache reflective data since it is costly to lookup
 	private static final Map<Field, ReturningWork<Object, Object>> FIELD_GETTER = new HashMap<>();
 	private static final Map<Field, ThrowingBiConsumer<Object, Object>> FIELD_SETTER = new HashMap<>();
 	
-	private Reflections() {}
+	private Fields() {}
 
 	public static Object get(Field field, Object instance) {
 		
@@ -103,7 +106,7 @@ public final class Reflections {
 			return firstWord;
 		}
 		else {
-			return firstWord + fieldWords.subList(1, fieldWords.size()).stream().map(Reflections::capitalize).collect(joining());
+			return firstWord + fieldWords.subList(1, fieldWords.size()).stream().map(Fields::capitalize).collect(joining());
 		}
 	}
 	

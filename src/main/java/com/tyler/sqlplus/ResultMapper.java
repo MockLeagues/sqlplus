@@ -19,7 +19,7 @@ import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.proxy.EntityProxy;
-import com.tyler.sqlplus.utility.Reflections;
+import com.tyler.sqlplus.utility.Fields;
 
 /**
  * Defines the contract for a class which maps a result set row to an object of type <T>
@@ -128,7 +128,7 @@ public interface ResultMapper<T> {
 						rsColumnName = fieldName_rsCol.get(nameOfFieldToLoad);
 					}
 					else if (underscoreCamelCaseConvert) {
-						rsColumnName = Reflections.camelCaseToUnderscore(nameOfFieldToLoad);
+						rsColumnName = Fields.camelCaseToUnderscore(nameOfFieldToLoad);
 					}
 					else {
 						rsColumnName = nameOfFieldToLoad;
@@ -136,7 +136,7 @@ public interface ResultMapper<T> {
 					
 					Object fieldValue = converterForField.get(rs, rsColumnName);
 					try {
-						Reflections.set(loadableField, instance, fieldValue);
+						Fields.set(loadableField, instance, fieldValue);
 					} catch (ReflectionException e) {
 						throw new POJOBindException("Unable to set field value for field " + loadableField, e);
 					}
@@ -175,7 +175,7 @@ public interface ResultMapper<T> {
 				mappedFieldName = rsColName_fieldName.get(rsColName);
 			}
 			else if (underscoreCamelCaseConvert) {
-				mappedFieldName = Reflections.underscoreToCamelCase(rsColName);
+				mappedFieldName = Fields.underscoreToCamelCase(rsColName);
 			}
 			else {
 				mappedFieldName = rsColName;

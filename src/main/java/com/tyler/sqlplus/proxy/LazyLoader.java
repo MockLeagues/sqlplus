@@ -24,7 +24,7 @@ import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.annotation.MapKey;
 import com.tyler.sqlplus.exception.LazyLoadException;
 import com.tyler.sqlplus.exception.SessionClosedException;
-import com.tyler.sqlplus.utility.Reflections;
+import com.tyler.sqlplus.utility.Fields;
 
 /**
  * This class is dedicated to loading entities on-demand (lazily) for proxy objects
@@ -111,7 +111,7 @@ public class LazyLoader {
 
 		return loadQuery.streamAs(valueClass).collect(toMap(
 			entity -> {
-				Object key = Reflections.get(keyField, entity);
+				Object key = Fields.get(keyField, entity);
 				if (key == null) {
 					throw new LazyLoadException(
 						"Null value encountered for key field '" + mapKey + "' while constructing " + valueType + " for insertion into map. " +
