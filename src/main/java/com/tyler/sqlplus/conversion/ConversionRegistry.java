@@ -189,20 +189,6 @@ public class ConversionRegistry {
 		WRITER_REGISTRY.put(type, writer);
 	}
 	
-	/**
-	 * @return A clone of the standard reader registry. Edits made will not propagate to the underlying defaults
-	 */
-	public static Map<Class<?>, DbReader<?>> cloneReaderRegistry() {
-		return new HashMap<>(READER_REGISTRY);
-	}
-	
-	/**
-	 * @return A clone of the standard writer registry. Edits made will not propagate to the underlying defaults
-	 */
-	public static Map<Class<?>, DbWriter<?>> cloneWriterRegistry() {
-		return new HashMap<>(WRITER_REGISTRY);
-	}
-	
 	private Map<Class<?>, DbReader<?>> readers;
 	private Map<Class<?>, DbWriter<?>> writers;
 	
