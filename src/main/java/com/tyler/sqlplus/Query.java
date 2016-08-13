@@ -49,7 +49,8 @@ public class Query {
 	private Map<String, String> rsColumn_classFieldName = new HashMap<>();
 	private ConversionRegistry conversionRegistry = new ConversionRegistry();
 	
-	public Query(String sql, Session session) {
+	/** Should only be constructed by the Session class */
+	Query(String sql, Session session) {
 		this.session = session;
 		this.sql = sql;
 		this.paramLabel_paramIndex = parseParams(sql);
