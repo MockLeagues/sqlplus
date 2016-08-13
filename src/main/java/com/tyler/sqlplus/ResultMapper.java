@@ -32,7 +32,7 @@ public interface ResultMapper<T> {
 	public T map(ResultSet rs) throws SQLException;
 	
 	/**
-	 * Caches which classes are proxiable, i.e. have fields annotated with @LoadQuery
+	 * Caches which classes are proxiable, i.e. have fields or methods annotated with @LoadQuery
 	 */
 	static final Map<Class<?>, Boolean> TYPE_PROXIABLE = new HashMap<>();
 	
@@ -86,7 +86,7 @@ public interface ResultMapper<T> {
 
 	/**
 	 * Creates a {@link ResultMapper} which will map ResultSet rows to POJOs.
-	 * If the given class type has any fields annotated with @LoadQuery (denoting a lazy-loaded collection), a proxy
+	 * If the given class type has any fields or methods annotated with @LoadQuery (denoting a lazy-loaded collection), a proxy
 	 * object will be returned;
 	 */
 	public static <E> ResultMapper<E> forType(Class<E> type, ConversionPolicy conversionPolicy, Map<String, String> rsCol_fieldName, Session session, boolean underscoreCamelCaseConvert) {
@@ -151,11 +151,21 @@ public interface ResultMapper<T> {
 
 	/**
 	 * Determines if a given class type should result in proxy objects being returned when mapping POJOs.
-	 * Proxy objects are returned if there is at least 1 field in the class with a @LoadQuery annotation
+	 * Proxy objects are returned if there is at least 1 field or method in the class with a @LoadQuery annotation
 	 */
 	static boolean isProxiable(Class<?> type) {
-		return Arrays.stream(type.getDeclaredFields())
-		             .filter(f -> f.isAnnotationPresent(LoadQuery.class))
+		
+		boolean presentOnField = Arrays.stream(type.getDeclaredFields())
+		                               .filter(f -> f.isAnnotationPresent(LoadQuery.class))
+		                               .findFirst()
+		                               .isPresent();
+		if (presentOnField) {
+			return true;
+		}
+		
+		// Else see if we can find one on a method
+		return Arrays.stream(type.getDeclaredMethods())
+		             .filter(m -> m.isAnnotationPresent(LoadQuery.class))
 		             .findFirst()
 		             .isPresent();
 	}

@@ -191,7 +191,7 @@ public class ResultMapperTest {
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
 	}
 	
-	static class ProxiablePOJO {
+	static class ProxiablePOJOByField {
 		
 		String id, name;
 		
@@ -214,7 +214,38 @@ public class ResultMapperTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		ProxiablePOJO proxy = ResultMapper.forType(ProxiablePOJO.class, ConversionPolicy.DEFAULT, new HashMap<>(), mock(Session.class), false).map(rsToMap);
+		ProxiablePOJOByField proxy = ResultMapper.forType(ProxiablePOJOByField.class, ConversionPolicy.DEFAULT, new HashMap<>(), mock(Session.class), false).map(rsToMap);
+		assertTrue(proxy instanceof Proxy);
+	}
+	
+	static class ProxiablePOJOByMethod {
+		
+		String id, name;
+		
+		List<String> relations;
+		
+		@LoadQuery("select * from table")
+		public List<String> getRelations() {
+			return relations;
+		}
+		
+	}
+	
+	@Test
+	public void testProxyIsReturnedWhenLazyLoadMethodsPresent() throws Exception {
+
+		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
+		when(rsMeta.getColumnCount()).thenReturn(2);
+		when(rsMeta.getColumnLabel(1)).thenReturn("id");
+		when(rsMeta.getColumnLabel(2)).thenReturn("name");
+		
+		ResultSet rsToMap = mock(ResultSet.class);
+		
+		when(rsToMap.getMetaData()).thenReturn(rsMeta);
+		when(rsToMap.getString("id")).thenReturn("12345");
+		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
+		
+		ProxiablePOJOByMethod proxy = ResultMapper.forType(ProxiablePOJOByMethod.class, ConversionPolicy.DEFAULT, new HashMap<>(), mock(Session.class), false).map(rsToMap);
 		assertTrue(proxy instanceof Proxy);
 	}
 	

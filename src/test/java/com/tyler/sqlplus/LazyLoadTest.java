@@ -28,7 +28,7 @@ public class LazyLoadTest {
 	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
 	
 	@Test
-	public void testLazyLoadSingleRelation() throws Exception {
+	public void testLazyLoadSingleRelationWithAnnotationOnField() throws Exception {
 		
 		h2.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
@@ -55,7 +55,7 @@ public class LazyLoadTest {
 	}
 	
 	@Test
-	public void testLazyLoadMultipleRelations() throws Exception {
+	public void testLazyLoadMultipleRelationsWithAnnotationOnField() throws Exception {
 		
 		h2.batch(
 			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
@@ -79,6 +79,143 @@ public class LazyLoadTest {
 			assertEquals("Office A", offices.get(0).officeName);
 			assertEquals("Office B", offices.get(1).officeName);
 			assertEquals("Office C", offices.get(2).officeName);
+		});
+		
+	}
+	
+	static class EmployeeLoadFromMethod {
+		
+		public Integer employeeId;
+
+		public List<Office> offices;
+		
+		@LoadQuery(
+			"select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
+			"from office o " +
+			"where o.employee_id = :employeeId"
+		)
+		public List<Office> getOffices() {
+			return offices;
+		}
+		
+	}
+	
+	@Test
+	public void testLazyLoadWithAnnotationOnMethodWithInferredFieldName() throws Exception {
+		
+		h2.batch(
+			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
+			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			EmployeeLoadFromMethod  employee = 
+				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
+			        .getUniqueResultAs(EmployeeLoadFromMethod.class);
+			
+			List<Office> offices = employee.getOffices();
+			assertNotNull(offices);
+			
+			assertEquals(3, offices.size());
+			assertEquals("Office A", offices.get(0).officeName);
+			assertEquals("Office B", offices.get(1).officeName);
+			assertEquals("Office C", offices.get(2).officeName);
+		});
+	}
+	
+	static class EmployeeLoadFromMethodWithExplicitField {
+		
+		public Integer employeeId;
+
+		public List<Office> listOfOffices;
+		
+		@LoadQuery(
+			value = "select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
+			        "from office o " +
+			        "where o.employee_id = :employeeId",
+			field = "listOfOffices"
+		)
+		public List<Office> getTheOffices() {
+			return listOfOffices;
+		}
+		
+	}
+	
+	@Test
+	public void testLazyLoadWithAnnotationOnMethodWithExplicitFieldName() throws Exception {
+		
+		h2.batch(
+			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
+			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			EmployeeLoadFromMethodWithExplicitField  employee = 
+				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
+			        .getUniqueResultAs(EmployeeLoadFromMethodWithExplicitField.class);
+			
+			List<Office> offices = employee.getTheOffices();
+			assertNotNull(offices);
+			
+			assertEquals(3, offices.size());
+			assertEquals("Office A", offices.get(0).officeName);
+			assertEquals("Office B", offices.get(1).officeName);
+			assertEquals("Office C", offices.get(2).officeName);
+		});
+	}
+	
+	public static class EmployeeLazyLoadMaps {
+		
+		public Integer employeeId;
+
+		@LoadQuery(
+			"select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
+			"from office o " +
+			"where o.employee_id = :employeeId"
+		)
+		@MapKey("officeId")
+		public Map<Integer, Office> offices;
+		
+		public Map<Integer, Office> getOffices() {
+			return offices;
+		}
+		
+	}
+	
+	@Test
+	public void testLoadMapWithMapKeySpecified() throws Exception {
+		
+		h2.batch(
+			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
+			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
+			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			EmployeeLazyLoadMaps employee = 
+				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
+			        .getUniqueResultAs(EmployeeLazyLoadMaps.class);
+			
+			Map<Integer, Office> offices = employee.getOffices();
+			assertEquals(3, offices.size());
+			
+			Office officeA = offices.get(1);
+			assertEquals("Office A", officeA.officeName);
+			
+			Office officeB = offices.get(2);
+			assertEquals("Office B", officeB.officeName);
+			
+			Office officeC = offices.get(3);
+			assertEquals("Office C", officeC.officeName);
+			
 		});
 		
 	}
@@ -173,56 +310,6 @@ public class LazyLoadTest {
 			
 			assertThrows(() -> employeeNoGeneric.getOffices(), LazyLoadException.class, "Field " + EmployeeNoGeneric.class.getDeclaredField("offices") + " does not contain generic type info. " +
 					"This is required for determining the types of lazy-loaded one to many relations");
-		});
-		
-	}
-
-	public static class EmployeeLazyLoadMaps {
-		
-		public Integer employeeId;
-
-		@LoadQuery(
-			"select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
-			"from office o " +
-			"where o.employee_id = :employeeId"
-		)
-		@MapKey("officeId")
-		public Map<Integer, Office> offices;
-		
-		public Map<Integer, Office> getOffices() {
-			return offices;
-		}
-		
-	}
-	
-	@Test
-	public void testLoadMapWithMapKeySpecified() throws Exception {
-		
-		h2.batch(
-			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
-			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
-			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
-			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
-		);
-		
-		h2.getSQLPlus().open(conn -> {
-			
-			EmployeeLazyLoadMaps employee = 
-				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
-			        .getUniqueResultAs(EmployeeLazyLoadMaps.class);
-			
-			Map<Integer, Office> offices = employee.getOffices();
-			assertEquals(3, offices.size());
-			
-			Office officeA = offices.get(1);
-			assertEquals("Office A", officeA.officeName);
-			
-			Office officeB = offices.get(2);
-			assertEquals("Office B", officeB.officeName);
-			
-			Office officeC = offices.get(3);
-			assertEquals("Office C", officeC.officeName);
-			
 		});
 		
 	}

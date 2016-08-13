@@ -7,6 +7,7 @@ import java.util.Set;
 
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
+import com.tyler.sqlplus.exception.LazyLoadException;
 import com.tyler.sqlplus.utility.Fields;
 
 import javassist.util.proxy.MethodHandler;
@@ -33,22 +34,46 @@ public class EntityProxy {
 			private Set<String> gettersAlreadyLoaded = new HashSet<>();
 			
 			@Override
-			public Object invoke(Object self, Method superclassMethod, Method methodCalled, Object[] args) throws Throwable {
+			public Object invoke(Object self, Method invokedMethod, Method proceed, Object[] args) throws Throwable {
 				
-				String methodName = superclassMethod.getName();
-				if (methodName.startsWith("get") && !gettersAlreadyLoaded.contains(methodName)) {
+				String methodName = invokedMethod.getName();
+				boolean getPrefix = methodName.startsWith("get");
+				boolean methodAnnotated = invokedMethod.isAnnotationPresent(LoadQuery.class);
+				
+				if (!gettersAlreadyLoaded.contains(methodName) && (getPrefix || methodAnnotated)) {
+
+					LoadQuery loadQueryAnnot = null;
+					Field loadField = null;
 					
-					String fieldName = Fields.extractFieldName(methodName);
-					Field loadField = type.getDeclaredField(fieldName);
+					if (methodAnnotated) {
+						loadQueryAnnot = invokedMethod.getDeclaredAnnotation(LoadQuery.class);
+						if (!loadQueryAnnot.field().isEmpty()) {
+							loadField = type.getDeclaredField(loadQueryAnnot.field());
+						}
+						else if (getPrefix) {
+							String loadFieldName = Fields.extractFieldName(methodName);
+							loadField = type.getDeclaredField(loadFieldName);
+						}
+						else {
+							throw new LazyLoadException("Could not determine field to lazy-load to");
+						}
+					}
+					else if (getPrefix) {
+						String loadFieldName = Fields.extractFieldName(methodName);
+						loadField = type.getDeclaredField(loadFieldName);
+						if (loadField.isAnnotationPresent(LoadQuery.class)) {
+							loadQueryAnnot = loadField.getDeclaredAnnotation(LoadQuery.class);
+						}
+					}
 					
-					if (loadField.isAnnotationPresent(LoadQuery.class)) {
-						Object loadedResult = LazyLoader.load(self, loadField, session);
+					if (loadField != null && loadQueryAnnot != null) {
+						Object loadedResult = LazyLoader.load(self, loadField, loadQueryAnnot.value(), session);
 						Fields.set(loadField, self, loadedResult);
 						gettersAlreadyLoaded.add(methodName);
 					}
 				}
 				
-				return methodCalled.invoke(self, args);
+				return proceed.invoke(self, args);
 			}
 		});
 		

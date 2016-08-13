@@ -1,6 +1,7 @@
 package com.tyler.sqlplus.proxy;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toMap;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -20,7 +21,6 @@ import java.util.function.Function;
 
 import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.Session;
-import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.annotation.MapKey;
 import com.tyler.sqlplus.exception.LazyLoadException;
 import com.tyler.sqlplus.exception.SessionClosedException;
@@ -31,13 +31,12 @@ import com.tyler.sqlplus.utility.Fields;
  */
 public class LazyLoader {
 
-	static Object load(Object proxy, Field loadField, Session session) throws InstantiationException, IllegalAccessException {
+	static Object load(Object proxy, Field loadField, String loadSql, Session session) throws InstantiationException, IllegalAccessException {
 		
 		if (!session.isOpen()) {
 			throw new SessionClosedException("Cannot lazy-load field " + loadField + ", session is no longer open");
 		}
 		
-		String loadSql = loadField.getDeclaredAnnotation(LoadQuery.class).value();
 		Query loadQuery = session.createQuery(loadSql).bind(proxy);
 		
 		Object loadedResult;
