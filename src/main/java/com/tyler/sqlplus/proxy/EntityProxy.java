@@ -37,20 +37,21 @@ public class EntityProxy {
 			public Object invoke(Object self, Method invokedMethod, Method proceed, Object[] args) throws Throwable {
 				
 				String methodName = invokedMethod.getName();
-				boolean getPrefix = methodName.startsWith("get");
-				boolean methodAnnotated = invokedMethod.isAnnotationPresent(LoadQuery.class);
+				boolean hasGetPrefix = methodName.startsWith("get");
+				boolean isMethodAnnotated = invokedMethod.isAnnotationPresent(LoadQuery.class);
+				boolean isAlreadyLoaded = gettersAlreadyLoaded.contains(methodName);
 				
-				if (!gettersAlreadyLoaded.contains(methodName) && (getPrefix || methodAnnotated)) {
+				if (!isAlreadyLoaded && (hasGetPrefix || isMethodAnnotated)) {
 
 					LoadQuery loadQueryAnnot = null;
 					Field loadField = null;
 					
-					if (methodAnnotated) {
+					if (isMethodAnnotated) {
 						loadQueryAnnot = invokedMethod.getDeclaredAnnotation(LoadQuery.class);
 						if (!loadQueryAnnot.field().isEmpty()) {
 							loadField = type.getDeclaredField(loadQueryAnnot.field());
 						}
-						else if (getPrefix) {
+						else if (hasGetPrefix) {
 							String loadFieldName = Fields.extractFieldName(methodName);
 							loadField = type.getDeclaredField(loadFieldName);
 						}
@@ -58,7 +59,7 @@ public class EntityProxy {
 							throw new LazyLoadException("Could not determine field to lazy-load to");
 						}
 					}
-					else if (getPrefix) {
+					else if (hasGetPrefix) {
 						String loadFieldName = Fields.extractFieldName(methodName);
 						loadField = type.getDeclaredField(loadFieldName);
 						if (loadField.isAnnotationPresent(LoadQuery.class)) {
