@@ -5,7 +5,10 @@ import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -185,6 +188,13 @@ public class ConversionPolicy {
 				
 				@Override
 				public Date get(ResultSet rs, String column) throws SQLException {
+					Object dbObj = rs.getObject(column);
+					if (dbObj.getClass() == Timestamp.class) {
+						return new Date(((Timestamp)dbObj).getTime());
+					}
+					else if (dbObj.getClass() == java.sql.Time.class) {
+						throw new UnsupportedOperationException("Cannot convert time field to java.util.Date");
+					}
 					return rs.getDate(column);
 				}
 				
@@ -197,15 +207,93 @@ public class ConversionPolicy {
 		}
 		
 		{
+			setDefaultConverter(Timestamp.class, new AttributeConverter<Timestamp>() {
+				
+				@Override
+				public Timestamp get(ResultSet rs, String column) throws SQLException {
+					Object dbObj = rs.getObject(column);
+					if (dbObj.getClass() == java.sql.Time.class) {
+						throw new UnsupportedOperationException("Cannot convert time field to java.sql.Timestamp");
+					}
+					return rs.getTimestamp(column);
+				}
+				
+				@Override
+				public void set(PreparedStatement ps, int parameterIndex, Timestamp obj) throws SQLException {
+					ps.setTimestamp(parameterIndex, obj);
+				}
+				
+			});
+		}
+		
+		{
 			setDefaultConverter(LocalDate.class, new AttributeConverter<LocalDate>() {
 				
 				@Override
 				public LocalDate get(ResultSet rs, String column) throws SQLException {
-					return LocalDate.parse(rs.getString(column));
+					Object dbObj = rs.getObject(column);
+					if (dbObj != null) {
+						if (dbObj.getClass() == Timestamp.class) {
+							return ((Timestamp)dbObj).toLocalDateTime().toLocalDate();
+						}
+						else {
+							return LocalDate.parse(rs.getString(column));
+						}
+					}
+					else {
+						return LocalDate.parse(rs.getString(column));
+					}
 				}
 				
 				@Override
 				public void set(PreparedStatement ps, int parameterIndex, LocalDate obj) throws SQLException {
+					ps.setString(parameterIndex, obj.toString());
+				}
+				
+			});
+		}
+		
+		{
+			setDefaultConverter(LocalDateTime.class, new AttributeConverter<LocalDateTime>() {
+				
+				@Override
+				public LocalDateTime get(ResultSet rs, String column) throws SQLException {
+					Object dbObj = rs.getObject(column);
+					if (dbObj.getClass() == Timestamp.class) {
+						return ((Timestamp)dbObj).toLocalDateTime();
+					}
+					else if (dbObj.getClass() == java.sql.Date.class) {
+						return ((java.sql.Date)dbObj).toLocalDate().atStartOfDay();
+					}
+					return LocalDateTime.parse(rs.getString(column));
+				}
+				
+				@Override
+				public void set(PreparedStatement ps, int parameterIndex, LocalDateTime obj) throws SQLException {
+					ps.setString(parameterIndex, obj.toString());
+				}
+				
+			});
+		}
+		
+		{
+			setDefaultConverter(LocalTime.class, new AttributeConverter<LocalTime>() {
+				
+				@Override
+				public LocalTime get(ResultSet rs, String column) throws SQLException {
+					Object dbObj = rs.getObject(column);
+					if (dbObj.getClass() == Timestamp.class) {
+						return ((Timestamp)dbObj).toLocalDateTime().toLocalTime();
+					}
+					else if (dbObj.getClass() == java.sql.Date.class) {
+						throw new UnsupportedOperationException(
+							"Cannot convert date field to java.time.LocalTime field; date fields do not contain time components");
+					}
+					return LocalTime.parse(rs.getString(column));
+				}
+				
+				@Override
+				public void set(PreparedStatement ps, int parameterIndex, LocalTime obj) throws SQLException {
 					ps.setString(parameterIndex, obj.toString());
 				}
 				

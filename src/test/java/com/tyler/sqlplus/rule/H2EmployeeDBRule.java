@@ -137,6 +137,15 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 					"primary key (`office_id`)" +
 				")"
 			);
+			
+			st.executeUpdate(
+				"create table `dates_dates_dates` (" +
+					"`timestamp_field` timestamp," +
+					"`date_field` date," +
+					"`datetime_field` datetime," +
+					"`time_field` time" +
+				")"
+			);
 		}
 		catch (SQLException e) {
 			throw new SqlRuntimeException(e);
@@ -151,6 +160,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 			st.executeUpdate("drop table meeting");
 			st.executeUpdate("drop table employee");
 			st.executeUpdate("drop table office");
+			st.executeUpdate("drop table dates_dates_dates");
 		}
 		catch (SQLException e) {
 			throw new SqlRuntimeException(e);
