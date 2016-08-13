@@ -26,18 +26,27 @@ public class Session implements Closeable {
 	 * will be thrown
 	 */
 	public Query createQuery(String sql) {
+		assertOpen();
+		Query q = new Query(sql, this);
+		q.setConvertUnderscoreToCamelCase(config.isConvertUnderscoreToCamelCase());
+		return q;
+	}
+	
+	public void setTransactionIsolationLevel(int level) {
+		assertOpen();
 		try {
-			if (conn.isClosed()) {
-				throw new SessionClosedException();
-			}
+			conn.setTransactionIsolation(level);
 		} catch (SQLException e) {
 			throw new SqlRuntimeException(e);
 		}
-		Query q = new Query(sql, this);
-		q.setConvertUnderscoreToCamelCase(config.isConvertCamelCaseToUnderscore());
-		return q;
 	}
-
+	
+	private void assertOpen() {
+		if (!isOpen()) {
+			throw new SessionClosedException();
+		}
+	}
+	
 	public boolean isOpen() {
 		try {
 			return !conn.isClosed();
@@ -47,6 +56,10 @@ public class Session implements Closeable {
 		}
 	}
 	
+	/**
+	 * Package-private so as to not break encapsulation.
+	 * JDBC connection object should ONLY every be retrieved from the Query class
+	 */
 	Connection getJdbcConnection() {
 		return conn;
 	}

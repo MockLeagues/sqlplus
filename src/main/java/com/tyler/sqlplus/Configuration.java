@@ -43,7 +43,7 @@ public class Configuration {
 		this.driverClass = driverClass;
 	}
 
-	public boolean isConvertCamelCaseToUnderscore() {
+	public boolean isConvertUnderscoreToCamelCase() {
 		return convertCamelCaseToUnderscore;
 	}
 
