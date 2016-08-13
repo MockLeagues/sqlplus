@@ -2,9 +2,9 @@
 sqlplus is a developer-friendly utility library for working with JDBC. It does not implement ORM features such as SQL generation or automatic cascading; rather, it provides a clean and relatively low-level layer of abstraction for managing persistence in your application.
 
 ## Why another database library?
-Why make another database utility library, when we already have things like JDBI or MyBatis? True enough, there are already great libraries out there that get the job done (and have more development manpower than just myself). However, there were 2 main reasons I went ahead and created sqplus anyways:
-* Database persistence is a topic that naturally interests me. I attempted to create my own ORM (in the spirit of Hibernate) awhile back but quickly realized I bit off way more than I could chew, so this is my middle ground
-* I wanted to create a JDBC library which leveraged the power of Java 8's functional features. The ResultSet object is just screaming for Java 8's streaming features since it is, at its core, basically a collection
+Why make another database utility library, when we already have things like JDBI or MyBatis? True enough, there are already great libraries out there that get the job done, but there were 2 main reasons I went ahead and created sqplus anyways:
+* Database persistence is a topic that naturally interests me. I attempted to create my own ORM awhile back but quickly realized I bit off way more than I could chew, so this is my middle ground
+* I wanted to create a JDBC library which leveraged the enormous power of Java 8's functional features
 
 ## Basic Usage
 
@@ -12,10 +12,12 @@ The sqlplus library follows the same workflow as most other JDBC libraries. You 
 
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
-List<Map<String, Object>> results = sqlPlus.query(session -> session.createQuery("select * from widgets").fetch());
+List<Map<String, Object>> results = sqlPlus.query(session -> {
+	return session.createQuery("select * from widgets").fetch());
+});
 ```
 
-Aren't lambdas great? The query method follows the so-called 'loaner' pattern which, thanks to Java 8 lambdas, is now painless to implement. The method 'loans' you a session to use for your work without requiring all the ceremony we've all been through 100 times when connecting to a database.
+This method follows the so-called 'loaner' pattern: the method 'loans' you a session to use for your work without requiring all the ceremony we've all been through 100 times when connecting to a database.
 
 The companion to the query method is the open method, which works exactly the same but is not declared to return anything:
 
@@ -26,30 +28,38 @@ sqlPlus.open(session -> {
 });
 ```
 
-Of course, we also need the ability to execute work inside of a transaction. No problem! Simply call transact:
+Of course, we also need the ability to execute atomic work inside of a transaction:
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
 sqlPlus.transact(session -> {
-  session.createQuery("insert into widget (name, color) values ('hoozit', 'fire-red')").executeUpdate());
-  session.createQuery("insert into widget (name, color) values ('whatsit', 'sky-blue')").executeUpdate());
+	List<Integer> returnedKeys = session.createQuery("insert into widget (name, color) values ('hoozit', 'fire-red')").executeUpdate(Integer.class);
+	Integer generatedKey = returnedKeys.get(0);
+	session.createQuery("insert into widget_audit (widget_id, execution_time, action) values (:id, now(), 'create')")
+	       .setParameter("id", generatedKey)
+	       .executeUpdate();
 });
 ```
 
-This workflow is probably best executed as a batch (another available feature), but it demonstrates the notion of a transaction well enough.
+These 3 methods (query, open, and transact) and their respective use-cases (execute value-returning work, execute arbitrary work, execute atomic work inside a transaction) are the primary APIs into the sqlplus library. They take care of obtaining connections and executing rollbacks if exceptions occur so all you need to worry about is the work you need to do with your session.
+
+Note that all sqplus exceptions extend RuntimeException, so you don't have to worry about annoying boilerplate try-catch blocks which munch or re-brand the 100s of SQLExceptions that are potentially thrown from simple, everyday JDBC method calls. This is typically the convention for exceptions which are non-recoverable; if an error occurs while interacting with the database, there really isn't much you could do in code to try and recover from it without re-gathering user input from scratch, implementing stronger validation or fixing your query syntax. Therefore, it doesn't make much sense to force you to handle the error.
 
 ## POJO mapping support
 
-sqlplus provides features for mapping result sets to lists of plain-old-java-objects (POJOs). This is where the magic of the library really resides in my opinion since it takes a functional, streaming approach to how this is done, creating literally unlimited possibilities in how you can manipulate your data.
+sqlplus provides features for automatically mapping result sets to lists of plain-old-java-objects (POJOs). This is done using a functional, streaming approach, which creates literally unlimited possibilities in how you can manipulate your data.
 
-The workflow for querying objects is simple enough:
+The workflow for querying objects is very simple:
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
 List<Widget> allWidgets = sqlPlus.query(session -> session.createQuery("select * from widget").fetchAs(Widget.class));
 ```
 
-By default, sqlplus will attempt to map the column names present in the result set to the classe's field names. You may also specify custom field mappings on the query object before execution, or in 'as' clauses in your field selection list.
+By default, sqlplus will attempt to map the column names present in the result set directly to the class's field names. If you need additional customization for how this mapping is done, you have 3 main options to choose from:
+* Specify custom field mappings on the query object before execution
+* Specify concrete field aliases in 'as' clauses in your SQL
+* Configure sqlplus to use underscore to camel case conversion. This will convert a database field name like 'date_modified' to the equivalent camel-cased 'dateModified' when trying to find the appropriate field to set on a POJO
 
-This, however, is only the tip of the iceberg. The previous example fetched the entire list into memory at once. What if you had millions of widgets? You'd blow your heap in no time! The solution is to STREAM over the results using Java 8's streaming API:
+The previous example fetched the entire list into memory at once. What if you had millions of widgets? You'd blow your memory in no time! The solution is to STREAM over the results using Java 8's streaming API:
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
 sqlPlus.open(session -> {
@@ -69,7 +79,7 @@ sqlPlus.open(session -> {
 });
 ```
 
-Keep in mind, since sqplus allows you to create a stream over the query result set, you can perform ANY sort of map-reduce operations on the resulting collection. This is particularly useful if you have some sort of data manipulation you want to perform on your results which would be difficult to express directly at the SQL level, such as a complex group by operation:
+Keep in mind that since sqplus allows you to create a plain object stream over the query result set, you can perform ANY sort of map-reduce operations on the resulting collection. This is particularly useful if you have some sort of data manipulation you want to perform on your results which would be difficult or impossible to express directly at the SQL level, such as a group by operation:
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
 Map<String, List<Widget>> widgetsByColor = sqlPlus.query(session -> {
@@ -81,7 +91,7 @@ Map<String, List<Widget>> widgetsByColor = sqlPlus.query(session -> {
 
 In any serious application, you'll find yourself working with entities which have relations to one or multiple other entities. sqlplus solves this problem via a lazy-loading solution which will load related entities on-demand (i.e. the first time they are accessed via a getter method inside of a session).
 
-Lazy-loaded relations are specified on the class member with a @LoadQuery annotation, which specifies the sql which will load the appropriate relation(s). Any parameters referenced in the load query are bound to the enclosing object. In the following example, this means the 'orderId' parameter will be bound to the value of the orderId field of the order object which caused the related collection to be loaded:
+Lazy-loaded fields are specified with a @LoadQuery annotation, which specifies the sql used to load them. Any parameters referenced in the load query are bound to the enclosing object. In the following example, this means the 'orderId' parameter will be bound to the value of the orderId field of the order object which caused the related collection to be loaded:
 ```java
 
 class Order {
@@ -149,13 +159,13 @@ sqlPlus.open(session -> {
 });
 ```
 
-sqlplus is currently very unforgiving as far as naming conventions go - in order for a field to lazy-load correctly, you must use standard 'java beans' naming conventions on your getter methods; that is, 'get' followed by the capitalized field name you want to lazy-load. There may be a feature later on which will make this more configurable, but in the spirit of keeping things simple this works well enough for the time being.
+sqlplus is currently very unforgiving as far as naming conventions go - in order for a field to lazy-load correctly, you must use standard 'java beans' naming conventions on your getter methods; that is, 'get' followed by the capitalized field name you want to lazy-load.
 
 Note that if you make a call to a lazy-loading getter method outside of a session without having loaded its associated data, an exception will be thrown.
 
 ## Creating service classes
 
-sqlplus provides a feature to create service classes whose methods are wrapped inside of transactions. Consider this example:
+sqlplus provides a feature to create service / data access object classes whose methods are wrapped inside of transactions. Consider this example:
 ```java
 class WidgetDao {
 
