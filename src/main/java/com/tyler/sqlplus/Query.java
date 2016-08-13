@@ -16,8 +16,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import com.tyler.sqlplus.conversion.AttributeConverter;
-import com.tyler.sqlplus.conversion.ConversionPolicy;
+import com.tyler.sqlplus.conversion.ConversionRegistry;
+import com.tyler.sqlplus.conversion.DbReader;
+import com.tyler.sqlplus.conversion.DbWriter;
 import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.POJOBindException;
@@ -46,7 +47,7 @@ public class Query {
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
 	private Map<String, String> rsColumn_classFieldName = new HashMap<>();
-	private ConversionPolicy conversionPolicy = new ConversionPolicy();
+	private ConversionRegistry conversionRegistry = new ConversionRegistry();
 	
 	public Query(String sql, Session session) {
 		this.session = session;
@@ -54,8 +55,20 @@ public class Query {
 		this.paramLabel_paramIndex = parseParams(sql);
 	}
 	
-	public <T> Query setConverter(Class<T> type, AttributeConverter<T> converter) {
-		this.conversionPolicy.setConverter(type, converter);
+	/**
+	 * Sets the function to use for reading parameter objects from the result set produced by this query. These will
+	 * be used when constructing POJO objects
+	 */
+	public <T> Query setReader(Class<T> type, DbReader<T> reader) {
+		conversionRegistry.registerReader(type, reader);
+		return this;
+	}
+	
+	/**
+	 * Sets the function to use for writing parameter objects of the given type for this query
+	 */
+	public <T> Query setWriter(Class<T> type, DbWriter<T> writer) {
+		conversionRegistry.registerWriter(type, writer);
 		return this;
 	}
 	
@@ -159,7 +172,7 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionPolicy, rsColumn_classFieldName, session, underscoreCamelCaseConvert);
+		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionRegistry, rsColumn_classFieldName, session, underscoreCamelCaseConvert);
 		return stream().map(rs -> {
 			try {
 				return pojoMapper.map(rs);
@@ -193,7 +206,7 @@ public class Query {
 			if (rs.getMetaData().getColumnCount() > 1) {
 				throw new SqlRuntimeException("Scalar query returned more than 1 column");
 			}
-			return conversionPolicy.findConverter(scalarClass).get(rs, 1);
+			return conversionRegistry.getReader(scalarClass).read(rs, 1);
 		} catch (SQLException e) {
 			throw new SqlRuntimeException("Error retrieving scalar value", e);
 		}
@@ -223,9 +236,9 @@ public class Query {
 			List<T> keys = new ArrayList<>();
 			ResultSet rsKeys = ps.getGeneratedKeys();
 			
-			AttributeConverter<T> keyConverter = conversionPolicy.findConverter(targetKeyClass);
+			DbReader<T> reader = conversionRegistry.getReader(targetKeyClass);
 			while (rsKeys.next()) {
-				keys.add(keyConverter.get(rsKeys, 1));
+				keys.add(reader.read(rsKeys, 1));
 			}
 			return keys;
 					
@@ -266,8 +279,8 @@ public class Query {
 						ps.setObject(paramIndex, null);
 					}
 					else {
-						AttributeConverter converter = conversionPolicy.findConverter(objParam.getClass());
-						converter.set(ps, paramIndex, objParam);
+						DbWriter writer = conversionRegistry.getWriter(objParam.getClass());
+						writer.write(ps, paramIndex, objParam);
 					}
 				}
 				

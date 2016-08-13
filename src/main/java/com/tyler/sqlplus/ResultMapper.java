@@ -13,8 +13,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.conversion.AttributeConverter;
-import com.tyler.sqlplus.conversion.ConversionPolicy;
+import com.tyler.sqlplus.conversion.ConversionRegistry;
+import com.tyler.sqlplus.conversion.DbReader;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
@@ -89,7 +89,7 @@ public interface ResultMapper<T> {
 	 * If the given class type has any fields or methods annotated with @LoadQuery (denoting a lazy-loaded collection), a proxy
 	 * object will be returned;
 	 */
-	public static <E> ResultMapper<E> forType(Class<E> type, ConversionPolicy conversionPolicy, Map<String, String> rsCol_fieldName, Session session, boolean underscoreCamelCaseConvert) {
+	public static <E> ResultMapper<E> forType(Class<E> klass, ConversionRegistry conversionRegistry, Map<String, String> rsCol_fieldName, Session session, boolean underscoreCamelCaseConvert) {
 
 		// Since we iterate over the POJO class fields when mapping them from the result set, we need to invert the given map
 		// to ensure the keys are the POJO class field names, not the result set columns
@@ -97,7 +97,7 @@ public interface ResultMapper<T> {
 		rsCol_fieldName.forEach((rsCol, fieldName) -> fieldName_rsCol.put(fieldName, rsCol));
 
 		// Determine whether this mapper should return proxies or raw class instances
-		boolean proxiable = TYPE_PROXIABLE.computeIfAbsent(type, ResultMapper::isProxiable);
+		boolean proxiable = TYPE_PROXIABLE.computeIfAbsent(klass, ResultMapper::isProxiable);
 		
 		return new ResultMapper<E>() {
 
@@ -107,20 +107,21 @@ public interface ResultMapper<T> {
 			public E map(ResultSet rs) throws SQLException {
 				
 				if (loadableFields == null) {
-					loadableFields = determineLoadableFields(rs, type, rsCol_fieldName, underscoreCamelCaseConvert);
+					loadableFields = determineLoadableFields(rs, klass, rsCol_fieldName, underscoreCamelCaseConvert);
 				}
 				
 				E instance;
 				try {
-					instance = proxiable ? EntityProxy.create(type, session) : type.newInstance();
+					instance = proxiable ? EntityProxy.create(klass, session) : klass.newInstance();
 				} catch (InstantiationException | IllegalAccessException e) {
 					throw new POJOBindException(
-						"Could not construct instance of class " + type.getName() + ", verify it has a public no-args constructor");
+						"Could not construct instance of class " + klass.getName() + ", verify it has a public no-args constructor");
 				}
 				
 				for (Field loadableField : loadableFields) {
 					
-					AttributeConverter<?> converterForField = conversionPolicy.findConverter(loadableField.getType());
+					@SuppressWarnings("rawtypes")
+					DbReader fieldReader = conversionRegistry.getReader(loadableField.getType());;
 					
 					String nameOfFieldToLoad = loadableField.getName();
 					String rsColumnName;
@@ -134,7 +135,7 @@ public interface ResultMapper<T> {
 						rsColumnName = nameOfFieldToLoad;
 					}
 					
-					Object fieldValue = converterForField.get(rs, rsColumnName);
+					Object fieldValue = fieldReader.read(rs, rsColumnName);
 					try {
 						Fields.set(loadableField, instance, fieldValue);
 					} catch (ReflectionException e) {
