@@ -170,6 +170,29 @@ public class LazyLoadTest {
 		});
 	}
 	
+	@Test
+	public void testLazyLoadCachesDataAfterFirstRetrieval() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
+		);
+		
+		h2.getSQLPlus().open(conn -> {
+			
+			Address singleAddress = 
+			    conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
+			        .getUniqueResultAs(Address.class);
+			
+			Employee cachedEmployee = singleAddress.getEmployee();
+			h2.batch("update employee set name = 'new-name' where employee_id = 1");
+			cachedEmployee = singleAddress.getEmployee(); // Should not have to make another trip to the DB
+			
+			assertEquals("tester-1", cachedEmployee.name);
+		});
+		
+	}
+	
 	static class EmployeeLoadFromMethodWithUnresolvableField {
 		
 		public Integer employeeId;
