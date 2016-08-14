@@ -54,25 +54,26 @@ public interface ResultMapper<T> {
 	/**
 	 * Creates a result mapper which maps rows to hash maps
 	 */
-	@SuppressWarnings("unchecked")
-	public static <T extends Map<String, Object>> ResultMapper<T> forMap() {
-		return (ResultMapper<T>) forMap(HashMap.class);
+	public static ResultMapper<Map<String, Object>> forMap() {
+		return forMap(HashMap.class);
 	}
 	
 	/**
 	 * Creates a result mapper which maps rows to java Map objects of the given implementation
 	 */
-	@SuppressWarnings("unchecked")
-	public static <T extends Map<String, Object>> ResultMapper<T> forMap(Class<T> impl) {
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static ResultMapper<Map<String, Object>> forMap(Class<? extends Map> impl) {
 		return rs -> {
 			Map<String, Object> row;
 			if (impl == Map.class) {
 				row = new HashMap<>();
 			}
-			try {
-				row = impl.newInstance();
-			} catch (InstantiationException | IllegalAccessException e) {
-				throw new SqlRuntimeException("Could not instantiate instance of map implementation " + impl.getName());
+			else {
+				try {
+					row = impl.newInstance();
+				} catch (InstantiationException | IllegalAccessException e) {
+					throw new SqlRuntimeException("Could not instantiate instance of map implementation " + impl.getName());
+				}
 			}
 			
 			ResultSetMetaData meta = rs.getMetaData();
@@ -80,7 +81,7 @@ public interface ResultMapper<T> {
 				row.put(meta.getColumnLabel(col), rs.getObject(col));
 			}
 			
-			return (T) row;
+			return row;
 		};
 	};
 
