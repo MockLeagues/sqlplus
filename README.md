@@ -42,7 +42,7 @@ These 3 methods (query, open, and transact) and their respective use-cases (exec
 
 Note that all sqplus exceptions extend RuntimeException, so you don't have to worry about annoying boilerplate try-catch blocks which munch or re-brand the 100s of SQLExceptions that are potentially thrown from simple, everyday JDBC method calls. This is typically the convention for exceptions which are non-recoverable; if an error occurs while interacting with the database, there really isn't much you could do in code to try and recover from it without re-gathering user input from scratch, implementing stronger validation or fixing your query syntax. Therefore, it doesn't make much sense to force you to handle the error.
 
-## POJO mapping support
+# POJO mapping support
 
 sqlplus provides features for automatically mapping result sets to lists of plain-old-java-objects (POJOs). This is done using a functional, streaming approach, which creates literally unlimited possibilities in how you can manipulate your data.
 
