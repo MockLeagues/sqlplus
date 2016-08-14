@@ -2,6 +2,8 @@ package com.tyler.sqlplus.conversion;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -120,6 +122,31 @@ public class ConversionRegistry {
 			}
 			else {
 				ps.setBoolean(i, o);
+			}
+		});
+		
+		registerStandardReader(BigInteger.class, (rs, col) -> {
+			BigDecimal bDec = rs.getBigDecimal(col);
+			return bDec == null ? null : bDec.toBigInteger(); 
+		});
+		
+		registerStandardWriter(BigInteger.class, (ps, i, o) -> {
+			if (o == null) {
+				ps.setNull(i, Types.BIGINT);
+			}
+			else {
+				ps.setBigDecimal(i, new BigDecimal(o));
+			}
+		});
+		
+		registerStandardReader(BigDecimal.class, (rs, col) -> rs.getBigDecimal(col));
+		
+		registerStandardWriter(BigDecimal.class, (ps, i, o) -> {
+			if (o == null) {
+				ps.setNull(i, Types.DECIMAL);
+			}
+			else {
+				ps.setBigDecimal(i, o);
 			}
 		});
 		

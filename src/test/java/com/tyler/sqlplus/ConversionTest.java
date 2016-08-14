@@ -6,6 +6,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,6 +36,8 @@ public class ConversionTest {
 		Float bigFloat;
 		double tinyDouble;
 		Double bigDouble;
+		BigInteger hugeInt;
+		BigDecimal hugeDouble;
 		boolean tinyBoolean;
 		Boolean bigBoolean;
 		char tinyChar;
@@ -253,6 +257,34 @@ public class ConversionTest {
 	public void testReadNullString() throws Exception {
 		h2.batch("insert into types_table(int_field) values (1)");
 		String dbResult = h2.getSQLPlus().query(s -> s.createQuery("select varchar_field as \"string\" from types_table").getUniqueResultAs(TypesBag.class).string);
+		assertNull(dbResult);
+	}
+	
+	@Test
+	public void testReadPresentBigInteger() throws Exception {
+		h2.batch("insert into types_table(int_field) values (1)");
+		BigInteger dbResult = h2.getSQLPlus().query(s -> s.createQuery("select int_field as \"hugeInt\" from types_table").getUniqueResultAs(TypesBag.class).hugeInt);
+		assertEquals(new BigInteger("1"), dbResult);
+	}
+	
+	@Test
+	public void testReadNullBigInteger() throws Exception {
+		h2.batch("insert into types_table(float_field) values (1.0)");
+		BigInteger dbResult = h2.getSQLPlus().query(s -> s.createQuery("select int_field as \"hugeInt\" from types_table").getUniqueResultAs(TypesBag.class).hugeInt);
+		assertNull(dbResult);
+	}
+	
+	@Test
+	public void testReadPresentBigDecimal() throws Exception {
+		h2.batch("insert into types_table(decimal_field) values (1.5)");
+		BigDecimal dbResult = h2.getSQLPlus().query(s -> s.createQuery("select decimal_field as \"hugeDouble\" from types_table").getUniqueResultAs(TypesBag.class).hugeDouble);
+		assertEquals(new BigDecimal("1.50"), dbResult);
+	}
+	
+	@Test
+	public void testReadNullBigDecimal() throws Exception {
+		h2.batch("insert into types_table(float_field) values (1.0)");
+		BigDecimal dbResult = h2.getSQLPlus().query(s -> s.createQuery("select decimal_field as \"hugeDouble\" from types_table").getUniqueResultAs(TypesBag.class).hugeDouble);
 		assertNull(dbResult);
 	}
 	
