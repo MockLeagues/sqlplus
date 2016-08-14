@@ -131,7 +131,13 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 			);
 			
 			st.executeUpdate(
-				"create table `dates_dates_dates` (" +
+				"create table `types_table` (" +
+					"`int_field` int(10)," +
+					"`float_field` float," +
+					"`decimal_field` decimal(10, 2)," +
+					"`varchar_field` varchar(15)," +
+					"`char_field` varchar(1)," +
+					"`tiny_int_field` tinyint," +
 					"`timestamp_field` timestamp," +
 					"`date_field` date," +
 					"`datetime_field` datetime," +
@@ -152,7 +158,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 			st.executeUpdate("drop table meeting");
 			st.executeUpdate("drop table employee");
 			st.executeUpdate("drop table office");
-			st.executeUpdate("drop table dates_dates_dates");
+			st.executeUpdate("drop table types_table");
 		}
 		catch (SQLException e) {
 			throw new SqlRuntimeException(e);
