@@ -46,7 +46,6 @@ public class Query {
 	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
-	private Map<String, String> rsColumn_classFieldName = new HashMap<>();
 	private ConversionRegistry conversionRegistry = new ConversionRegistry();
 	
 	/** Should only be constructed by the Session class */
@@ -70,11 +69,6 @@ public class Query {
 	 */
 	public <T> Query setWriter(Class<T> type, DbWriter<T> writer) {
 		conversionRegistry.registerWriter(type, writer);
-		return this;
-	}
-	
-	public Query addColumnMapping(String resultSetColumnName, String classFieldName) {
-		rsColumn_classFieldName.put(resultSetColumnName, classFieldName);
 		return this;
 	}
 	
@@ -173,7 +167,7 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionRegistry, rsColumn_classFieldName, session, underscoreCamelCaseConvert);
+		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionRegistry, session, underscoreCamelCaseConvert);
 		return stream().map(rs -> {
 			try {
 				return pojoMapper.map(rs);

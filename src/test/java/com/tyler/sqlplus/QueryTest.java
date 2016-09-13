@@ -115,62 +115,6 @@ public class QueryTest {
 	}
 	
 	@Test
-	public void testMappingSinglePOJOithCustomFieldMappings() throws Exception {
-		h2.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
-		);
-		
-		List<Address> results = h2.getSQLPlus().query(conn -> {
-			return conn.createQuery("select address_id as ADD_ID, street as STREET_NAME, state as STATE_ABBR, city as CITY_NAME, zip as POSTAL from address")
-						.addColumnMapping("ADD_ID", "addressId")
-						.addColumnMapping("STREET_NAME", "street")
-						.addColumnMapping("STATE_ABBR", "state")
-						.addColumnMapping("CITY_NAME", "city")
-						.addColumnMapping("POSTAL", "zip")
-						.fetchAs(Address.class);
-		});
-		
-		assertEquals(2, results.size());
-		
-		Address first = results.get(0);
-		assertEquals(new Integer(1), first.addressId);
-		assertEquals("Maple Street", first.street);
-		assertEquals("Anytown", first.city);
-		assertEquals("MN", first.state);
-		assertEquals("12345", first.zip);
-		
-		Address second = results.get(1);
-		assertEquals(new Integer(2), second.addressId);
-		assertEquals("Elm Street", second.street);
-		assertEquals("Othertown", second.city);
-		assertEquals("CA", second.state);
-		assertEquals("54321", second.zip);
-	}
-	
-	@Test
-	public void testMappingSinglePOJOWithCustomFieldMappingsThrowsErrorIfUnknownFieldName() throws Exception {
-		
-		h2.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
-		);
-		
-		h2.getSQLPlus().open(conn -> {
-			assertThrows(() -> {
-				conn.createQuery("select address_id as ADD_ID, street as STREET_NAME, state as STATE_ABBR, city as CITY_NAME, zip as POSTAL from address")
-					.addColumnMapping("ADD_ID", "addressId")
-					.addColumnMapping("STREET_NAME", "streetName")
-					.addColumnMapping("STATE_ABBR", "state")
-					.addColumnMapping("CITY_NAME", "city")
-					.addColumnMapping("POSTAL", "zip")
-					.fetchAs(Address.class);
-			}, POJOBindException.class, "Custom-mapped field streetName not found in class " + Address.class.getName() + " for result set column STREET_NAME");
-		});
-		
-	}
-	
-	@Test
 	public void testFetchingAsMaps() throws Exception {
 		
 		h2.batch(

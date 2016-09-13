@@ -90,12 +90,7 @@ public interface ResultMapper<T> {
 	 * If the given class type has any fields or methods annotated with @LoadQuery (denoting a lazy-loaded collection), a proxy
 	 * object will be returned;
 	 */
-	public static <E> ResultMapper<E> forType(Class<E> klass, ConversionRegistry conversionRegistry, Map<String, String> rsCol_fieldName, Session session, boolean underscoreCamelCaseConvert) {
-
-		// Since we iterate over the POJO class fields when mapping them from the result set, we need to invert the given map
-		// to ensure the keys are the POJO class field names, not the result set columns
-		Map<String, String> fieldName_rsCol = new HashMap<>();
-		rsCol_fieldName.forEach((rsCol, fieldName) -> fieldName_rsCol.put(fieldName, rsCol));
+	public static <E> ResultMapper<E> forType(Class<E> klass, ConversionRegistry conversionRegistry, Session session, boolean underscoreCamelCaseConvert) {
 
 		// Determine whether this mapper should return proxies or raw class instances
 		boolean proxiable = TYPE_PROXIABLE.computeIfAbsent(klass, ResultMapper::isProxiable);
@@ -108,7 +103,7 @@ public interface ResultMapper<T> {
 			public E map(ResultSet rs) throws SQLException {
 				
 				if (loadableFields == null) {
-					loadableFields = determineLoadableFields(rs, klass, rsCol_fieldName, underscoreCamelCaseConvert);
+					loadableFields = determineLoadableFields(rs, klass, underscoreCamelCaseConvert);
 				}
 				
 				E instance;
@@ -126,10 +121,7 @@ public interface ResultMapper<T> {
 					
 					String nameOfFieldToLoad = loadableField.getName();
 					String rsColumnName;
-					if (fieldName_rsCol.containsKey(nameOfFieldToLoad)) {
-						rsColumnName = fieldName_rsCol.get(nameOfFieldToLoad);
-					}
-					else if (underscoreCamelCaseConvert) {
+					if (underscoreCamelCaseConvert) {
 						rsColumnName = Fields.camelCaseToUnderscore(nameOfFieldToLoad);
 					}
 					else {
@@ -172,7 +164,7 @@ public interface ResultMapper<T> {
 		             .isPresent();
 	}
 	
-	static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type, Map<String, String> rsColName_fieldName, boolean underscoreCamelCaseConvert) throws SQLException {
+	static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type, boolean underscoreCamelCaseConvert) throws SQLException {
 		
 		Set<Field> loadableFields = new HashSet<>();
 		ResultSetMetaData meta = rs.getMetaData();
@@ -182,11 +174,7 @@ public interface ResultMapper<T> {
 			String rsColName = meta.getColumnLabel(col);
 			
 			String mappedFieldName;
-			boolean customMappingPresent = rsColName_fieldName.containsKey(rsColName);
-			if (customMappingPresent) {
-				mappedFieldName = rsColName_fieldName.get(rsColName);
-			}
-			else if (underscoreCamelCaseConvert) {
+			if (underscoreCamelCaseConvert) {
 				mappedFieldName = Fields.underscoreToCamelCase(rsColName);
 			}
 			else {
@@ -194,15 +182,9 @@ public interface ResultMapper<T> {
 			}
 			
 			try {
-				Field loadableField = type.getDeclaredField(mappedFieldName);
-				loadableFields.add(loadableField);
+				loadableFields.add(type.getDeclaredField(mappedFieldName));
 			} catch (NoSuchFieldException e) {
-				// Not mappable. If the mapped field name was pulled from a custom mapping, we should throw an error
-				// letting the user know they messed up their field name; otherwise would be hard to track down
-				if (customMappingPresent) {
-					throw new POJOBindException(
-						"Custom-mapped field " + mappedFieldName + " not found in class " + type.getName() + " for result set column " + rsColName);
-				}
+				// Field is not mappable for this result set
 			}
 		}
 		

@@ -53,8 +53,7 @@ SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
 List<Widget> allWidgets = sqlPlus.query(session -> session.createQuery("select * from widget").fetchAs(Widget.class));
 ```
 
-By default, sqlplus will attempt to map the column names present in the result set directly to the class's field names. If you need additional customization for how this mapping is done, you have 3 main options to choose from:
-* Specify custom field mappings on the query object before execution
+By default, sqlplus will attempt to map the column names present in the result set directly to the class's field names. If you need additional customization for how this mapping is done, you have 2 options to choose from:
 * Specify concrete field aliases in 'as' clauses in your SQL
 * Configure sqlplus to use underscore to camel case conversion. This will convert a database field name like 'date_modified' to the equivalent camel-cased 'dateModified' when trying to find the appropriate field to set on a POJO
 
