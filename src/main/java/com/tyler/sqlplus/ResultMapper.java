@@ -14,7 +14,6 @@ import java.util.Set;
 
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.conversion.ConversionRegistry;
-import com.tyler.sqlplus.conversion.DbReader;
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
@@ -35,7 +34,6 @@ public interface ResultMapper<T> {
 	 * Caches which classes are proxiable, i.e. have fields or methods annotated with @LoadQuery
 	 */
 	static final Map<Class<?>, Boolean> TYPE_PROXIABLE = new HashMap<>();
-	
 	
 	/**
 	 * Creates a result mapper which maps rows to string arrays
@@ -110,14 +108,10 @@ public interface ResultMapper<T> {
 				try {
 					instance = proxiable ? EntityProxy.create(klass, session) : klass.newInstance();
 				} catch (InstantiationException | IllegalAccessException e) {
-					throw new POJOBindException(
-						"Could not construct instance of class " + klass.getName() + ", verify it has a public no-args constructor");
+					throw new POJOBindException("Could not construct instance of class " + klass.getName() + ", verify it has a public no-args constructor");
 				}
 				
 				for (Field loadableField : loadableFields) {
-					
-					@SuppressWarnings("rawtypes")
-					DbReader fieldReader = conversionRegistry.getReader(loadableField.getType());;
 					
 					String nameOfFieldToLoad = loadableField.getName();
 					String rsColumnName;
@@ -128,7 +122,7 @@ public interface ResultMapper<T> {
 						rsColumnName = nameOfFieldToLoad;
 					}
 					
-					Object fieldValue = fieldReader.read(rs, rsColumnName);
+					Object fieldValue = conversionRegistry.getReader(loadableField.getType()).read(rs, rsColumnName);
 					try {
 						Fields.set(loadableField, instance, fieldValue);
 					} catch (ReflectionException e) {
