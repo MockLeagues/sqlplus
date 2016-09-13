@@ -39,18 +39,15 @@ public class LazyLoader {
 		
 		Query loadQuery = session.createQuery(loadSql).bind(proxy);
 		
-		Object loadedResult;
 		if (Collection.class.isAssignableFrom(loadField.getType())) {
-			loadedResult = loadCollection(loadQuery, loadField);
+			return loadCollection(loadQuery, loadField);
 		}
 		else if (Map.class.isAssignableFrom(loadField.getType())) {
-			loadedResult = loadMap(loadQuery, loadField);
+			return loadMap(loadQuery, loadField);
 		}
 		else {
-			loadedResult = loadQuery.getUniqueResultAs(loadField.getType());
+			return loadQuery.getUniqueResultAs(loadField.getType());
 		}
-		
-		return loadedResult;
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
