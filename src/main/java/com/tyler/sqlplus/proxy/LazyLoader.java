@@ -101,22 +101,21 @@ public class LazyLoader {
 		Field keyField;
 		try {
 			keyField = valueClass.getDeclaredField(mapKey);
-		} catch (NoSuchFieldException | SecurityException e) {
-			throw new LazyLoadException("Map key field '" + mapKey + "' not found in class " + valueClass.getName());
+		} catch (NoSuchFieldException e) {
+			throw new LazyLoadException("Map key field '" + mapKey + "' not found in " + valueClass);
 		}
 
-		return loadQuery.streamAs(valueClass).collect(toMap(
-			entity -> {
-				Object key = Fields.get(keyField, entity);
-				if (key == null) {
-					throw new LazyLoadException(
-						"Null value encountered for key field '" + mapKey + "' while constructing " + valueType + " for insertion into map. " +
-						"Double check your query column names match up with the entity field names");
-				}
-				return key;
-			},
-			Function.identity()
-		));
+		Function<Object, Object> entityToKey = entity -> {
+			Object key = Fields.get(keyField, entity);
+			if (key == null) {
+				throw new LazyLoadException(
+					"Null value encountered for key field '" + mapKey + "' while constructing " + valueType + " for insertion into map. " +
+					"Double check your query column names match up with the entity field names");
+			}
+			return key;
+		};
+		
+		return loadQuery.streamAs(valueClass).collect(toMap(entityToKey, Function.identity()));
 	}
 	
 	private static Type[] getGenericTypes(Field field) {
