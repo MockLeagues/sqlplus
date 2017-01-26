@@ -5,7 +5,7 @@ While there are already  a number of great libraries out there for this sort of 
 
 # Basic Usage
 
-The sqlplus library follows the same workflow as most other JDBC libraries. You first instantiate a sqlplus object, which you then use to open up transactions against a database connection. However, since you're a developer, you didn't come here to read documentation - you want to see code! Here is a simple example
+The sqlplus library follows the same workflow as most other JDBC libraries. You first instantiate a sqlplus object, which you then use to open up transactions against a database connection. However, since you're a developer, you didn't come here to read documentation - you want to see code! Here is a simple example:
 
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
@@ -16,16 +16,7 @@ List<Map<String, Object>> results = sqlPlus.query(session -> {
 
 This method follows the so-called 'loaner' pattern: the method 'loans' you a session to use for your work without requiring all the ceremony we've all been through 100 times when connecting to a database.
 
-The companion to the query method is the open method, which works exactly the same but is not declared to return anything:
-
-```java
-SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
-sqlPlus.open(session -> {
-	session.createQuery("insert into widget (name, color) values ('hoozit', 'fire-red')").executeUpdate();
-});
-```
-
-Of course, we also need the ability to execute atomic work inside of a transaction:
+For a section of code that does not return a value, use transact() instead of query()
 
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
@@ -38,7 +29,7 @@ sqlPlus.transact(session -> {
 });
 ```
 
-These 3 methods (query, open, and transact) and their respective use-cases (execute value-returning work, execute arbitrary work, execute atomic work inside a transaction) are the primary APIs into the sqlplus library. They take care of obtaining connections and executing rollbacks if exceptions occur so all you need to worry about is the work you need to do with your session.
+These 2 methods (query and transact) and their respective use-cases (execute value-returning work, execute arbitrary work) are the primary APIs into the sqlplus library. They take care of obtaining connections and executing rollbacks if exceptions occur so all you need to worry about is the work you need to do with your session.
 
 Note that all sqplus exceptions extend RuntimeException, so you don't have to worry about annoying boilerplate try-catch blocks which munch or re-brand the 100s of SQLExceptions that are potentially thrown from simple, everyday JDBC method calls. This is typically the convention for exceptions which are non-recoverable; if an error occurs while interacting with the database, there really isn't much you could do in code to try and recover from it without re-gathering user input from scratch, implementing stronger validation or fixing your query syntax. Therefore, it doesn't make much sense to force you to handle the error.
 
@@ -53,9 +44,7 @@ SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
 List<Widget> allWidgets = sqlPlus.query(session -> session.createQuery("select * from widget").fetchAs(Widget.class));
 ```
 
-By default, sqlplus will attempt to map the column names present in the result set directly to the class's field names. If you need additional customization for how this mapping is done, you have 2 options to choose from:
-* Specify concrete field aliases in 'as' clauses in your SQL
-* Configure sqlplus to use underscore to camel case conversion. This will convert a database field name like 'date_modified' to the equivalent camel-cased 'dateModified' when trying to find the appropriate field to set on a POJO
+By default, sqlplus will attempt to map the column names present in the result set directly to the class's field names. If you need additional customization for how this mapping is done, you can specify concrete field aliases in 'as' clauses in your SQL
 
 The previous example fetched the entire list into memory at once. What if you had millions of widgets? You'd blow your memory in no time! The solution is to STREAM over the results using Java 8's streaming API:
 
@@ -215,9 +204,48 @@ List<Widget> redWidgets = widgetDao.getWidgets("red");
 
 The service returned via the call to createTransactionAwareService() will have any invocations to methods annotated with @Transactional wrapped in a transaction, same as if you were to execute them inside of a call to sqlPlus.transact(). Additionally, the current active session will be bound to the first field in the service class found with the @ServiceSession annotation.
 
+# Spring Integration
+
+sqlplus provides seamless integration with the spring dependency injection framework. This is most easily done by passing a data source bean as a constructor argument to a new sqlplus bean. The following beans.xml shows what this might look like:
+
+```xml
+
+<beans
+  xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:context="http://www.springframework.org/schema/context"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans
+  http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+  http://www.springframework.org/schema/context
+  http://www.springframework.org/schema/context/spring-context-2.5.xsd">
+
+	<!--
+	Here, we create a data source bean using a very basic data source implementation provided by sqplus.
+	It is recommended to use an application-server provided data source in production to take advantage of features such as connection pooling
+	-->
+	<bean id="dataSource" class="com.tyler.sqlplus.BasicDataSource">
+		<property name="url"         value="jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1" />
+		<property name="username"    value="sa" />
+		<property name="password"    value="sa" />
+		<property name="driverClass" value="org.h2.Driver" />
+	</bean>
+
+	<bean id="sqlPlus" class="com.tyler.sqlplus.SqlPlus">
+		<constructor-arg>
+			<ref bean="dataSource" />
+		</constructor-arg>
+	</bean>
+
+	<!-- A sqlplus bean is now available for @Autowire injection -->
+	<context:component-scan base-package="your.app.package" />
+
+</beans>
+
+```
+
 # Implementation Notes
 
-Methods invoked inside of a call to one of the 'loaner' methods (query, transact or open) which themselves call a method that invokes query, transact or open will re-use the existing session instead of opening their own child session. Since this is a confusing concept to describe purely in text, here is an example:
+sqlplus maintains the notion of the 'current' session. This is done using a thread local variable to allow specific sessions to be bound to the currently executing thread. This means if a transactional block of code attempts to invoke another transactional block of code in the same thread, that block will use the existing transaction from its parent method. Consider this example:
 
 ```java
 public static void main(String[] args) {
@@ -229,13 +257,13 @@ public static void main(String[] args) {
 	final SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
 	
 	final Runnable childTask = () -> {
-		sqlPlus.open(session -> {
+		sqlPlus.transact(session -> {
 			System.out.println("Session in child: " + session)
 		});
 	};
 	
 	
-	sqlPlus.open(session -> {
+	sqlPlus.transact(session -> {
 		System.out.println("Session in parent: " + session)
 		childTask.run();
 	});
@@ -246,4 +274,4 @@ public static void main(String[] args) {
 // >> Session in child: com.tyler.sqlplus.Session@497470ed
 ```
 
-Notice how a session is opened in both the parent method invocation as well as the child method invocation. sqlplus handles this case by maintaining a concept of the 'current' active session for a sqlplus instance. This is done by associating an active session to the current running thread. This means that the first, and only the first call to do work against a session in a thread will actually cause a new session to be created, but any subsequent child calls made within the parent call context that also request to open work against a session will simply re-use the existing session bound to the current thread.
+Notice how a session is opened in both the parent method invocation as well as the child method invocation. However, because both methods execute within the same thread, they will reuse the existing transaction.

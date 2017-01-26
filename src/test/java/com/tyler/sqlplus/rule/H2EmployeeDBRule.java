@@ -9,7 +9,6 @@ import java.util.List;
 
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
 
 public class H2EmployeeDBRule extends AbstractDBRule {
 
