@@ -9,6 +9,7 @@ import java.util.List;
 
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
 
 public class H2EmployeeDBRule extends AbstractDBRule {
 
@@ -24,11 +25,20 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 	public static class Employee {
 		
 		public enum Type { HOURLY, SALARY; }
+		
 		public Integer employeeId;
 		public Type type;
 		public String name;
 		public LocalDate hired;
 		public Integer salary;
+		
+		@LoadQuery(
+			"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
+			"from address a " +
+			"where a.address_id = :addressId"
+		)
+		public Address address;
+		@SuppressWarnings("unused") private int addressId;
 
 		@LoadQuery(
 			"select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
@@ -39,6 +49,10 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 		
 		public List<Office> getOffices() {
 			return offices;
+		}
+
+		public Address getAddress() {
+			return address;
 		}
 		
 	}

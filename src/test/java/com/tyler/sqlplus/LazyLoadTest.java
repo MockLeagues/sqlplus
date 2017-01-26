@@ -28,6 +28,32 @@ public class LazyLoadTest {
 	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
 	
 	@Test
+	public void testLazyLoadForeignKeyRelation() throws Exception {
+		
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
+		);
+		
+		h2.getSQLPlus().transact(conn -> {
+			
+			Employee employee = 
+					conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\", address_id as \"addressId\" from employee e ")
+				        .getUniqueResultAs(Employee.class);
+			
+			assertNull(employee.address);
+			Address lazyAddress = employee.getAddress();
+			assertNotNull(employee.address);
+			assertNotNull(lazyAddress);
+			
+			assertEquals("Maple Street", lazyAddress.street);
+			assertEquals("Anytown", lazyAddress.city);
+			assertEquals("MN", lazyAddress.state);
+			assertEquals("12345", lazyAddress.zip);
+		});
+	}
+	
+	@Test
 	public void testLazyLoadSingleRelationWithAnnotationOnField() throws Exception {
 		
 		h2.batch(
