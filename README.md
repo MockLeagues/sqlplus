@@ -16,7 +16,7 @@ List<Map<String, Object>> results = sqlPlus.query(session -> {
 
 This method follows the so-called 'loaner' pattern: the method 'loans' you a session to use for your work without requiring all the ceremony we've all been through 100 times when connecting to a database.
 
-For a section of code that does not return a value, use transact() instead of query()
+For a section of code that does not return a value, use ```java transact()``` instead of ```java query()```
 
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
@@ -50,7 +50,7 @@ The previous example fetched the entire list into memory at once. What if you ha
 
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
-sqlPlus.open(session -> {
+sqlPlus.transact(session -> {
   session.createQuery("select * from widget").streamAs(Widget.class).forEach(widget -> {
     // Do something with your widget, ensuring there is only 1 object in memory at a time
   });
@@ -61,7 +61,7 @@ However, we can do even better. Usually when you have a large number of results,
 
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
-sqlPlus.open(session -> {
+sqlPlus.transact(session -> {
   session.createQuery("select * from widget").batchProcess(Widget.class, 1000, batchOf1000Widgets -> {
     // Consume widgets in batches of 1000
   });
@@ -102,7 +102,7 @@ class Order {
 }
 
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
-sqlPlus.open(session -> {
+sqlPlus.transact(session -> {
 	List<Order> myOrders = session.createQuery("select * from order o where o.issuer = :name")
 	                              .setParameter("name", "twill")
 	                              .fetchAs(Order.class);
@@ -166,7 +166,7 @@ class Order {
 }
 
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
-sqlPlus.open(session -> {
+sqlPlus.transact(session -> {
 	List<Order> myOrders = session.createQuery("select * from order o where o.issuer = :name")
 	                              .setParameter("name", "twill")
 	                              .fetchAs(Order.class);
