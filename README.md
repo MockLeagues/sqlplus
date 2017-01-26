@@ -16,7 +16,7 @@ List<Map<String, Object>> results = sqlPlus.query(session -> {
 
 This method follows the so-called 'loaner' pattern: the method 'loans' you a session to use for your work without requiring all the ceremony we've all been through 100 times when connecting to a database.
 
-For a section of code that does not return a value, use ```java transact()``` instead of ```java query()```
+For a section of code that does not return a value, use ```transact()``` instead of ```query()```:
 
 ```java
 SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
@@ -44,7 +44,7 @@ SqlPlus sqlPlus = new SqlPlus("dbUrl", "user", "password");
 List<Widget> allWidgets = sqlPlus.query(session -> session.createQuery("select * from widget").fetchAs(Widget.class));
 ```
 
-By default, sqlplus will attempt to map the column names present in the result set directly to the class's field names. If you need additional customization for how this mapping is done, you can specify concrete field aliases in 'as' clauses in your SQL
+By default, sqlplus will attempt to map the column names present in the result set directly to the class's field names. If you need additional customization for how this mapping is done, you can specify concrete field aliases in 'as' clauses in your SQL.
 
 The previous example fetched the entire list into memory at once. What if you had millions of widgets? You'd blow your memory in no time! The solution is to STREAM over the results using Java 8's streaming API:
 
@@ -221,7 +221,8 @@ sqlplus provides seamless integration with the spring dependency injection frame
 
 	<!--
 	Here, we create a data source bean using a very basic data source implementation provided by sqplus.
-	It is recommended to use an application-server provided data source in production to take advantage of features such as connection pooling
+	It is recommended to use an application-server provided data source in production to take advantage
+	of features such as connection pooling
 	-->
 	<bean id="dataSource" class="com.tyler.sqlplus.BasicDataSource">
 		<property name="url"         value="jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1" />
