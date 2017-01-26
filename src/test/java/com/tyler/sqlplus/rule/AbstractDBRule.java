@@ -9,7 +9,6 @@ import java.util.List;
 
 import org.junit.rules.ExternalResource;
 
-import com.tyler.sqlplus.Configuration;
 import com.tyler.sqlplus.SqlPlus;
 
 public abstract class AbstractDBRule extends ExternalResource {
@@ -22,10 +21,6 @@ public abstract class AbstractDBRule extends ExternalResource {
 	
 	public SqlPlus getSQLPlus() {
 		return sqlPlus;
-	}
-	
-	public SqlPlus buildSqlPlus(Configuration config) {
-		return new SqlPlus(config, this::getConnection);
 	}
 	
 	public String[][] query(String sql) {

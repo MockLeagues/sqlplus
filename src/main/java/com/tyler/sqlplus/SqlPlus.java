@@ -1,12 +1,12 @@
 package com.tyler.sqlplus;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.function.Supplier;
 
-import com.tyler.sqlplus.exception.ConfigurationException;
+import javax.sql.DataSource;
+
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.ReturningWork;
 import com.tyler.sqlplus.functional.Work;
@@ -21,43 +21,42 @@ public class SqlPlus {
 
 	private static final ThreadLocal<Session> CURRENT_THREAD_SESSION = new ThreadLocal<>();
 	
-	@SuppressWarnings("unused")
-	private Configuration config;
+	private DataSource dataSource;
 
-	private Supplier<Connection> connectionFactory;
+	@SuppressWarnings("unused")
+	private SqlPlus() {}
 	
 	public SqlPlus(String url, String user, String pass) {
-		this(new Configuration().setUrl(url).setUsername(user).setPassword(pass));
-	}
-
-	public SqlPlus(Configuration config) {
-		this(config, () -> {
-			try {
-				return DriverManager.getConnection(config.getUrl(), config.getUsername(), config.getPassword());
-			}
-			catch (Exception ex) {
-				throw new ConfigurationException("Failed to connect to database", ex);
-			}
-		});
-	}
-
-	public SqlPlus(Supplier<Connection> factory) {
-		this(new Configuration(), factory);
+		this(new BasicDataSource().setUrl(url).setUsername(user).setPassword(pass));
 	}
 	
-	public SqlPlus(Configuration config, Supplier<Connection> factory) {
-		
-		String driverClass = config.getDriverClass();
-		if (driverClass != null) {
-			try {
-				Class.forName(driverClass);
-			} catch (ClassNotFoundException e) {
-				throw new ConfigurationException("Driver class " + driverClass + " not found", e);
+	public SqlPlus(Supplier<Connection> connectionFactory) {
+		this(new BasicDataSource() {
+			
+
+			@Override
+			public Connection getConnection(String user, String pass) {
+				return connectionFactory.get();
 			}
-		}
-		
-		this.config = config;
-		this.connectionFactory = factory;
+
+			@Override
+			public Connection getConnection() {
+				return connectionFactory.get();
+			}
+			
+		});
+	}
+	
+	public SqlPlus(DataSource dataSource) {
+		this.dataSource = dataSource;
+	}
+
+	public DataSource getDataSource() {
+		return dataSource;
+	}
+
+	public void setDataSource(DataSource dataSource) {
+		this.dataSource = dataSource;
 	}
 
 	public <T> T createTransactionAwareService(Class<T> klass) throws InstantiationException, IllegalAccessException {
@@ -94,7 +93,7 @@ public class SqlPlus {
 		T result = null;
 
 		try {
-			conn = connectionFactory.get();
+			conn = dataSource.getConnection();
 			conn.setAutoCommit(false);
 			Session newSession = new Session(conn);
 			CURRENT_THREAD_SESSION.set(newSession);
@@ -127,7 +126,7 @@ public class SqlPlus {
 	}
 	
 	public int[] batchExec(String... stmts) {
-		try (Connection conn = connectionFactory.get()) {
+		try (Connection conn = dataSource.getConnection()) {
 			Statement s = conn.createStatement();
 			for (String sql : stmts) {
 				s.addBatch(sql);
