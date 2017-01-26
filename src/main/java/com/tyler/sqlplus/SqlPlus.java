@@ -4,8 +4,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Supplier;
 
 import com.tyler.sqlplus.exception.ConfigurationException;
@@ -21,11 +19,12 @@ import com.tyler.sqlplus.proxy.TransactionAwareService;
  */
 public class SqlPlus {
 
-	@SuppressWarnings("unused")
-	private Configuration config;
+	private static final ThreadLocal<Session> CURRENT_THREAD_SESSION = new ThreadLocal<>();
 	
+	@SuppressWarnings("unused")
+	private Configuration config;	
+
 	private Supplier<Connection> connectionFactory;
-	private Map<Long, Session> id_currentSession = new HashMap<>();
 	
 	public SqlPlus(String url, String user, String pass) {
 		this(new Configuration().setUrl(url).setUsername(user).setPassword(pass));
@@ -105,9 +104,8 @@ public class SqlPlus {
 	 */
 	private <T> T exec(ReturningWork<Session, T> action, boolean transactional) {
 
-		Long currentSessionId = Thread.currentThread().getId();
-		if (id_currentSession.containsKey(currentSessionId)) {
-			Session currentSession = id_currentSession.get(currentSessionId);
+		Session currentSession = CURRENT_THREAD_SESSION.get();
+		if (currentSession != null) {
 			try {
 				return action.doReturningWork(currentSession);
 			} catch (Exception e) {
@@ -124,14 +122,14 @@ public class SqlPlus {
 				conn.setAutoCommit(false);
 			}
 			Session newSession = new Session(conn);
-			id_currentSession.put(currentSessionId, newSession);
+			CURRENT_THREAD_SESSION.set(newSession);
 			result = action.doReturningWork(newSession);
 			if (transactional) {
 				conn.commit();
 			}
 		}
 		catch (Exception e) {
-			id_currentSession.remove(currentSessionId);
+			CURRENT_THREAD_SESSION.remove();
 			if (conn != null) {
 				try {
 					if (transactional) {
@@ -145,7 +143,7 @@ public class SqlPlus {
 			throw new SqlRuntimeException(e);
 		}
 
-		id_currentSession.remove(currentSessionId);
+		CURRENT_THREAD_SESSION.remove();
 		if (conn != null) {
 			try {
 				conn.close();
