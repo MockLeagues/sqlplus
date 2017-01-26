@@ -1,23 +1,21 @@
 package com.tyler.sqlplus.proxy;
 
+import com.tyler.sqlplus.SqlPlus;
+import com.tyler.sqlplus.annotation.Transactional;
+import com.tyler.sqlplus.annotation.SqlPlusInject;
+import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.utility.Fields;
+import javassist.util.proxy.Proxy;
+import javassist.util.proxy.ProxyFactory;
+
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Optional;
 
-import com.tyler.sqlplus.Session;
-import com.tyler.sqlplus.SqlPlus;
-import com.tyler.sqlplus.annotation.ServiceSession;
-import com.tyler.sqlplus.annotation.Transactional;
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.utility.Fields;
-
-import javassist.util.proxy.Proxy;
-import javassist.util.proxy.ProxyFactory;
-
 /**
  * Creates proxy objects which wrap {@link Transactional} annotated methods in SqlPlus transactions.
- * Proxy classes created in this manner can contain a {@link ServiceSession} annotated field into which the working
- * session will be injected on each service method call
+ * Proxy classes created in this manner can contain a {@link SqlPlusInject} annotated field into which
+ * the sqlplus instance will be injected and therefore queried for the current session
  */
 public class TransactionAwareService {
 
@@ -30,21 +28,17 @@ public class TransactionAwareService {
 		@SuppressWarnings("unchecked")
 		T serviceProxy = (T) factory.createClass().newInstance();
 		
-		// Try to find the field in our service class we will inject working sessions into
-		Optional<Field> sessionField = Arrays.stream(serviceClass.getDeclaredFields())
-		                                     .filter(field -> field.isAnnotationPresent(ServiceSession.class))
-		                                     .findFirst();
-		
-		if (sessionField.isPresent() && sessionField.get().getType() != Session.class) {
+		Optional<Field> sqlPlusField = findSqlPlusInjectField(serviceClass);
+		if (sqlPlusField.isPresent() && sqlPlusField.get().getType() != SqlPlus.class) {
 			throw new ReflectionException(
-				"@ServiceSession annotated field " + sessionField.get() + " must be a Session type");
+				SqlPlusInject.class + " annotated field " + sqlPlusField.get() + " must be of type " + SqlPlus.class);
 		}
 		
 		((Proxy)serviceProxy).setHandler((self, thisMethod, proceed, args) -> {
 			Object[] result = { null };
 			sqlPlus.transact(session -> {
-				if (sessionField.isPresent()) {
-					Fields.set(sessionField.get(), self, session);
+				if (sqlPlusField.isPresent()) {
+					Fields.set(sqlPlusField.get(), self, sqlPlus);
 				}
 				result[0] = proceed.invoke(self, args);
 			});
@@ -53,5 +47,19 @@ public class TransactionAwareService {
 		
 		return serviceProxy;
 	}
-	
+
+	private static Optional<Field> findSqlPlusInjectField(Class<?> klass) {
+		Class<?> searchClass = klass;
+		while (searchClass != Object.class) {
+			Optional<Field> injectField = Arrays.stream(searchClass.getDeclaredFields())
+			                                    .filter(field -> field.isAnnotationPresent(SqlPlusInject.class))
+			                                    .findFirst();
+			if (injectField.isPresent()) {
+				return injectField;
+			}
+			searchClass = searchClass.getSuperclass();
+		}
+		return Optional.empty();
+	}
+
 }

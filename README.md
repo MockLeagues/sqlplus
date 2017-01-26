@@ -184,13 +184,14 @@ sqlplus provides a feature to create service / data access object classes whose 
 
 ```java
 class WidgetDao {
-
-	@ServiceSession
-	private Session session;
+  
+	@SqlPlusInject
+	private SqlPlus sqlPlus;
 	
 	@Transactional
 	public List<Widget> getWidgets(String color) {
-		return session.createQuery("select * from widget where color = :color")
+		return sqlPlus.getCurrentSession()
+		              .createQuery("select * from widget where color = :color")
 		              .setParameter("color", color)
 		              .fetchAs(Widget.class);
 	}
@@ -202,7 +203,7 @@ WidgetDao widgetDao = sqlPlus.createTransactionAwareService(WidgetDao.class);
 List<Widget> redWidgets = widgetDao.getWidgets("red");
 ```
 
-The service returned via the call to createTransactionAwareService() will have any invocations to methods annotated with @Transactional wrapped in a transaction, same as if you were to execute them inside of a call to sqlPlus.transact(). Additionally, the current active session will be bound to the first field in the service class found with the @ServiceSession annotation.
+The service returned via the call to createTransactionAwareService() will have any invocations to methods annotated with @Transactional wrapped in a transaction, same as if you were to execute them inside of a call to sqlPlus.transact(). To execute work against the current session wrapping the method, you can call ```sqlPlus.getCurrentSession()```, as shown.
 
 # Spring Integration
 
