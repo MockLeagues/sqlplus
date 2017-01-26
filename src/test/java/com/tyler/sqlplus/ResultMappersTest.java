@@ -1,26 +1,20 @@
 package com.tyler.sqlplus;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import com.tyler.sqlplus.annotation.LoadQuery;
+import com.tyler.sqlplus.conversion.ConversionRegistry;
+import javassist.util.proxy.Proxy;
+import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
-import org.junit.Test;
-
-import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.conversion.ConversionRegistry;
-
-import javassist.util.proxy.Proxy;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class ResultMappersTest {
 
@@ -163,10 +157,10 @@ public class ResultMappersTest {
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		
-		Set<Field> mappableFields = ResultMappers.determineLoadableFields(rsToMap, POJOMappableFields.class);
+		Map<Field, String> mappableFields = ResultMappers.determineLoadableFields(rsToMap, POJOMappableFields.class);
 		
-		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
-		assertFalse(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
+		assertTrue(mappableFields.containsKey(POJOMappableFields.class.getDeclaredField("mappableA")));
+		assertFalse(mappableFields.containsKey(POJOMappableFields.class.getDeclaredField("mappableB")));
 	}
 	
 	static class ProxiablePOJOByField {

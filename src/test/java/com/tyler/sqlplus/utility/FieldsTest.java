@@ -1,8 +1,8 @@
 package com.tyler.sqlplus.utility;
 
-import static org.junit.Assert.assertEquals;
-
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class FieldsTest {
 
@@ -23,6 +23,16 @@ public class FieldsTest {
 	@Test(expected = IllegalArgumentException.class)
 	public void testThrowsExceptionIfNotJavaBeansStyle() throws Exception {
 		Fields.extractFieldName("incrementAge");
+	}
+
+	@Test
+	public void underscoreToCamelCaseWithNoUnderscores() {
+		assertEquals("test", Fields.underscoreToCamelCase("TEST"));
+	}
+
+	@Test
+	public void underscoreToCamelCaseWithUnderscores() {
+		assertEquals("testField", Fields.underscoreToCamelCase("TEST_FIELD"));
 	}
 
 }

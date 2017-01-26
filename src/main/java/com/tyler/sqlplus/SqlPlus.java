@@ -1,16 +1,15 @@
 package com.tyler.sqlplus;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.function.Supplier;
-
-import javax.sql.DataSource;
-
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.functional.ReturningWork;
 import com.tyler.sqlplus.functional.Work;
 import com.tyler.sqlplus.proxy.TransactionAwareService;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.function.Supplier;
 
 /**
  * This class is the primary entry point to the SQLPlus API.
@@ -87,7 +86,7 @@ public class SqlPlus {
 				throw new SqlRuntimeException(e);
 			}
 		}
-		
+
 		Connection conn = null;
 		T result = null;
 

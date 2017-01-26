@@ -1,20 +1,5 @@
 package com.tyler.sqlplus;
 
-import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
-import java.sql.SQLException;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import org.junit.Rule;
-import org.junit.Test;
-
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
@@ -22,6 +7,17 @@ import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee.Type;
+import org.junit.Rule;
+import org.junit.Test;
+
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
+import static org.junit.Assert.*;
 
 public class QueryTest {
 
@@ -90,7 +86,24 @@ public class QueryTest {
 			assertEquals("Elm Street", result.street);
 		});
 	}
-	
+
+	@Test
+	public void testUnderscoreFieldNamesAreProperlyConvertedToCamelCaseEquivalents() throws Exception {
+
+		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+
+		h2.getSQLPlus().transact(conn -> {
+
+			String sql = "select ADDRESS_ID, STREET, STATE, CITY, ZIP from address a";
+
+			Address addr = conn.createQuery(sql).getUniqueResultAs(Address.class);
+			assertEquals("Maple Street", addr.street);
+			assertEquals("Anytown", addr.city);
+			assertEquals("MN", addr.state);
+			assertEquals("12345", addr.zip);
+		});
+	}
+
 	@Test
 	public void testQueryingWithWithMixtureOfParameterLabelsAndQuestionMarks() throws Exception {
 		

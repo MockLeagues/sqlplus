@@ -1,13 +1,13 @@
 package com.tyler.sqlplus.utility;
 
+import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.functional.ReturningWork;
+import com.tyler.sqlplus.functional.ThrowingBiConsumer;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.functional.ReturningWork;
-import com.tyler.sqlplus.functional.ThrowingBiConsumer;
 
 /**
  * Utilities for working with {@link Field} objects
@@ -86,7 +86,44 @@ public final class Fields {
 		
 		return Character.toLowerCase(fieldName.charAt(0)) + fieldName.substring(1);
 	}
-	
+
+	public static String underscoreToCamelCase(String underscoreStr) {
+		StringBuilder newStr = new StringBuilder();
+
+		char[] chars = underscoreStr.toCharArray();
+		for (int i = 0; i < chars.length; i++) {
+
+			char thisChar = chars[i];
+			if (thisChar == '_') {
+				continue;
+			}
+
+			if (i > 0 && chars[i - 1] == '_') {
+				newStr.append(Character.toUpperCase(thisChar));
+			} else {
+				newStr.append(Character.toLowerCase(thisChar));
+			}
+		}
+
+		return newStr.toString();
+	}
+
+	public static String camelCaseToUnderscore(String camelCaseStr) {
+		StringBuilder newStr = new StringBuilder();
+
+		char[] chars = camelCaseStr.toCharArray();
+		for (int i = 0; i < chars.length; i++) {
+
+			char thisChar = chars[i];
+			if (Character.isUpperCase(thisChar) && i > 0) {
+				newStr.append('_');
+			}
+			newStr.append(thisChar);
+		}
+
+		return newStr.toString().toUpperCase();
+	}
+
 	private static String capitalize(String s) {
 		return String.valueOf(s.charAt(0)).toUpperCase() + s.substring(1);
 	}

@@ -1,24 +1,19 @@
 package com.tyler.sqlplus;
 
+import com.tyler.sqlplus.annotation.LoadQuery;
+import com.tyler.sqlplus.conversion.ConversionRegistry;
+import com.tyler.sqlplus.conversion.FieldReader;
+import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.exception.SqlRuntimeException;
+import com.tyler.sqlplus.proxy.EntityProxy;
+import com.tyler.sqlplus.utility.Fields;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.conversion.ConversionRegistry;
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.exception.SqlRuntimeException;
-import com.tyler.sqlplus.proxy.EntityProxy;
-import com.tyler.sqlplus.utility.Fields;
+import java.util.*;
 
 /**
  * Utilities for creating various result mappers
@@ -90,7 +85,7 @@ public final class ResultMappers {
 		
 		return new ResultMapper<E>() {
 
-			private Set<Field> loadableFields;
+			private Map<Field, String> loadableFields;
 			
 			@Override
 			public E map(ResultSet rs) throws SQLException {
@@ -106,14 +101,24 @@ public final class ResultMappers {
 					throw new RuntimeException("Could not construct instance of class " + klass.getName() + ", verify it has a public no-args constructor");
 				}
 				
-				for (Field loadableField : loadableFields) {
-					Object fieldValue = conversionRegistry.getReader(loadableField.getType()).read(rs, loadableField.getName());
+				loadableFields.forEach((loadableField, columnName) -> {
+
+					FieldReader reader = conversionRegistry.getReader(loadableField.getType());
+
+					Object fieldValue = null;
+					try {
+						fieldValue = reader.read(rs, columnName);
+					} catch (SQLException e) {
+						throw new SqlRuntimeException(e);
+					}
+
 					try {
 						Fields.set(loadableField, instance, fieldValue);
 					} catch (ReflectionException e) {
 						throw new RuntimeException("Unable to set field value for field " + loadableField, e);
 					}
-				}
+
+				});
 				
 				return instance;
 			}
@@ -138,20 +143,28 @@ public final class ResultMappers {
 		                       .isPresent();
 	}
 	
-	static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type) throws SQLException {
+	static Map<Field, String> determineLoadableFields(ResultSet rs, Class<?> type) throws SQLException {
 		
-		Set<Field> loadableFields = new HashSet<>();
+		Map<Field, String> loadableFields = new HashMap<>();
 		ResultSetMetaData meta = rs.getMetaData();
 		
 		for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
 			
-			String rsColName = meta.getColumnLabel(col);
-			
+			String columnLabel = meta.getColumnLabel(col);
+
+			Field field;
 			try {
-				loadableFields.add(type.getDeclaredField(rsColName));
+				field = type.getDeclaredField(columnLabel);
 			} catch (NoSuchFieldException e) {
-				// Field is not mappable for this result set
+				try {
+					String convertedToCamelCase = Fields.underscoreToCamelCase(columnLabel);
+					field = type.getDeclaredField(convertedToCamelCase);
+				} catch (NoSuchFieldException e2) {
+					continue;
+				}
 			}
+
+			loadableFields.put(field, columnLabel);
 		}
 		
 		return loadableFields;
