@@ -22,7 +22,7 @@ public class SqlPlus {
 	private static final ThreadLocal<Session> CURRENT_THREAD_SESSION = new ThreadLocal<>();
 	
 	@SuppressWarnings("unused")
-	private Configuration config;	
+	private Configuration config;
 
 	private Supplier<Connection> connectionFactory;
 	

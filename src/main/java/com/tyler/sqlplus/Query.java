@@ -17,8 +17,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import com.tyler.sqlplus.conversion.ConversionRegistry;
-import com.tyler.sqlplus.conversion.DbReader;
-import com.tyler.sqlplus.conversion.DbWriter;
+import com.tyler.sqlplus.conversion.FieldReader;
+import com.tyler.sqlplus.conversion.FieldWriter;
 import com.tyler.sqlplus.exception.NoResultsException;
 import com.tyler.sqlplus.exception.NonUniqueResultException;
 import com.tyler.sqlplus.exception.POJOBindException;
@@ -58,7 +58,7 @@ public class Query {
 	 * Sets the function to use for reading parameter objects from the result set produced by this query. These will
 	 * be used when constructing POJO objects
 	 */
-	public <T> Query setReader(Class<T> type, DbReader<T> reader) {
+	public <T> Query setReader(Class<T> type, FieldReader<T> reader) {
 		conversionRegistry.registerReader(type, reader);
 		return this;
 	}
@@ -66,7 +66,7 @@ public class Query {
 	/**
 	 * Sets the function to use for writing parameter objects of the given type for this query
 	 */
-	public <T> Query setWriter(Class<T> type, DbWriter<T> writer) {
+	public <T> Query setWriter(Class<T> type, FieldWriter<T> writer) {
 		conversionRegistry.registerWriter(type, writer);
 		return this;
 	}
@@ -221,7 +221,7 @@ public class Query {
 			List<T> keys = new ArrayList<>();
 			ResultSet rsKeys = ps.getGeneratedKeys();
 			
-			DbReader<T> reader = conversionRegistry.getReader(targetKeyClass);
+			FieldReader<T> reader = conversionRegistry.getReader(targetKeyClass);
 			while (rsKeys.next()) {
 				keys.add(reader.read(rsKeys, 1));
 			}
@@ -264,7 +264,7 @@ public class Query {
 						ps.setObject(paramIndex, null);
 					}
 					else {
-						DbWriter writer = conversionRegistry.getWriter(objParam.getClass());
+						FieldWriter writer = conversionRegistry.getWriter(objParam.getClass());
 						writer.write(ps, paramIndex, objParam);
 					}
 				}

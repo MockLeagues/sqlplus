@@ -18,8 +18,8 @@ import com.tyler.sqlplus.exception.ConversionException;
 
 public class ConversionRegistry {
 
-	private static final Map<Class<?>, DbReader<?>> READER_REGISTRY = new HashMap<>();
-	private static final Map<Class<?>, DbWriter<?>> WRITER_REGISTRY = new HashMap<>();
+	private static final Map<Class<?>, FieldReader<?>> READER_REGISTRY = new HashMap<>();
+	private static final Map<Class<?>, FieldWriter<?>> WRITER_REGISTRY = new HashMap<>();
 	
 	static {
 		
@@ -331,37 +331,37 @@ public class ConversionRegistry {
 		registerStandardWriter(Object.class, (ps, i, o) -> ps.setObject(i, o));
 	}
 
-	public static <T> void registerStandardReader(Class<T> type, DbReader<T> reader) {
+	public static <T> void registerStandardReader(Class<T> type, FieldReader<T> reader) {
 		READER_REGISTRY.put(type, reader);
 	}
 	
-	public static <T> void registerStandardWriter(Class<T> type, DbWriter<T> writer) {
+	public static <T> void registerStandardWriter(Class<T> type, FieldWriter<T> writer) {
 		WRITER_REGISTRY.put(type, writer);
 	}
 	
-	private Map<Class<?>, DbReader<?>> readers;
-	private Map<Class<?>, DbWriter<?>> writers;
+	private Map<Class<?>, FieldReader<?>> readers;
+	private Map<Class<?>, FieldWriter<?>> writers;
 	
 	public ConversionRegistry() {
 		readers = new HashMap<>(READER_REGISTRY);
 		writers = new HashMap<>(WRITER_REGISTRY);
 	}
 	
-	public <T> void registerReader(Class<T> type, DbReader<T> reader) {
+	public <T> void registerReader(Class<T> type, FieldReader<T> reader) {
 		this.readers.put(type, reader);
 	}
 	
-	public <T> void registerWriter(Class<T> type, DbWriter<T> writer) {
+	public <T> void registerWriter(Class<T> type, FieldWriter<T> writer) {
 		this.writers.put(type, writer);
 	}
 	
 	@SuppressWarnings("unchecked")
-	public <T> DbReader<T> getReader(Class<T> type) {
+	public <T> FieldReader<T> getReader(Class<T> type) {
 		
-		DbReader<T> reader = null;
+		FieldReader<T> reader = null;
 		
 		if (readers.containsKey(type)) {
-			reader = (DbReader<T>) readers.get(type);
+			reader = (FieldReader<T>) readers.get(type);
 		}
 		else if (Enum.class.isAssignableFrom(type)) {
 			
@@ -393,12 +393,12 @@ public class ConversionRegistry {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public <T> DbWriter<T> getWriter(Class<T> type) {
+	public <T> FieldWriter<T> getWriter(Class<T> type) {
 		
-		DbWriter<T> writer = null;
+		FieldWriter<T> writer = null;
 		
 		if (writers.containsKey(type)) {
-			writer = (DbWriter<T>) writers.get(type);
+			writer = (FieldWriter<T>) writers.get(type);
 		}
 		else if (Enum.class.isAssignableFrom(type)) {
 			

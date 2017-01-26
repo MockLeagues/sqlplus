@@ -7,7 +7,7 @@ import java.sql.SQLException;
  * Defines logic for reading a java object from a {@link ResultSet}
  */
 @FunctionalInterface
-public interface DbReader<T> {
+public interface FieldReader<T> {
 
 	public default T read(ResultSet rs, int colIndex) throws SQLException {
 		String labelForIndex = rs.getMetaData().getColumnLabel(colIndex);
