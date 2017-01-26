@@ -14,11 +14,9 @@ import com.tyler.sqlplus.exception.SqlRuntimeException;
 public class Session implements Closeable {
 
 	private Connection conn;
-	private Configuration config;
 	
-	public Session(Connection conn, Configuration config) {
+	public Session(Connection conn) {
 		this.conn = conn;
-		this.config = config;
 	}
 	
 	/**
@@ -27,9 +25,7 @@ public class Session implements Closeable {
 	 */
 	public Query createQuery(String sql) {
 		assertOpen();
-		Query q = new Query(sql, this);
-		q.setConvertUnderscoreToCamelCase(config.isConvertUnderscoreToCamelCase());
-		return q;
+		return new Query(sql, this);
 	}
 	
 	public void setTransactionIsolationLevel(int level) {

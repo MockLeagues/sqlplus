@@ -396,39 +396,4 @@ public class QueryTest {
 		}
 	}
 	
-	@Test
-	public void testConvertUnderscoreToCamelCaseFieldNamesIfSetOnQueryObject() throws Exception {
-		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
-		h2.getSQLPlus().open(conn -> {
-			
-			Address result = conn.createQuery("select * from address")
-			                     .setConvertUnderscoreToCamelCase(true)
-			                     .getUniqueResultAs(Address.class);
-			
-			assertEquals(new Integer(1), result.addressId);
-			assertEquals("Maple Street", result.street);
-			assertEquals("Anytown", result.city);
-			assertEquals("12345", result.zip);
-			assertEquals("MN", result.state);
-		});
-	}
-	
-	@Test
-	public void testConvertCamelCaseToUnderscoreIfDefaultSettingOnSqlPlus() throws Exception {
-		
-		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
-		
-		SqlPlus sqlPlus = h2.buildSqlPlus(new Configuration().setConvertUnderscoreToCamelCase(true));
-		
-		sqlPlus.open(conn -> {
-			Address result = conn.createQuery("select * from address").getUniqueResultAs(Address.class);
-			assertEquals(new Integer(1), result.addressId);
-			assertEquals("Maple Street", result.street);
-			assertEquals("Anytown", result.city);
-			assertEquals("12345", result.zip);
-			assertEquals("MN", result.state);
-		});
-		
-	}
-	
 }

@@ -42,7 +42,6 @@ public class Query {
 	
 	private Session session;
 	private String sql;
-	private boolean underscoreCamelCaseConvert = false;
 	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
@@ -69,15 +68,6 @@ public class Query {
 	 */
 	public <T> Query setWriter(Class<T> type, DbWriter<T> writer) {
 		conversionRegistry.registerWriter(type, writer);
-		return this;
-	}
-	
-	/**
-	 * Sets whether the column names of this query's result set should be converted from underscore to camel-case when mapping
-	 * them to POJO fields
-	 */
-	public Query setConvertUnderscoreToCamelCase(boolean convert) {
-		this.underscoreCamelCaseConvert = convert;
 		return this;
 	}
 	
@@ -167,7 +157,7 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionRegistry, session, underscoreCamelCaseConvert);
+		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionRegistry, session);
 		return stream().map(rs -> {
 			try {
 				return pojoMapper.map(rs);

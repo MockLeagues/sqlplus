@@ -6,7 +6,6 @@ public class Configuration {
 	private String username;
 	private String password;
 	private String driverClass;
-	private boolean convertCamelCaseToUnderscore = false;
 	
 	public String getUrl() {
 		return url;
@@ -43,13 +42,4 @@ public class Configuration {
 		this.driverClass = driverClass;
 	}
 
-	public boolean isConvertUnderscoreToCamelCase() {
-		return convertCamelCaseToUnderscore;
-	}
-
-	public Configuration setConvertUnderscoreToCamelCase(boolean convertCamelCaseToUnderscore) {
-		this.convertCamelCaseToUnderscore = convertCamelCaseToUnderscore;
-		return this;
-	}
-	
 }

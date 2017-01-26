@@ -88,7 +88,7 @@ public interface ResultMapper<T> {
 	 * If the given class type has any fields or methods annotated with @LoadQuery (denoting a lazy-loaded collection), a proxy
 	 * object will be returned;
 	 */
-	public static <E> ResultMapper<E> forType(Class<E> klass, ConversionRegistry conversionRegistry, Session session, boolean underscoreCamelCaseConvert) {
+	public static <E> ResultMapper<E> forType(Class<E> klass, ConversionRegistry conversionRegistry, Session session) {
 
 		// Determine whether this mapper should return proxies or raw class instances
 		boolean proxiable = TYPE_PROXIABLE.computeIfAbsent(klass, ResultMapper::isProxiable);
@@ -101,7 +101,7 @@ public interface ResultMapper<T> {
 			public E map(ResultSet rs) throws SQLException {
 				
 				if (loadableFields == null) {
-					loadableFields = determineLoadableFields(rs, klass, underscoreCamelCaseConvert);
+					loadableFields = determineLoadableFields(rs, klass);
 				}
 				
 				E instance;
@@ -112,17 +112,7 @@ public interface ResultMapper<T> {
 				}
 				
 				for (Field loadableField : loadableFields) {
-					
-					String nameOfFieldToLoad = loadableField.getName();
-					String rsColumnName;
-					if (underscoreCamelCaseConvert) {
-						rsColumnName = Fields.camelCaseToUnderscore(nameOfFieldToLoad);
-					}
-					else {
-						rsColumnName = nameOfFieldToLoad;
-					}
-					
-					Object fieldValue = conversionRegistry.getReader(loadableField.getType()).read(rs, rsColumnName);
+					Object fieldValue = conversionRegistry.getReader(loadableField.getType()).read(rs, loadableField.getName());
 					try {
 						Fields.set(loadableField, instance, fieldValue);
 					} catch (ReflectionException e) {
@@ -158,7 +148,7 @@ public interface ResultMapper<T> {
 		             .isPresent();
 	}
 	
-	static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type, boolean underscoreCamelCaseConvert) throws SQLException {
+	static Set<Field> determineLoadableFields(ResultSet rs, Class<?> type) throws SQLException {
 		
 		Set<Field> loadableFields = new HashSet<>();
 		ResultSetMetaData meta = rs.getMetaData();
@@ -167,16 +157,8 @@ public interface ResultMapper<T> {
 			
 			String rsColName = meta.getColumnLabel(col);
 			
-			String mappedFieldName;
-			if (underscoreCamelCaseConvert) {
-				mappedFieldName = Fields.underscoreToCamelCase(rsColName);
-			}
-			else {
-				mappedFieldName = rsColName;
-			}
-			
 			try {
-				loadableFields.add(type.getDeclaredField(mappedFieldName));
+				loadableFields.add(type.getDeclaredField(rsColName));
 			} catch (NoSuchFieldException e) {
 				// Field is not mappable for this result set
 			}

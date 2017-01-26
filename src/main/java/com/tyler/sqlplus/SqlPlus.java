@@ -21,7 +21,9 @@ import com.tyler.sqlplus.proxy.TransactionAwareService;
  */
 public class SqlPlus {
 
+	@SuppressWarnings("unused")
 	private Configuration config;
+	
 	private Supplier<Connection> connectionFactory;
 	private Map<Long, Session> id_currentSession = new HashMap<>();
 	
@@ -121,7 +123,7 @@ public class SqlPlus {
 			if (transactional) {
 				conn.setAutoCommit(false);
 			}
-			Session newSession = new Session(conn, config);
+			Session newSession = new Session(conn);
 			id_currentSession.put(currentSessionId, newSession);
 			result = action.doReturningWork(newSession);
 			if (transactional) {
