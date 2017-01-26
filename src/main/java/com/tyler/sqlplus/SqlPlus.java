@@ -60,7 +60,15 @@ public class SqlPlus {
 	public <T> T createTransactionAwareService(Class<T> klass) throws InstantiationException, IllegalAccessException {
 		return TransactionAwareService.create(klass, this);
 	}
-	
+
+	public Session getCurrentSession() {
+		Session currentSession = CURRENT_THREAD_SESSION.get();
+		if (currentSession == null) {
+			throw new IllegalStateException("No session is bound to the current thread");
+		}
+		return currentSession;
+	}
+
 	/**
 	 * Executes an action inside of a single database transaction.
 	 * 
@@ -88,7 +96,7 @@ public class SqlPlus {
 		}
 
 		Connection conn = null;
-		T result = null;
+		T result;
 
 		try {
 			conn = dataSource.getConnection();
@@ -112,14 +120,12 @@ public class SqlPlus {
 		}
 
 		CURRENT_THREAD_SESSION.remove();
-		if (conn != null) {
-			try {
-				conn.close();
-			} catch (SQLException e) {
-				throw new SqlRuntimeException(e);
-			}
+		try {
+			conn.close();
+		} catch (SQLException e) {
+			throw new SqlRuntimeException(e);
 		}
-		
+
 		return result;
 	}
 	
