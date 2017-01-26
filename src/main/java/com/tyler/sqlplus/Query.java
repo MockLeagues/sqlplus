@@ -92,7 +92,7 @@ public class Query {
 	 * Executes this query, mapping results to a simple list of maps
 	 */
 	public List<Map<String, Object>> fetch() {
-		ResultMapper<Map<String, Object>> rowMapper = ResultMapper.forMap();
+		ResultMapper<Map<String, Object>> rowMapper = ResultMappers.forMap();
 		return stream().map(rs -> {
 			try {
 				return rowMapper.map(rs);
@@ -157,7 +157,7 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		ResultMapper<T> pojoMapper = ResultMapper.forType(klass, conversionRegistry, session);
+		ResultMapper<T> pojoMapper = ResultMappers.forClass(klass, conversionRegistry, session);
 		return stream().map(rs -> {
 			try {
 				return pojoMapper.map(rs);

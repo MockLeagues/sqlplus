@@ -17,13 +17,12 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import com.tyler.sqlplus.ResultMapperTest.MyPOJO.Size;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.conversion.ConversionRegistry;
 
 import javassist.util.proxy.Proxy;
 
-public class ResultMapperTest {
+public class ResultMappersTest {
 
 	@Test
 	public void testMapStringArray() throws Exception {
@@ -36,7 +35,7 @@ public class ResultMapperTest {
 		when(rsToMap.getString(1)).thenReturn("valA");
 		when(rsToMap.getString(2)).thenReturn("valB");
 		
-		String[] row = ResultMapper.forStringArray().map(rsToMap);
+		String[] row = ResultMappers.forStringArray().map(rsToMap);
 		assertArrayEquals(new String[]{"valA", "valB"}, row);
 	}
 	
@@ -104,7 +103,7 @@ public class ResultMapperTest {
 		when(rsToMap.getString("enumField")).thenReturn("SMALL");
 		when(rsToMap.getString("localDateField")).thenReturn("2015-01-01");
 		
-		MyPOJO pojo = ResultMapper.forType(MyPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		MyPOJO pojo = ResultMappers.forClass(MyPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		
 		assertEquals(1, pojo.intField);
 		assertEquals(new Float(1.5), new Float(pojo.floatField));
@@ -123,7 +122,7 @@ public class ResultMapperTest {
 		assertEquals(new Character('c'), pojo.bigCharField);
 		
 		assertEquals("string", pojo.stringField);
-		assertEquals(Size.SMALL, pojo.enumField);
+		assertEquals(MyPOJO.Size.SMALL, pojo.enumField);
 		assertEquals(LocalDate.of(2015, 1, 1), pojo.localDateField);
 	}
 	
@@ -143,7 +142,7 @@ public class ResultMapperTest {
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		when(rsToMap.getInt("presentField")).thenReturn(1);
 		
-		POJOWithNullFields pojo = ResultMapper.forType(POJOWithNullFields.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		POJOWithNullFields pojo = ResultMappers.forClass(POJOWithNullFields.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		
 		assertEquals(new Integer(1), pojo.presentField);
 		assertNull(pojo.nonPresentField);
@@ -164,7 +163,7 @@ public class ResultMapperTest {
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		
-		Set<Field> mappableFields = ResultMapper.determineLoadableFields(rsToMap, POJOMappableFields.class);
+		Set<Field> mappableFields = ResultMappers.determineLoadableFields(rsToMap, POJOMappableFields.class);
 		
 		assertTrue(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertFalse(mappableFields.contains(POJOMappableFields.class.getDeclaredField("mappableB")));
@@ -193,7 +192,7 @@ public class ResultMapperTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		ProxiablePOJOByField proxy = ResultMapper.forType(ProxiablePOJOByField.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		ProxiablePOJOByField proxy = ResultMappers.forClass(ProxiablePOJOByField.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		assertTrue(proxy instanceof Proxy);
 	}
 	
@@ -224,7 +223,7 @@ public class ResultMapperTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		ProxiablePOJOByMethod proxy = ResultMapper.forType(ProxiablePOJOByMethod.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		ProxiablePOJOByMethod proxy = ResultMappers.forClass(ProxiablePOJOByMethod.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		assertTrue(proxy instanceof Proxy);
 	}
 	
@@ -246,7 +245,7 @@ public class ResultMapperTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		NormalPOJO pojo = ResultMapper.forType(NormalPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		NormalPOJO pojo = ResultMappers.forClass(NormalPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		assertFalse(pojo instanceof Proxy);
 		assertTrue(pojo.getClass() == NormalPOJO.class);
 	}
