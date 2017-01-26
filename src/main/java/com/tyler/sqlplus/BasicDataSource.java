@@ -18,6 +18,8 @@ public class BasicDataSource implements DataSource {
 	private String password;
 	private String driverClass;
 	
+	public BasicDataSource() {}
+	
 	public String getUrl() {
 		return url;
 	}

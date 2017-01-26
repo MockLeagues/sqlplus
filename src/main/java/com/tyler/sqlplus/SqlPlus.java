@@ -33,10 +33,9 @@ public class SqlPlus {
 	public SqlPlus(Supplier<Connection> connectionFactory) {
 		this(new BasicDataSource() {
 			
-
 			@Override
 			public Connection getConnection(String user, String pass) {
-				return connectionFactory.get();
+				throw new UnsupportedOperationException("This data source cannot supply connections for an arbitrary user");
 			}
 
 			@Override
