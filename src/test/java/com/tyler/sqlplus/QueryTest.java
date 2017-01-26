@@ -30,7 +30,7 @@ public class QueryTest {
 	
 	@Test
 	public void testErrorThrownIfUnkownParamAdded() throws SQLException {
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				Query q = conn.createQuery("select * from employee where employee_id = :id");
 				q.setParameter("idx", "123");
@@ -41,7 +41,7 @@ public class QueryTest {
 	@Test
 	public void testErrorThrownIfParamValueNotSet() throws Exception {
 		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where state = :state and city = :city").setParameter("state", "s").getUniqueResultAs(Address.class);
 			}, QuerySyntaxException.class, "Missing parameter values for the following parameters: [city]");
@@ -50,7 +50,7 @@ public class QueryTest {
 	
 	@Test
 	public void testThrowsIfParamIndexOutOfRange() throws Exception {
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where city = ?").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
 			}, QuerySyntaxException.class, "Parameter index 2 is out of range of this query's parameters (max parameters: 1)");
@@ -59,7 +59,7 @@ public class QueryTest {
 	
 	@Test
 	public void testThrowsIfDuplicateParamAdded() throws Exception {
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where city = :city and street = :city").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
 			}, QuerySyntaxException.class, "Duplicate parameter 'city'");
@@ -68,7 +68,7 @@ public class QueryTest {
 	
 	@Test
 	public void testErrorThrownIfNoParamsSet() throws Exception {
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select * from employee where name = :name").fetch();
 			}, QuerySyntaxException.class, "No parameters set");
@@ -82,7 +82,7 @@ public class QueryTest {
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			Address result = conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a where state = :state and city = :city")
 			                     .setParameter("state", "CA")
 			                     .setParameter("city", "Othertown")
@@ -99,7 +99,7 @@ public class QueryTest {
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
 		);
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			String sql =
 				"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
@@ -171,7 +171,7 @@ public class QueryTest {
 		
 		int[] numBatchesSeen = {0};
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			Query q = conn.createQuery("select street as \"street\", city as \"city\" from address");
 			q.batchProcess(Address.class, 4, batch -> {
 				assertEquals(4, batch.size());
@@ -194,7 +194,7 @@ public class QueryTest {
 		
 		int[] numBatchesSeen = {0};
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			Query q = conn.createQuery("select street as \"street\", city as \"city\" from address");
 			q.batchProcess(Address.class, 4, batch -> {
 				if (numBatchesSeen[0] == 5) {
@@ -233,8 +233,8 @@ public class QueryTest {
 	
 	@Test
 	public void testBatchesAreAddedWhenExplicitlyAdded() throws Exception {
-		
-		h2.getSQLPlus().open(conn -> {
+
+		h2.getSQLPlus().transact(conn -> {
 			
 			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
@@ -248,22 +248,21 @@ public class QueryTest {
 			    .setParameter("salary", "200")
 			    .finishBatch()
 			    .executeUpdate();
-			
-			String[][] expect = {
-				{"1", "SALARY", "test1", "2015-01-01", "100", null},
-				{"2", "SALARY", "test2", "2015-01-02", "200", null}
-			};
-			
-			String[][] actual = h2.query("select employee_id, type, name, hired, salary, address_id from employee");
-			assertArrayEquals(expect, actual);
 		});
 		
+		String[][] expect = {
+			{"1", "SALARY", "test1", "2015-01-01", "100", null},
+			{"2", "SALARY", "test2", "2015-01-02", "200", null}
+		};
+		
+		String[][] actual = h2.query("select employee_id, type, name, hired, salary, address_id from employee");
+		assertArrayEquals(expect, actual);
 	}
 	
 	@Test
 	public void testTheLastManualBatchIsAutoAddedIfNotExplicitlyAdded() throws Exception {
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
@@ -277,20 +276,20 @@ public class QueryTest {
 			    .setParameter("salary", "200")
 			    // Don't manually add last batch, query should auto-add it
 			    .executeUpdate();
-			
-			String[][] expect = {
-				{"1", "SALARY", "test1", "2015-01-01", "100", null},
-				{"2", "SALARY", "test2", "2015-01-02", "200", null}
-			};
-			
-			String[][] actual = h2.query("select employee_id, type, name, hired, salary, address_id from employee");
-			assertArrayEquals(expect, actual);
 		});
+		
+		String[][] expect = {
+			{"1", "SALARY", "test1", "2015-01-01", "100", null},
+			{"2", "SALARY", "test2", "2015-01-02", "200", null}
+		};
+		
+		String[][] actual = h2.query("select employee_id, type, name, hired, salary, address_id from employee");
+		assertArrayEquals(expect, actual);
 	}
 	
 	@Test
 	public void testFinishingABatchWithMissingParametersThrowsError() throws Exception {
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			Query q = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test1")
@@ -309,17 +308,18 @@ public class QueryTest {
 		toCreate.name = "tester-pojo";
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .bind(toCreate)
 			    .executeUpdate();
-			
-			String[] actualRow = h2.query("select type, name, hired, salary from employee")[0];
-			String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  hiredAt.toString(), "20000" };
-			assertArrayEquals(expectRow, actualRow);
 		});
+		
+		String[] actualRow = h2.query("select type, name, hired, salary from employee")[0];
+		String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  hiredAt.toString(), "20000" };
+		assertArrayEquals(expectRow, actualRow);
 	}
+
 	
 	@Test
 	public void testBindingObjectParamsWhenSomeFieldIsNullSetsNull() throws Exception {
@@ -328,18 +328,17 @@ public class QueryTest {
 		toCreate.type = Type.HOURLY;
 		toCreate.name = "tester-pojo";
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .bind(toCreate)
 			    .executeUpdate();
-			
-			String[] actualRow = h2.query("select type, name, hired, salary from employee")[0];
-			String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  null, null };
-			assertArrayEquals(expectRow, actualRow);
-			assertArrayEquals(expectRow, actualRow);
 		});
 		
+		String[] actualRow = h2.query("select type, name, hired, salary from employee")[0];
+		String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  null, null };
+		assertArrayEquals(expectRow, actualRow);
+		assertArrayEquals(expectRow, actualRow);
 	}
 	
 	public static class EmployeeMissingBindParam {
@@ -356,7 +355,7 @@ public class QueryTest {
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)").bind(toCreate);
 			}, POJOBindException.class);
@@ -367,13 +366,13 @@ public class QueryTest {
 	public void returnGeneratedKeys() throws Exception {
 		h2.batch("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			List<Integer> keys = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
-			                                   .setParameter("type", "HOURLY")
-			                                   .setParameter("name", "tester-2")
-			                                   .setParameter("hired", "2015-01-01")
-			                                   .setParameter("salary", "10000")
-			                                   .executeUpdate(Integer.class);
+			                         .setParameter("type", "HOURLY")
+			                         .setParameter("name", "tester-2")
+			                         .setParameter("hired", "2015-01-01")
+			                         .setParameter("salary", "10000")
+			                         .executeUpdate(Integer.class);
 			assertEquals(new Integer(2), keys.get(0));
 		});
 	}

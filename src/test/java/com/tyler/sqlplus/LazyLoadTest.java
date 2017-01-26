@@ -35,7 +35,7 @@ public class LazyLoadTest {
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			Address singleAddress = 
 				conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
@@ -64,7 +64,7 @@ public class LazyLoadTest {
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			Employee employee = 
 				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
@@ -110,7 +110,7 @@ public class LazyLoadTest {
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			EmployeeLoadFromMethod  employee = 
 				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
@@ -154,7 +154,7 @@ public class LazyLoadTest {
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			EmployeeLoadFromMethodWithExplicitField  employee = 
 				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
@@ -178,7 +178,7 @@ public class LazyLoadTest {
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			Address singleAddress = 
 			    conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
@@ -213,7 +213,7 @@ public class LazyLoadTest {
 	@Test
 	public void testErrorThrownIfLoadQueryOnMethodWithUnresolvableField() throws Exception {
 		h2.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			EmployeeLoadFromMethodWithUnresolvableField employee = 
 				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
@@ -256,7 +256,7 @@ public class LazyLoadTest {
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			EmployeeLazyLoadMaps employee = 
 				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
@@ -321,7 +321,7 @@ public class LazyLoadTest {
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			EmployeeWildcardGeneric employeeWildcardGeneric =
 				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
@@ -360,7 +360,7 @@ public class LazyLoadTest {
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		h2.getSQLPlus().open(conn -> {
+		h2.getSQLPlus().transact(conn -> {
 			
 			EmployeeNoGeneric employeeNoGeneric =
 				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")

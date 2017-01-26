@@ -27,14 +27,14 @@ public class SqlPlusTest {
 		List<Session> sessionsRetrieved = new ArrayList<>();
 		
 		Callable<Object> childCall = () -> {
-			h2.getSQLPlus().open(conn -> {
+			h2.getSQLPlus().transact(conn -> {
 				sessionsRetrieved.add(conn);
 			});
 			return null;
 		};
 		
 		Callable<Object> parentCall = () -> {
-			h2.getSQLPlus().open(sess -> {
+			h2.getSQLPlus().transact(sess -> {
 				sessionsRetrieved.add(sess);
 				childCall.call(); // When the child call opens it's session, the session it gets should be the exact same object
 			});

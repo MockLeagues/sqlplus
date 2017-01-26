@@ -64,45 +64,22 @@ public class SqlPlus {
 		return TransactionAwareService.create(klass, this);
 	}
 	
-	public void testConnection() {
-		open(conn -> {
-			// Throws if problems opening connection
-		});
-	}
-
-	/**
-	 * Executes an action against a database connection obtained from this instance's connection factory
-	 */
-	public void open(Work<Session> action) {
-		exec(conn -> {
-			action.doWork(conn);
-			return null;
-		}, false);
-	}
-	
 	/**
 	 * Executes an action inside of a single database transaction.
 	 * 
 	 * If any exceptions are thrown, the transaction is immediately rolled back
 	 */
 	public void transact(Work<Session> action) {
-		exec(conn -> {
-			action.doWork(conn);
+		query(session -> {
+			action.doWork(session);
 			return null;
-		}, true);
+		});
 	}
-
+	
 	/**
 	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 */
 	public <T> T query(ReturningWork<Session, T> action) {
-		return exec(action, false);
-	}
-
-	/**
-	 * Private method through which all other sql plus session method interfaces filter into
-	 */
-	private <T> T exec(ReturningWork<Session, T> action, boolean transactional) {
 
 		Session currentSession = CURRENT_THREAD_SESSION.get();
 		if (currentSession != null) {
@@ -118,23 +95,17 @@ public class SqlPlus {
 
 		try {
 			conn = connectionFactory.get();
-			if (transactional) {
-				conn.setAutoCommit(false);
-			}
+			conn.setAutoCommit(false);
 			Session newSession = new Session(conn);
 			CURRENT_THREAD_SESSION.set(newSession);
 			result = action.doReturningWork(newSession);
-			if (transactional) {
-				conn.commit();
-			}
+			conn.commit();
 		}
 		catch (Exception e) {
 			CURRENT_THREAD_SESSION.remove();
 			if (conn != null) {
 				try {
-					if (transactional) {
-						conn.rollback();
-					}
+					conn.rollback();
 					conn.close();
 				} catch (SQLException e2) {
 					throw new SqlRuntimeException(e2);

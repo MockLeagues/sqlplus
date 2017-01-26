@@ -296,7 +296,7 @@ public class ConversionTest {
 		         "(timestamp_field, date_field, datetime_field, time_field) values " +
 		         "('2016-01-05 12:30:05', '2016-01-03', '2016-10-12 08:25:30', '10:30:45')");
 		
-		h2.getSQLPlus().open(session -> {
+		h2.getSQLPlus().transact(session -> {
 			
 			TypesBag bag = session.createQuery("select timestamp_field as \"javaUtilDate\" from types_table").getUniqueResultAs(TypesBag.class);
 			assertEquals(116, bag.javaUtilDate.getYear());
@@ -328,7 +328,7 @@ public class ConversionTest {
 		         "(timestamp_field, date_field, datetime_field, time_field) values " +
 		         "('2016-01-05 12:30:05', '2016-01-03', '2016-10-12 08:25:30', '10:30:45')");
 		
-		h2.getSQLPlus().open(session -> {
+		h2.getSQLPlus().transact(session -> {
 			
 			TypesBag bag = session.createQuery("select date_field as \"javaUtilDate\" from types_table").getUniqueResultAs(TypesBag.class);
 			assertEquals(116, bag.javaUtilDate.getYear());
@@ -360,7 +360,7 @@ public class ConversionTest {
 		         "(timestamp_field, date_field, datetime_field, time_field) values " +
 		         "('2016-01-05 12:30:05', '2016-01-03', '2016-10-12 08:25:30', '10:30:45')");
 		
-		h2.getSQLPlus().open(session -> {
+		h2.getSQLPlus().transact(session -> {
 			
 			TypesBag bag = session.createQuery("select datetime_field as \"javaUtilDate\" from types_table").getUniqueResultAs(TypesBag.class);
 			assertEquals(116, bag.javaUtilDate.getYear());
@@ -391,7 +391,7 @@ public class ConversionTest {
 		         "(timestamp_field, date_field, datetime_field, time_field) values " +
 		         "('2016-01-05 12:30:05', '2016-01-03', '2016-10-12 08:25:30', '10:30:45')");
 		
-		h2.getSQLPlus().open(session -> {
+		h2.getSQLPlus().transact(session -> {
 			
 			assertThrows(
 				() -> session.createQuery("select time_field as \"javaUtilDate\" from types_table").getUniqueResultAs(TypesBag.class),
