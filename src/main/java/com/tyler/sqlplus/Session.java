@@ -1,12 +1,11 @@
 package com.tyler.sqlplus;
 
+import com.tyler.sqlplus.exception.SessionClosedException;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-
-import com.tyler.sqlplus.exception.SessionClosedException;
-import com.tyler.sqlplus.exception.SqlRuntimeException;
 
 /**
  * Represents an individual unit of work within the SqlPlus environment
@@ -18,7 +17,18 @@ public class Session implements Closeable {
 	public Session(Connection conn) {
 		this.conn = conn;
 	}
-	
+
+	/**
+	 * Convenience method to create a query with parameters in a single call
+	 */
+	public Query createQuery(String sql, Object... params) {
+		Query q = createQuery(sql);
+		for (int i = 0; i < params.length; i++) {
+			q.setParameter(i + 1, params[i]);
+		}
+		return q;
+	}
+
 	/**
 	 * Stages a new query within this session. If the session is no longer active, a {@link SessionClosedException}
 	 * will be thrown
@@ -27,16 +37,7 @@ public class Session implements Closeable {
 		assertOpen();
 		return new Query(sql, this);
 	}
-	
-	public void setTransactionIsolationLevel(int level) {
-		assertOpen();
-		try {
-			conn.setTransactionIsolation(level);
-		} catch (SQLException e) {
-			throw new SqlRuntimeException(e);
-		}
-	}
-	
+
 	private void assertOpen() {
 		if (!isOpen()) {
 			throw new SessionClosedException();

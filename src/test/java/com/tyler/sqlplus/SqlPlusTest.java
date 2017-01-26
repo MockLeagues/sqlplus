@@ -1,18 +1,14 @@
 package com.tyler.sqlplus;
 
-import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.annotation.Transactional;
 import com.tyler.sqlplus.annotation.SqlPlusInject;
+import com.tyler.sqlplus.annotation.Transactional;
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 

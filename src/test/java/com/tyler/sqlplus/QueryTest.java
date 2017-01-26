@@ -126,6 +126,29 @@ public class QueryTest {
 			assertEquals("12345", addr.zip);
 		});
 	}
+
+	@Test
+	public void testCreatingQueryWithInitialKnownParams() throws Exception {
+
+		h2.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
+		);
+
+		h2.getSQLPlus().transact(conn -> {
+
+			String sql =
+				"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
+				"from address a " +
+				"where a.city = ? and a.state = ?";
+
+			Address addr = conn.createQuery("select * from address where city=? and state=?", "Anytown", "MN").getUniqueResultAs(Address.class);
+			assertEquals("Maple Street", addr.street);
+			assertEquals("Anytown", addr.city);
+			assertEquals("MN", addr.state);
+			assertEquals("12345", addr.zip);
+		});
+	}
 	
 	@Test
 	public void testFetchingAsMaps() throws Exception {
