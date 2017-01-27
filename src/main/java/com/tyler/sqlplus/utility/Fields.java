@@ -1,8 +1,8 @@
 package com.tyler.sqlplus.utility;
 
 import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.functional.ReturningWork;
-import com.tyler.sqlplus.functional.ThrowingBiConsumer;
+import com.tyler.sqlplus.function.ReturningWork;
+import com.tyler.sqlplus.function.ThrowingBiConsumer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;

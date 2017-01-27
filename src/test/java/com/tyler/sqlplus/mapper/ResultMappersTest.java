@@ -1,5 +1,6 @@
-package com.tyler.sqlplus;
+package com.tyler.sqlplus.mapper;
 
+import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.conversion.ConversionRegistry;
 import javassist.util.proxy.Proxy;

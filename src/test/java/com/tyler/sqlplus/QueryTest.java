@@ -58,7 +58,8 @@ public class QueryTest {
 		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where city = :city and street = :city").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
-			}, QuerySyntaxException.class, "Duplicate parameter 'city'");
+			}, QuerySyntaxException.class, "Duplicate parameter 'city' in query:\n" +
+							"select address_id from address where city = :city and street = :city");
 		});
 	}
 	
@@ -430,5 +431,30 @@ public class QueryTest {
 			assertArrayEquals(new String[][]{}, h2.query("select * from employee"));
 		}
 	}
-	
+
+	@Test
+	public void testDeadlockIsNotEncounteredWhen2SeparateThreadsNeedEachOthersLockedTables() throws Exception {
+
+	Thread addressOwner = new Thread(() -> {
+			h2.getSQLPlus().transact(sess -> {
+				sess.createQuery("insert into address (street, city, state, zip) values('Maple Street', 'Othertown', 'MN', '12345')").executeUpdate();
+				Thread.sleep(500);
+				sess.createQuery("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-2', '2015-01-01', 20500, 1)").executeUpdate();
+			});
+		});
+
+		Thread employeeOwner = new Thread(() -> {
+			h2.getSQLPlus().transact(sess -> {
+				sess.createQuery("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)").executeUpdate();
+				Thread.sleep(500);
+				sess.createQuery("insert into address (street, city, state, zip) values('Maple Street', 'Springfield', 'MN', '12345')").executeUpdate();
+			});
+		});
+
+		addressOwner.start();
+		employeeOwner.start();
+		addressOwner.join();
+		employeeOwner.join();
+	}
+
 }

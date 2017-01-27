@@ -1,35 +1,27 @@
 package com.tyler.sqlplus;
 
-import static java.util.stream.Collectors.toList;
+import com.tyler.sqlplus.conversion.ConversionRegistry;
+import com.tyler.sqlplus.conversion.FieldReader;
+import com.tyler.sqlplus.conversion.FieldWriter;
+import com.tyler.sqlplus.exception.*;
+import com.tyler.sqlplus.function.BatchConsumer;
+import com.tyler.sqlplus.mapper.ResultMapper;
+import com.tyler.sqlplus.mapper.ResultMappers;
+import com.tyler.sqlplus.mapper.ResultStream;
+import com.tyler.sqlplus.utility.Fields;
+import javassist.util.proxy.Proxy;
 
 import java.lang.reflect.Field;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import com.tyler.sqlplus.conversion.ConversionRegistry;
-import com.tyler.sqlplus.conversion.FieldReader;
-import com.tyler.sqlplus.conversion.FieldWriter;
-import com.tyler.sqlplus.exception.NoResultsException;
-import com.tyler.sqlplus.exception.NonUniqueResultException;
-import com.tyler.sqlplus.exception.POJOBindException;
-import com.tyler.sqlplus.exception.QuerySyntaxException;
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.exception.SqlRuntimeException;
-import com.tyler.sqlplus.functional.BatchConsumer;
-import com.tyler.sqlplus.utility.Fields;
-import com.tyler.sqlplus.utility.ResultStream;
-
-import javassist.util.proxy.Proxy;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Provides encapsulation for an SQL query, allowing results to be retrieved and streamed as POJOs
@@ -118,9 +110,7 @@ public class Query {
 	}
 	
 	/**
-	 * Executes this query, mapping the results to the given POJO class. ResultSet columns will directly map
-	 * to the POJO's field names unless custom field mappings are present for this query or custom column names
-	 * are specified in 'as' clauses
+	 * Executes this query, mapping the results to the given POJO class
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
 		return streamAs(resultClass).collect(toList());
@@ -167,7 +157,7 @@ public class Query {
 		});
 	}
 	
-	public <T> Stream<ResultSet> stream() {
+	public Stream<ResultSet> stream() {
 		try {
 			PreparedStatement ps = prepareStatement(false);
 			return ResultStream.stream(ps.executeQuery());
@@ -256,18 +246,23 @@ public class Query {
 			PreparedStatement ps = session.getJdbcConnection().prepareStatement(formattedSql, returnKeys ? 0 : Statement.RETURN_GENERATED_KEYS);
 			
 			for (Map<Integer, Object> paramBatch : this.paramBatches) {
-			
-				for (Map.Entry<Integer, Object> e : paramBatch.entrySet()) {
-					Object objParam = e.getValue();
-					Integer paramIndex = e.getKey();
+
+				paramBatch.forEach((paramIndex, objParam) -> {
 					if (objParam == null) {
-						ps.setObject(paramIndex, null);
-					}
-					else {
+						try {
+							ps.setObject(paramIndex, null);
+						} catch (SQLException e) {
+							throw new SqlRuntimeException(e);
+						}
+					} else {
 						FieldWriter writer = conversionRegistry.getWriter(objParam.getClass());
-						writer.write(ps, paramIndex, objParam);
+						try {
+							writer.write(ps, paramIndex, objParam);
+						} catch (SQLException e) {
+							throw new SqlRuntimeException(e);
+						}
 					}
-				}
+				});
 				
 				if (this.paramBatches.size() > 1) {
 					ps.addBatch();
@@ -300,17 +295,10 @@ public class Query {
 			try {
 				mappedField = klass.getDeclaredField(paramLabel);
 			} catch (NoSuchFieldException e) {
-				throw new POJOBindException("No member exists in class " + klass.getName() + " to bind a value for parameter '" + paramLabel + "'");
+				throw new POJOBindException("No member exists in " + klass + " to bind a value for parameter '" + paramLabel + "'");
 			}
 			
-			Object member = null;
-			try {
-				member = Fields.get(mappedField, o);
-			}
-			catch (ReflectionException e) {
-				throw new POJOBindException("Error retrieving value for bind field " + mappedField, e);
-			}
-			
+			Object member = Fields.get(mappedField, o);
 			Integer paramIndex = paramLabel_paramIndex.get(paramLabel);
 			bindParams.put(paramIndex, member);
 		}
@@ -370,7 +358,7 @@ public class Query {
 			else {
 				paramLabel = paramLabel.substring(1);
 				if (paramLabel_index.containsKey(paramLabel)) {
-					throw new QuerySyntaxException("Duplicate parameter '" + paramLabel + "'");
+					throw new QuerySyntaxException("Duplicate parameter '" + paramLabel + "' in query:\n" + sql);
 				}
 				paramLabel_index.put(paramLabel, paramIndex);
 			}

@@ -3,6 +3,7 @@ package com.tyler.sqlplus;
 import com.tyler.sqlplus.annotation.SqlPlusInject;
 import com.tyler.sqlplus.annotation.Transactional;
 import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.proxy.TransactionServiceSupport;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
 import org.junit.Rule;

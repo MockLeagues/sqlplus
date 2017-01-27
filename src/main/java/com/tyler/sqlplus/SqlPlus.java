@@ -1,8 +1,8 @@
 package com.tyler.sqlplus;
 
 import com.tyler.sqlplus.exception.SqlRuntimeException;
-import com.tyler.sqlplus.functional.ReturningWork;
-import com.tyler.sqlplus.functional.Work;
+import com.tyler.sqlplus.function.ReturningWork;
+import com.tyler.sqlplus.function.Work;
 import com.tyler.sqlplus.proxy.TransactionAwareService;
 
 import javax.sql.DataSource;

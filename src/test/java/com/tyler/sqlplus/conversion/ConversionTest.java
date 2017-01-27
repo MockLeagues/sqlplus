@@ -1,10 +1,9 @@
-package com.tyler.sqlplus;
+package com.tyler.sqlplus.conversion;
 
-import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import com.tyler.sqlplus.rule.AbstractDBRule;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule;
+import org.junit.Rule;
+import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -14,18 +13,15 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Date;
 
-import org.junit.Rule;
-import org.junit.Test;
-
-import com.tyler.sqlplus.rule.AbstractDBRule;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule;
+import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
+import static org.junit.Assert.*;
 
 public class ConversionTest {
 
 	@Rule
 	public final AbstractDBRule h2 = new H2EmployeeDBRule();
 	
-	static class TypesBag {
+	public static class TypesBag {
 		int tinyInt;
 		Integer bigInt;
 		short tinyShort;

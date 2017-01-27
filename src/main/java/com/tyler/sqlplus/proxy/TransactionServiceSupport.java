@@ -1,5 +1,7 @@
-package com.tyler.sqlplus;
+package com.tyler.sqlplus.proxy;
 
+import com.tyler.sqlplus.Session;
+import com.tyler.sqlplus.SqlPlus;
 import com.tyler.sqlplus.annotation.SqlPlusInject;
 
 /**

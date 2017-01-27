@@ -1,9 +1,9 @@
-package com.tyler.sqlplus;
+package com.tyler.sqlplus.mapper;
 
+import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.conversion.ConversionRegistry;
 import com.tyler.sqlplus.conversion.FieldReader;
-import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SqlRuntimeException;
 import com.tyler.sqlplus.proxy.EntityProxy;
 import com.tyler.sqlplus.utility.Fields;
@@ -93,29 +93,23 @@ public final class ResultMappers {
 				if (loadableFields == null) {
 					loadableFields = determineLoadableFields(rs, klass);
 				}
-				
+
 				E instance;
 				try {
 					instance = shouldReturnProxy ? EntityProxy.create(klass, session) : klass.newInstance();
 				} catch (InstantiationException | IllegalAccessException e) {
-					throw new RuntimeException("Could not construct instance of class " + klass.getName() + ", verify it has a public no-args constructor");
+					throw new RuntimeException("Could not construct instance of " + klass + ", verify it has a public no-args constructor", e);
 				}
-				
+
 				loadableFields.forEach((loadableField, columnName) -> {
 
 					FieldReader reader = conversionRegistry.getReader(loadableField.getType());
 
-					Object fieldValue = null;
 					try {
-						fieldValue = reader.read(rs, columnName);
+						Object fieldValue = reader.read(rs, columnName);
+						Fields.set(loadableField, instance, fieldValue);
 					} catch (SQLException e) {
 						throw new SqlRuntimeException(e);
-					}
-
-					try {
-						Fields.set(loadableField, instance, fieldValue);
-					} catch (ReflectionException e) {
-						throw new RuntimeException("Unable to set field value for field " + loadableField, e);
 					}
 
 				});

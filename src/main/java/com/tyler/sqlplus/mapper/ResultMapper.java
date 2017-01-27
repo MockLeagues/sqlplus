@@ -1,4 +1,4 @@
-package com.tyler.sqlplus;
+package com.tyler.sqlplus.mapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

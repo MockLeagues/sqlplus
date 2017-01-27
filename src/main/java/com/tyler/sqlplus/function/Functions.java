@@ -1,4 +1,4 @@
-package com.tyler.sqlplus.functional;
+package com.tyler.sqlplus.function;
 
 public interface Functions {
 

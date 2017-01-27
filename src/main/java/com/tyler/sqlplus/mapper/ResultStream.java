@@ -1,4 +1,6 @@
-package com.tyler.sqlplus.utility;
+package com.tyler.sqlplus.mapper;
+
+import com.tyler.sqlplus.exception.SqlRuntimeException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -8,10 +10,8 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.tyler.sqlplus.exception.SqlRuntimeException;
-
 /**
- * Encapsulates iteration / functional streaming over a result set
+ * Encapsulates iteration / function streaming over a result set
  */
 public class ResultStream {
 
