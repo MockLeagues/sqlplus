@@ -2,9 +2,6 @@ package com.tyler.sqlplus.utility;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,6 +47,18 @@ public final class ReflectionUtility {
 		}
 	}
 	
+	public static boolean isArray(Object obj) {
+		return obj instanceof Object[]  ||
+		       obj instanceof int[]     ||
+		       obj instanceof short[]   ||
+		       obj instanceof long[]    ||
+		       obj instanceof float[]   ||
+		       obj instanceof double[]  ||
+		       obj instanceof boolean[] ||
+		       obj instanceof char[]    ||
+		       obj instanceof byte[];
+	}
+	
 	public static Optional<Field> findFieldWithAnnotation(Class<? extends Annotation> annotType, Class<?> klass) {
 		if (klass.isInterface()) {
 			return Optional.empty();
@@ -65,26 +74,6 @@ public final class ReflectionUtility {
 			searchClass = searchClass.getSuperclass();
 		}
 		return Optional.empty();
-	}
-	
-	public static Type[] getGenericTypes(Field field) {
-		try {
-			ParameterizedType parameterizedType = (ParameterizedType) field.getGenericType();
-			return parameterizedType.getActualTypeArguments();
-		}
-		catch (ClassCastException cce) {
-			throw new IllegalArgumentException(field + " does not contain generic type info");
-		}
-	}
-	
-	public static Type[] getGenericReturnTypes(Method method) {
-		try {
-			ParameterizedType parameterizedType = (ParameterizedType) method.getGenericReturnType();
-			return parameterizedType.getActualTypeArguments();
-		}
-		catch (ClassCastException cce) {
-			throw new IllegalArgumentException(method + " does not contain generic return type info");
-		}
 	}
 	
 }

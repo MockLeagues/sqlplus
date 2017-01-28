@@ -1,9 +1,10 @@
 package com.tyler.sqlplus.conversion;
 
-import com.tyler.sqlplus.rule.AbstractDBRule;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule;
-import org.junit.Rule;
-import org.junit.Test;
+import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -13,13 +14,18 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Date;
 
-import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
-import static org.junit.Assert.*;
+import org.junit.Rule;
+import org.junit.Test;
+
+import com.tyler.sqlplus.rule.AbstractDBRule;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 
 public class ConversionTest {
 
 	@Rule
 	public final AbstractDBRule h2 = new H2EmployeeDBRule();
+	
+	enum Size { SMALL, MEDIUM, LARGE };
 	
 	public static class TypesBag {
 		int tinyInt;
@@ -44,6 +50,7 @@ public class ConversionTest {
 		LocalDate localDate;
 		LocalDateTime localDateTime;
 		LocalTime localTime;
+		Size enumField;
 	}
 	
 	@Test
@@ -402,6 +409,13 @@ public class ConversionTest {
 			);
 			
 		});
+	}
+	
+	@Test
+	public void readEnumType() throws Exception {
+		h2.batch("insert into types_table(enum_field) values ('MEDIUM')");
+		Size dbResult = h2.getSQLPlus().query(s -> s.createQuery("select enum_field \"enumField\" from types_table").getUniqueResultAs(TypesBag.class)).enumField;
+		assertEquals(Size.MEDIUM, dbResult);
 	}
 	
 }

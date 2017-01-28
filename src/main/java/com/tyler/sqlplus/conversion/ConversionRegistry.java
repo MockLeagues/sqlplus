@@ -4,7 +4,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDate;
@@ -12,21 +11,22 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.tyler.sqlplus.exception.ConversionException;
 
 public class ConversionRegistry {
 
-	private static final Map<Class<?>, FieldReader<?>> READER_REGISTRY = new HashMap<>();
-	private static final Map<Class<?>, FieldWriter<?>> WRITER_REGISTRY = new HashMap<>();
+	private static final Map<Class<?>, FieldReader<?>> READER_REGISTRY = new LinkedHashMap<>();
+	private static final Map<Class<?>, FieldWriter<?>> WRITER_REGISTRY = new LinkedHashMap<>();
 	
 	static {
 		
-		registerStandardReader(int.class, (rs, col) -> rs.getInt(col));
+		registerStandardReader(int.class, (rs, col, type) -> rs.getInt(col));
 		registerStandardWriter(int.class, (ps, i, o) -> ps.setInt(i, o));
 		
-		registerStandardReader(Integer.class, (rs, col) -> {
+		registerStandardReader(Integer.class, (rs, col, type) -> {
 			int obj = rs.getInt(col);
 			return rs.wasNull() ? null : obj;
 		});
@@ -40,10 +40,10 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(short.class, (rs, col) -> rs.getShort(col));
+		registerStandardReader(short.class, (rs, col, type) -> rs.getShort(col));
 		registerStandardWriter(short.class, (ps, i, o) -> ps.setShort(i, o));
 		
-		registerStandardReader(Short.class, (rs, col) -> {
+		registerStandardReader(Short.class, (rs, col, type) -> {
 			short obj = rs.getShort(col);
 			return rs.wasNull() ? null : obj;
 		});
@@ -57,10 +57,10 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(long.class, (rs, col) -> rs.getLong(col));
+		registerStandardReader(long.class, (rs, col, type) -> rs.getLong(col));
 		registerStandardWriter(long.class, (ps, i, o) -> ps.setLong(i, o));
 		
-		registerStandardReader(Long.class, (rs, col) -> {
+		registerStandardReader(Long.class, (rs, col, type) -> {
 			long obj = rs.getLong(col);
 			return rs.wasNull() ? null : obj;
 		});
@@ -74,10 +74,10 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(float.class, (rs, col) -> rs.getFloat(col));
+		registerStandardReader(float.class, (rs, col, type) -> rs.getFloat(col));
 		registerStandardWriter(float.class, (ps, i, o) -> ps.setFloat(i, o));
 		
-		registerStandardReader(Float.class, (rs, col) -> {
+		registerStandardReader(Float.class, (rs, col, type) -> {
 			float obj = rs.getFloat(col);
 			return rs.wasNull() ? null : obj;
 		});
@@ -91,10 +91,10 @@ public class ConversionRegistry {
 			}
 		});
 
-		registerStandardReader(double.class, (rs, col) -> rs.getDouble(col));
+		registerStandardReader(double.class, (rs, col, type) -> rs.getDouble(col));
 		registerStandardWriter(double.class, (ps, i, o) -> ps.setDouble(i, o));
 		
-		registerStandardReader(Double.class, (rs, col) -> {
+		registerStandardReader(Double.class, (rs, col, type) -> {
 			double obj = rs.getDouble(col);
 			return rs.wasNull() ? null : obj;
 		});
@@ -108,10 +108,10 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(boolean.class, (rs, col) -> rs.getBoolean(col));
+		registerStandardReader(boolean.class, (rs, col, type) -> rs.getBoolean(col));
 		registerStandardWriter(boolean.class, (ps, i, o) -> ps.setBoolean(i, o));
 		
-		registerStandardReader(Boolean.class, (rs, col) -> {
+		registerStandardReader(Boolean.class, (rs, col, type) -> {
 			boolean obj = rs.getBoolean(col);
 			return rs.wasNull() ? null : obj;
 		});
@@ -125,7 +125,7 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(BigInteger.class, (rs, col) -> {
+		registerStandardReader(BigInteger.class, (rs, col, type) -> {
 			BigDecimal bDec = rs.getBigDecimal(col);
 			return bDec == null ? null : bDec.toBigInteger(); 
 		});
@@ -139,7 +139,7 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(BigDecimal.class, (rs, col) -> rs.getBigDecimal(col));
+		registerStandardReader(BigDecimal.class, (rs, col, type) -> rs.getBigDecimal(col));
 		
 		registerStandardWriter(BigDecimal.class, (ps, i, o) -> {
 			if (o == null) {
@@ -150,7 +150,7 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(char.class, (rs, col) -> {
+		registerStandardReader(char.class, (rs, col, type) -> {
 			String str = rs.getString(col);
 			if (rs.wasNull()) {
 				return Character.MIN_VALUE;
@@ -165,7 +165,7 @@ public class ConversionRegistry {
 		
 		registerStandardWriter(char.class, (ps, i, o) -> ps.setString(i, String.valueOf(o)));
 		
-		registerStandardReader(Character.class, (rs, col) -> {
+		registerStandardReader(Character.class, (rs, col, type) -> {
 			String str = rs.getString(col);
 			if (rs.wasNull()) {
 				return null;
@@ -187,7 +187,7 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(String.class, (rs, col) -> rs.getString(col));
+		registerStandardReader(String.class, (rs, col, type) -> rs.getString(col));
 		registerStandardWriter(String.class, (ps, i, o) -> {
 			if (o == null) {
 				ps.setNull(i, Types.VARCHAR);
@@ -197,7 +197,7 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(Date.class, (rs, col)  -> {
+		registerStandardReader(Date.class, (rs, col, type)  -> {
 			Object dbObj = rs.getObject(col);
 			if (dbObj.getClass() == java.sql.Date.class) {
 				return new Date(((java.sql.Date)dbObj).getTime());
@@ -222,7 +222,7 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(Timestamp.class, (rs, column) -> {
+		registerStandardReader(Timestamp.class, (rs, column, type) -> {
 			Object dbObj = rs.getObject(column);
 			if (dbObj == null) {
 				return null;
@@ -250,7 +250,7 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(LocalDate.class, (rs, column) -> {
+		registerStandardReader(LocalDate.class, (rs, column, type) -> {
 			Object dbObj = rs.getObject(column);
 			if (dbObj != null) {
 				if (dbObj.getClass() == Timestamp.class) {
@@ -274,7 +274,7 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(LocalDateTime.class, (rs, column) -> {
+		registerStandardReader(LocalDateTime.class, (rs, column, type) -> {
 			Object dbObj = rs.getObject(column);
 			if (dbObj == null) {
 				return LocalDateTime.parse(rs.getString(column));
@@ -301,7 +301,7 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(LocalTime.class, (rs, column) -> {
+		registerStandardReader(LocalTime.class, (rs, column, type) -> {
 			Object dbObj = rs.getObject(column);
 			if (dbObj == null) {
 				return LocalTime.parse(rs.getString(column));
@@ -327,7 +327,26 @@ public class ConversionRegistry {
 			}
 		});
 		
-		registerStandardReader(Object.class, (rs, col) -> rs.getObject(col));
+		registerStandardReader(Enum.class, (rs, column, type) -> {
+			try {
+				Method valueOf = type.getDeclaredMethod("valueOf", String.class);
+				valueOf.setAccessible(true);
+				return (Enum<?>) valueOf.invoke(null, rs.getString(column));
+			} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+				throw new RuntimeException(e);
+			}
+		});
+		
+		registerStandardWriter(Enum.class, (ps, i, o) -> {
+			if (o == null) {
+				ps.setNull(i, Types.VARCHAR);
+			}
+			else {
+				ps.setString(i, ((Enum<?>) o).name());
+			}
+		});
+		
+		registerStandardReader(Object.class, (rs, col, type) -> rs.getObject(col));
 		registerStandardWriter(Object.class, (ps, i, o) -> ps.setObject(i, o));
 	}
 
@@ -362,75 +381,28 @@ public class ConversionRegistry {
 	@SuppressWarnings("unchecked")
 	public <T> FieldReader<T> getReader(Class<T> type) {
 		
-		FieldReader<T> reader = null;
+		return (FieldReader<T>) readers.computeIfAbsent(type, t -> {
+			Class<?> registeredSupertype = readers.keySet()
+			                                      .stream()
+			                                      .filter(registeredType -> registeredType.isAssignableFrom(type))
+			                                      .findFirst()
+			                                      .orElseThrow(() -> new ConversionException("No suitable reader found for  " + type));
+			return readers.get(registeredSupertype);
+		});
 		
-		if (readers.containsKey(type)) {
-			reader = (FieldReader<T>) readers.get(type);
-		}
-		else if (Enum.class.isAssignableFrom(type)) {
-			
-			try {
-				Method valueOf = type.getMethod("valueOf", String.class);
-				valueOf.setAccessible(true);
-				
-				reader = (rs, column) -> {
-					try {
-						return (T) valueOf.invoke(null, rs.getString(column));
-					} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-						throw new SQLException(e);
-					}
-				};
-				
-				registerStandardReader(type, reader); // Register so we can use this again for the enum type
-				readers.put(type, reader);
-				
-			} catch (NoSuchMethodException | SecurityException e) {
-				throw new RuntimeException(e); // Shouldn't happen if enum type
-			}
-		}
-	
-		if (reader == null) {
-			throw new ConversionException("No suitable reader found for type " + type.getName());
-		}
-		
-		return reader;
 	}
 	
 	@SuppressWarnings("unchecked")
 	public <T> FieldWriter<T> getWriter(Class<T> type) {
 		
-		FieldWriter<T> writer = null;
-		
-		if (writers.containsKey(type)) {
-			writer = (FieldWriter<T>) writers.get(type);
-		}
-		else if (Enum.class.isAssignableFrom(type)) {
-			
-			try {
-				Method name = type.getMethod("name");
-				name.setAccessible(true);
-				
-				writer = (ps, i, o) -> {
-					try {
-						ps.setString(i, name.invoke(o) + "");
-					} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-						throw new SQLException(e);
-					}
-				};
-				
-				registerStandardWriter(type, writer); // Register so we can use it for next time we write this enum type
-				writers.put(type, writer);
-				
-			} catch (NoSuchMethodException | SecurityException e) {
-				throw new RuntimeException(e); // Shouldn't happen if enum type
-			}
-		}
-	
-		if (writer == null) {
-			throw new ConversionException("No suitable writer found for type " + type.getName());
-		}
-		
-		return writer;
+		return (FieldWriter<T>) writers.computeIfAbsent(type, t -> {
+			Class<?> registeredSupertype = writers.keySet()
+			                                      .stream()
+			                                      .filter(registeredType -> registeredType.isAssignableFrom(type))
+			                                      .findFirst()
+			                                      .orElseThrow(() -> new ConversionException("No suitable writer found for  " + type));
+			return writers.get(registeredSupertype);
+		});
 	}
 	
 }

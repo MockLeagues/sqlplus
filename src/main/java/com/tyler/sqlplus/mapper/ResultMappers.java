@@ -109,8 +109,9 @@ public final class ResultMappers {
 				}
 
 				loadableFields.forEach((loadableField, columnName) -> {
-					FieldReader<?> reader = conversionRegistry.getReader(loadableField.getType());
-					Object fieldValue = Functions.runSQL(() -> reader.read(rs, columnName));
+					Class<?> fieldType = loadableField.getType();
+					FieldReader<?> reader = conversionRegistry.getReader(fieldType);
+					Object fieldValue = Functions.runSQL(() -> reader.read(rs, columnName, fieldType));
 					Fields.set(loadableField, instance, fieldValue);
 				});
 				

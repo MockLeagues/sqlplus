@@ -1,5 +1,6 @@
 package com.tyler.sqlplus.proxy;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -8,16 +9,14 @@ import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Optional;
 
-import org.h2.mvstore.db.TransactionStore.Transaction;
-
 import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.Session;
-import com.tyler.sqlplus.annotation.Bind;
+import com.tyler.sqlplus.annotation.BindObject;
 import com.tyler.sqlplus.annotation.BindParam;
-import com.tyler.sqlplus.annotation.SQLPlusInject;
-import com.tyler.sqlplus.annotation.SQLPlusQuery;
-import com.tyler.sqlplus.annotation.SQLPlusUpdate;
+import com.tyler.sqlplus.annotation.Database;
+import com.tyler.sqlplus.annotation.DAOQuery;
+import com.tyler.sqlplus.annotation.DAOUpdate;
 import com.tyler.sqlplus.annotation.Transactional;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.QueryInterpretationException;
@@ -44,16 +43,16 @@ public class TransactionalService {
 			factory.setSuperclass(serviceClass);
 		}
 		factory.setFilter(method -> method.isAnnotationPresent(Transactional.class) ||
-		                            method.isAnnotationPresent(SQLPlusQuery.class) ||
-		                            method.isAnnotationPresent(SQLPlusUpdate.class));
+		                            method.isAnnotationPresent(DAOQuery.class) ||
+		                            method.isAnnotationPresent(DAOUpdate.class));
 		
 		@SuppressWarnings("unchecked")
 		T serviceProxy = (T) factory.createClass().newInstance();
 		
-		Optional<Field> sqlPlusField = ReflectionUtility.findFieldWithAnnotation(SQLPlusInject.class, serviceClass);
+		Optional<Field> sqlPlusField = ReflectionUtility.findFieldWithAnnotation(Database.class, serviceClass);
 		if (sqlPlusField.isPresent()) {
 			if (sqlPlusField.get().getType() != SQLPlus.class) {
-				throw new AnnotationConfigurationException("@" + SQLPlusInject.class.getSimpleName() + " annotated field " + sqlPlusField.get() + " must be of type " + SQLPlus.class);
+				throw new AnnotationConfigurationException("@" + Database.class.getSimpleName() + " annotated field " + sqlPlusField.get() + " must be of type " + SQLPlus.class);
 			}
 			Fields.set(sqlPlusField.get(), serviceProxy, sqlPlus);
 		}
@@ -61,9 +60,9 @@ public class TransactionalService {
 		((Proxy) serviceProxy).setHandler((self, overriddenMethod, proceed, args) -> {
 			
 			ReturningWork<Session, Object> workToDoInTransaction;
-			if (overriddenMethod.isAnnotationPresent(SQLPlusQuery.class)) {
+			if (overriddenMethod.isAnnotationPresent(DAOQuery.class)) {
 				workToDoInTransaction = session -> invokeQuery(overriddenMethod, args, session);
-			} else if (overriddenMethod.isAnnotationPresent(SQLPlusUpdate.class)) {
+			} else if (overriddenMethod.isAnnotationPresent(DAOUpdate.class)) {
 				workToDoInTransaction = session -> invokeUpdate(overriddenMethod, args, session);
 			} else {
 				workToDoInTransaction = session -> proceed.invoke(self, args);
@@ -80,10 +79,10 @@ public class TransactionalService {
 		
 		Class<?> returnType = queryMethod.getReturnType();
 		if (returnType == void.class) {
-			throw new AnnotationConfigurationException("@" + SQLPlusQuery.class.getSimpleName() + " annotated method " + queryMethod + " must declare a return type");
+			throw new AnnotationConfigurationException("@" + DAOQuery.class.getSimpleName() + " annotated method " + queryMethod + " must declare a return type");
 		}
 		
-		String sql = queryMethod.getAnnotation(SQLPlusQuery.class).value();
+		String sql = queryMethod.getAnnotation(DAOQuery.class).value();
 		Query query = session.createQuery(sql);
 		bindParams(query, queryMethod.getParameters(), invokeArgs);
 		
@@ -94,7 +93,7 @@ public class TransactionalService {
 	
 	static Object invokeUpdate(Method queryMethod, Object[] invokeArgs, Session session) throws Exception {
 		
-		SQLPlusUpdate updateAnnot = queryMethod.getAnnotation(SQLPlusUpdate.class);
+		DAOUpdate updateAnnot = queryMethod.getAnnotation(DAOUpdate.class);
 		String sql = updateAnnot.value();
 		Query query = session.createQuery(sql);
 		bindParams(query, queryMethod.getParameters(), invokeArgs);
@@ -136,14 +135,24 @@ public class TransactionalService {
 			Object invokeArg = invokeArgs[i];
 			
 			if (param.isAnnotationPresent(BindParam.class)) {
+				
 				String queryParam = param.getAnnotation(BindParam.class).value();
 				query.setParameter(queryParam, invokeArg);
-			} else if (param.isAnnotationPresent(Bind.class)) {
+			}
+			else if (param.isAnnotationPresent(BindObject.class)) {
+				
 				if (invokeArg instanceof Iterable) {
 					for (Object element : (Iterable<?>) invokeArg) {
 						query.bind(element);
 					}
-				} else {
+				}
+				else if (ReflectionUtility.isArray(invokeArg)) {
+					int length = Array.getLength(invokeArg);
+					for (int j = 0; j < length; j++) {
+						query.bind(Array.get(invokeArg, j));
+					}
+				}
+				else{
 					query.bind(invokeArg);
 				}
 				

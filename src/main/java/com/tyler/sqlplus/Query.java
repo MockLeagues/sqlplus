@@ -168,7 +168,7 @@ public class Query {
 			if (rs.getMetaData().getColumnCount() > 1) {
 				throw new SQLRuntimeException("Scalar query returned more than 1 column");
 			}
-			return conversionRegistry.getReader(scalarClass).read(rs, 1);
+			return conversionRegistry.getReader(scalarClass).read(rs, 1, scalarClass);
 		} catch (SQLException e) {
 			throw new SQLRuntimeException("Error retrieving scalar value", e);
 		}
@@ -210,7 +210,7 @@ public class Query {
 			
 			FieldReader<T> reader = conversionRegistry.getReader(targetKeyClass);
 			while (rsKeys.next()) {
-				keys.add(reader.read(rsKeys, 1));
+				keys.add(reader.read(rsKeys, 1, targetKeyClass));
 			}
 			return keys;
 					

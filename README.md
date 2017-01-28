@@ -194,7 +194,7 @@ SQLPlus provides a feature to create service / data access object classes whose 
 ```java
 class WidgetDao {
   
-	@SQLPlusInject
+	@Database
 	private SQLPlus sqlPlus;
 	
 	@Transactional
@@ -219,32 +219,32 @@ You can also annotate abstract methods or interface class methods to map them di
 ```java
 abstract class WidgetService {
 
-	@SQLPlusInject
+	@Database
 	private SQLPlus sqlPlus;
 
 	/**
 	 * This is an alternate implementation of the getWidgets() method shown above which uses a more declarative, annotation-driven approach
 	 */
-	@SQLPlusQuery("select * from widget where color = :color")
-	public abstract List<Widget> getWidgets(@BindParam("color") String color);
+	@DAOQuery("select * from widget where color = :color")
+	public abstract List<Widget> getWidgets(@BindObjectParam("color") String color);
 	 
 	/**
 	 * This method will bind all parameters in the given object to the annotated query, same as if you were to manually call the bind() method on a query
 	 */
-	@SQLPlusUpdate("insert into widget(name, color) values (:name, :color)")
-	public abstract void createWidget(@Bind Widget widget);
+	@DAOUpdate("insert into widget(name, color) values (:name, :color)")
+	public abstract void createWidget(@BindObject Widget widget);
 	  
 	/**
-	 * You may also bind parameters in batches by passing an iterable collection of bind objects
+	 * You may also bind parameters in batches by passing an iterable collection or array of bind objects
 	 */
-	@SQLPlusUpdate("insert into widget(name, color) values (:name, :color)")
-	public abstract void createWidgets(@Bind Collection<Widget> widget);
+	@DAOUpdate("insert into widget(name, color) values (:name, :color)")
+	public abstract void createWidgets(@BindObject Collection<Widget> widget);
 	  
 	/**
 	 * If you want to retrieve generated keys for an insert, simply pass 'true' for the 'returnKeys' value
 	 */
-	@SQLPlusUpdate(value = "insert into widget(name, color) values (:name, :color)", returnKeys = true)
-	public abstract Integer createWidgetWithKey(@Bind Widget widget);
+	@DAOUpdate(value = "insert into widget(name, color) values (:name, :color)", returnKeys = true)
+	public abstract Integer createWidgetWithKey(@BindObject Widget widget);
 	
 	/**
 	 * Of course, you still have the ability to execute a custom transactional method

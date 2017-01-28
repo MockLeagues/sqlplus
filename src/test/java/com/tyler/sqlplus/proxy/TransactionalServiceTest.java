@@ -12,25 +12,25 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.tyler.sqlplus.SQLPlus;
-import com.tyler.sqlplus.annotation.Bind;
+import com.tyler.sqlplus.annotation.BindObject;
 import com.tyler.sqlplus.annotation.BindParam;
-import com.tyler.sqlplus.annotation.SQLPlusInject;
-import com.tyler.sqlplus.annotation.SQLPlusQuery;
-import com.tyler.sqlplus.annotation.SQLPlusUpdate;
+import com.tyler.sqlplus.annotation.Database;
+import com.tyler.sqlplus.annotation.DAOQuery;
+import com.tyler.sqlplus.annotation.DAOUpdate;
 import com.tyler.sqlplus.annotation.Transactional;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
 
-public class ProxyServiceTest {
+public class TransactionalServiceTest {
 
 	@Rule
 	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
 	
 	static class TransactionAwareService {
 
-		@SQLPlusInject
+		@Database
 		private SQLPlus sqlplus;
 
 		@Transactional
@@ -57,7 +57,7 @@ public class ProxyServiceTest {
 	}
 	
 	static class TransactionAwareServiceBadField {
-		@SQLPlusInject
+		@Database
 		private String notASession;
 	}
 	
@@ -66,7 +66,7 @@ public class ProxyServiceTest {
 		assertThrows(
 			() -> h2.getSQLPlus().createService(TransactionAwareServiceBadField.class),
 			AnnotationConfigurationException.class,
-			"@" + SQLPlusInject.class.getSimpleName() + " annotated field " + TransactionAwareServiceBadField.class.getDeclaredField("notASession") + " must be of type " + SQLPlus.class
+			"@" + Database.class.getSimpleName() + " annotated field " + TransactionAwareServiceBadField.class.getDeclaredField("notASession") + " must be of type " + SQLPlus.class
 		);
 	}
 
@@ -94,7 +94,7 @@ public class ProxyServiceTest {
 	
 	static interface InterfaceService {
 		
-		@SQLPlusQuery("select * from address")
+		@DAOQuery("select * from address")
 		List<Address> getAddresses();
 		
 	}
@@ -109,35 +109,41 @@ public class ProxyServiceTest {
 	
 	static abstract class QueryingService {
 
-		@SQLPlusQuery("select * from address")
+		@DAOQuery("select * from address")
 		public abstract void voidQuery();
 		
-		@SQLPlusQuery("select * from address where street = 'Main Street'")
+		@DAOQuery("select * from address where street = 'Main Street'")
 		public abstract Address getMainStreet();
 		
-		@SQLPlusQuery("select count(*) from address")
+		@DAOQuery("select count(*) from address")
 		public abstract int countAddress();
 		
-		@SQLPlusQuery("select * from address")
+		@DAOQuery("select * from address")
 		public abstract List<Address> getAddresses();
 		
-		@SQLPlusQuery("select * from address where street = :street and state = :state")
+		@DAOQuery("select * from address where street = :street and state = :state")
 		public abstract Address getAddress(@BindParam("street") String street, @BindParam("state") String city);
 		
-		@SQLPlusUpdate("insert into address (street, city, state, zip) values (:street, :city, :state, :zip)")
-		public abstract void createAddress(@Bind Address address);
+		@DAOUpdate("insert into address (street, city, state, zip) values (:street, :city, :state, :zip)")
+		public abstract void createAddress(@BindObject Address address);
 		
-		@SQLPlusUpdate(
+		@DAOUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
 			returnKeys = true
 		)
-		public abstract Integer createAddressWithKey(@Bind Address address);
+		public abstract Integer createAddressWithKey(@BindObject Address address);
 		
-		@SQLPlusUpdate(
+		@DAOUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
 			returnKeys = true
 		)
-		public abstract List<Integer> createAddressesWithKeys(@Bind Collection<Address> addresses);
+		public abstract List<Integer> createAddressesWithKeys(@BindObject Collection<Address> addresses);
+		
+		@DAOUpdate(
+			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
+			returnKeys = true
+		)
+		public abstract List<Integer> createAddressesWithKeysVarargs(@BindObject Address... addresses);
 		
 	}
 	
@@ -147,7 +153,7 @@ public class ProxyServiceTest {
 		assertThrows(
 			() -> service.voidQuery(),
 			SQLRuntimeException.class,
-			AnnotationConfigurationException.class.getName() + ": @" + SQLPlusQuery.class.getSimpleName() + " annotated method " + QueryingService.class.getDeclaredMethod("voidQuery") + " must declare a return type"
+			AnnotationConfigurationException.class.getName() + ": @" + DAOQuery.class.getSimpleName() + " annotated method " + QueryingService.class.getDeclaredMethod("voidQuery") + " must declare a return type"
 		);
 	}
 	
@@ -240,7 +246,7 @@ public class ProxyServiceTest {
 	}
 	
 	@Test
-	public void updateMethodShouldInsertAndReturnMultipleKey() throws Exception {
+	public void updateMethodShouldInsertAndReturnMultipleKeysWhenCollectionGiven() throws Exception {
 		
 		Address add1 = new Address();
 		add1.city = "test-city";
@@ -256,6 +262,34 @@ public class ProxyServiceTest {
 		
 		QueryingService service = h2.getSQLPlus().createService(QueryingService.class);
 		List<Integer> keys = service.createAddressesWithKeys(Arrays.asList(add1, add2));
+		
+		String[][] expect = {
+			{ "test-city", "test-state", "test-street", "test-zip" },
+			{ "test2-city", "test2-state", "test2-street", "test2-zip" }
+		};
+		String[][] actual = h2.query("select city, state, street, zip from address");
+		assertArrayEquals(expect, actual);
+		assertEquals(new Integer(1), keys.get(0));
+		assertEquals(new Integer(2), keys.get(1));
+	}
+	
+	@Test
+	public void updateMethodShouldInsertAndReturnMultipleKeysWhenVarargsGiven() throws Exception {
+		
+		Address add1 = new Address();
+		add1.city = "test-city";
+		add1.state = "test-state";
+		add1.street = "test-street";
+		add1.zip = "test-zip";
+		
+		Address add2 = new Address();
+		add2.city = "test2-city";
+		add2.state = "test2-state";
+		add2.street = "test2-street";
+		add2.zip = "test2-zip";
+		
+		QueryingService service = h2.getSQLPlus().createService(QueryingService.class);
+		List<Integer> keys = service.createAddressesWithKeysVarargs(add1, add2);
 		
 		String[][] expect = {
 			{ "test-city", "test-state", "test-street", "test-zip" },

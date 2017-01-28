@@ -154,7 +154,8 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 					"`timestamp_field` timestamp," +
 					"`date_field` date," +
 					"`datetime_field` datetime," +
-					"`time_field` time" +
+					"`time_field` time," +
+					"`enum_field` varchar(20)" +
 				")"
 			);
 		}

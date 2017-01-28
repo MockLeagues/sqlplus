@@ -7,10 +7,8 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface SQLPlusUpdate {
+public @interface DAOQuery {
 	
 	String value();
-	
-	boolean returnKeys() default false;
 	
 }
