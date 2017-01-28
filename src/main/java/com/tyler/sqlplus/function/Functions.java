@@ -2,7 +2,7 @@ package com.tyler.sqlplus.function;
 
 import java.sql.SQLException;
 
-import com.tyler.sqlplus.exception.SqlRuntimeException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 
 public interface Functions {
 
@@ -54,7 +54,7 @@ public interface Functions {
 		try {
 			return runnable.run();
 		} catch (SQLException e) {
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 	

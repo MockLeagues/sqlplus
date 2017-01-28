@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.exception.SqlRuntimeException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 
 public class H2EmployeeDBRule extends AbstractDBRule {
 
@@ -17,7 +17,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 		try {
 			return DriverManager.getConnection("jdbc:h2:mem:db1;DB_CLOSE_DELAY=-1", "sa", "sa");
 		} catch (SQLException e) {
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 	
@@ -159,7 +159,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 			);
 		}
 		catch (SQLException e) {
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 	
@@ -174,7 +174,7 @@ public class H2EmployeeDBRule extends AbstractDBRule {
 			st.executeUpdate("drop table types_table");
 		}
 		catch (SQLException e) {
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 	

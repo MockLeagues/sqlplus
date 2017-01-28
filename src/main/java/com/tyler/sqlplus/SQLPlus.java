@@ -1,6 +1,6 @@
 package com.tyler.sqlplus;
 
-import com.tyler.sqlplus.exception.SqlRuntimeException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.function.Work;
 import com.tyler.sqlplus.proxy.TransactionAwareService;
@@ -16,20 +16,20 @@ import java.util.function.Supplier;
  * 
  * An instance of a SQLPLus object provides an interface for executing actions against a database connection
  */
-public class SqlPlus {
+public class SQLPlus {
 
 	private static final ThreadLocal<Session> CURRENT_THREAD_SESSION = new ThreadLocal<>();
 	
 	private DataSource dataSource;
 
 	@SuppressWarnings("unused")
-	private SqlPlus() {}
+	private SQLPlus() {}
 	
-	public SqlPlus(String url, String user, String pass) {
+	public SQLPlus(String url, String user, String pass) {
 		this(new BasicDataSource().setUrl(url).setUsername(user).setPassword(pass));
 	}
 	
-	public SqlPlus(Supplier<Connection> connectionFactory) {
+	public SQLPlus(Supplier<Connection> connectionFactory) {
 		this(new BasicDataSource() {
 			
 			@Override
@@ -45,7 +45,7 @@ public class SqlPlus {
 		});
 	}
 	
-	public SqlPlus(DataSource dataSource) {
+	public SQLPlus(DataSource dataSource) {
 		this.dataSource = dataSource;
 	}
 
@@ -91,7 +91,7 @@ public class SqlPlus {
 			try {
 				return action.doReturningWork(currentSession);
 			} catch (Exception e) {
-				throw new SqlRuntimeException(e);
+				throw new SQLRuntimeException(e);
 			}
 		}
 
@@ -113,17 +113,17 @@ public class SqlPlus {
 					conn.rollback();
 					conn.close();
 				} catch (SQLException e2) {
-					throw new SqlRuntimeException(e2);
+					throw new SQLRuntimeException(e2);
 				}
 			}
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 
 		CURRENT_THREAD_SESSION.remove();
 		try {
 			conn.close();
 		} catch (SQLException e) {
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 
 		return result;
@@ -138,7 +138,7 @@ public class SqlPlus {
 			return s.executeBatch();
 		}
 		catch (SQLException e) {
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 

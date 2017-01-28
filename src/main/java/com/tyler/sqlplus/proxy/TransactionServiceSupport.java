@@ -1,7 +1,7 @@
 package com.tyler.sqlplus.proxy;
 
 import com.tyler.sqlplus.Session;
-import com.tyler.sqlplus.SqlPlus;
+import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.SqlPlusInject;
 
 /**
@@ -10,7 +10,7 @@ import com.tyler.sqlplus.annotation.SqlPlusInject;
 public class TransactionServiceSupport {
 
 	@SqlPlusInject
-	private SqlPlus sqlPlus;
+	private SQLPlus sqlPlus;
 
 	protected Session session() {
 		return sqlPlus.getCurrentSession();

@@ -90,7 +90,7 @@ public class Query {
 				return rowMapper.map(rs);
 			}
 			catch (SQLException e) {
-				throw new SqlRuntimeException(e);
+				throw new SQLRuntimeException(e);
 			}
 		}).collect(toList());
 	}
@@ -130,7 +130,7 @@ public class Query {
 				try {
 					processor.acceptBatch(batch);
 				} catch (Exception e) {
-					throw new SqlRuntimeException(e);
+					throw new SQLRuntimeException(e);
 				}
 				batch.clear();
 			}
@@ -141,7 +141,7 @@ public class Query {
 			try {
 				processor.acceptBatch(batch);
 			} catch (Exception e) {
-				throw new SqlRuntimeException(e);
+				throw new SQLRuntimeException(e);
 			}
 		}
 	}
@@ -162,7 +162,7 @@ public class Query {
 			PreparedStatement ps = prepareStatement(false);
 			return ResultStream.stream(ps.executeQuery());
 		} catch (SQLException e) {
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 	
@@ -179,11 +179,11 @@ public class Query {
 				throw new NoResultsException();
 			}
 			if (rs.getMetaData().getColumnCount() > 1) {
-				throw new SqlRuntimeException("Scalar query returned more than 1 column");
+				throw new SQLRuntimeException("Scalar query returned more than 1 column");
 			}
 			return conversionRegistry.getReader(scalarClass).read(rs, 1);
 		} catch (SQLException e) {
-			throw new SqlRuntimeException("Error retrieving scalar value", e);
+			throw new SQLRuntimeException("Error retrieving scalar value", e);
 		}
 	}
 	
@@ -218,7 +218,7 @@ public class Query {
 			return keys;
 					
 		} catch (SQLException e) {
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 
@@ -252,14 +252,14 @@ public class Query {
 						try {
 							ps.setObject(paramIndex, null);
 						} catch (SQLException e) {
-							throw new SqlRuntimeException(e);
+							throw new SQLRuntimeException(e);
 						}
 					} else {
 						FieldWriter writer = conversionRegistry.getWriter(objParam.getClass());
 						try {
 							writer.write(ps, paramIndex, objParam);
 						} catch (SQLException e) {
-							throw new SqlRuntimeException(e);
+							throw new SQLRuntimeException(e);
 						}
 					}
 				});
@@ -272,7 +272,7 @@ public class Query {
 			return ps;
 		}
 		catch (SQLException e) {
-			throw new SqlRuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 	

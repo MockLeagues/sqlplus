@@ -1,6 +1,6 @@
 package com.tyler.sqlplus.proxy;
 
-import com.tyler.sqlplus.SqlPlus;
+import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.Transactional;
 import com.tyler.sqlplus.annotation.SqlPlusInject;
 import com.tyler.sqlplus.exception.ReflectionException;
@@ -19,7 +19,7 @@ import java.util.Optional;
  */
 public class TransactionAwareService {
 
-	public static <T> T create(Class<T> serviceClass, SqlPlus sqlPlus) throws InstantiationException, IllegalAccessException {
+	public static <T> T create(Class<T> serviceClass, SQLPlus sqlPlus) throws InstantiationException, IllegalAccessException {
 		
 		ProxyFactory factory = new ProxyFactory();
 		factory.setSuperclass(serviceClass);
@@ -29,9 +29,9 @@ public class TransactionAwareService {
 		T serviceProxy = (T) factory.createClass().newInstance();
 		
 		Optional<Field> sqlPlusField = findSqlPlusInjectField(serviceClass);
-		if (sqlPlusField.isPresent() && sqlPlusField.get().getType() != SqlPlus.class) {
+		if (sqlPlusField.isPresent() && sqlPlusField.get().getType() != SQLPlus.class) {
 			throw new ReflectionException(
-				SqlPlusInject.class + " annotated field " + sqlPlusField.get() + " must be of type " + SqlPlus.class);
+				SqlPlusInject.class + " annotated field " + sqlPlusField.get() + " must be of type " + SQLPlus.class);
 		}
 		
 		((Proxy)serviceProxy).setHandler((self, thisMethod, proceed, args) -> {

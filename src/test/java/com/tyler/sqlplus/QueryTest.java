@@ -17,7 +17,7 @@ import org.junit.Test;
 
 import com.tyler.sqlplus.exception.POJOBindException;
 import com.tyler.sqlplus.exception.QuerySyntaxException;
-import com.tyler.sqlplus.exception.SqlRuntimeException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee;
@@ -424,7 +424,7 @@ public class QueryTest {
 				throw new TransactionException();
 			});
 			
-		} catch (SqlRuntimeException e) {
+		} catch (SQLRuntimeException e) {
 			assertEquals(TransactionException.class, e.getCause().getClass()); // Make sure the error we got was from us throwing the transaction exception
 			assertArrayEquals(new String[][]{}, h2.query("select * from employee"));
 		}

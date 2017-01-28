@@ -1,6 +1,6 @@
 package com.tyler.sqlplus.mapper;
 
-import com.tyler.sqlplus.exception.SqlRuntimeException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -28,7 +28,7 @@ public class ResultStream {
 			try {
 				return rs.next();
 			} catch (SQLException e) {
-				throw new SqlRuntimeException(e);
+				throw new SQLRuntimeException(e);
 			}
 		}
 

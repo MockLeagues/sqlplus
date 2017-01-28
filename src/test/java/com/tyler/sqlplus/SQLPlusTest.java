@@ -17,7 +17,7 @@ import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class SqlPlusTest {
+public class SQLPlusTest {
 
 	@Rule
 	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
@@ -49,7 +49,7 @@ public class SqlPlusTest {
 	static class TransactionAwareService {
 
 		@SqlPlusInject
-		private SqlPlus sqlplus;
+		private SQLPlus sqlplus;
 
 		@Transactional
 		public List<Address> getAddresses() {
@@ -84,7 +84,7 @@ public class SqlPlusTest {
 		assertThrows(
 			() -> h2.getSQLPlus().createTransactionAwareService(TransactionAwareServiceBadField.class),
 			ReflectionException.class,
-			SqlPlusInject.class + " annotated field " + TransactionAwareServiceBadField.class.getDeclaredField("notASession") + " must be of type " + SqlPlus.class
+			SqlPlusInject.class + " annotated field " + TransactionAwareServiceBadField.class.getDeclaredField("notASession") + " must be of type " + SQLPlus.class
 		);
 	}
 
