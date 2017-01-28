@@ -20,9 +20,10 @@ public abstract class QueryInterpreter {
 
 	private static final Collection<QueryInterpreter> REGISTERED_INTERPRETERS = new ArrayList<>();
 	static {
-		register(new DefaultQueryInterpreter());
 		register(new MapQueryInterpreter());
 		register(new CollectionQueryInterpreter());
+		register(new ScalarQueryInterpreter());
+		register(new DefaultQueryInterpreter());
 	}
 	
 	private static final Map<Type, QueryInterpreter> INTERPRETER_INDEX = new HashMap<>();

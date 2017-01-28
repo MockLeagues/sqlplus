@@ -331,6 +331,10 @@ public class ConversionRegistry {
 		registerStandardWriter(Object.class, (ps, i, o) -> ps.setObject(i, o));
 	}
 
+	public static boolean containsStandardReader(Class<?> type) {
+		return READER_REGISTRY.containsKey(type);
+	}
+	
 	public static <T> void registerStandardReader(Class<T> type, FieldReader<T> reader) {
 		READER_REGISTRY.put(type, reader);
 	}

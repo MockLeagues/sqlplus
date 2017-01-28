@@ -3,8 +3,12 @@ package com.tyler.sqlplus.proxy;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Collection;
 import java.util.Optional;
+
+import org.h2.mvstore.db.TransactionStore.Transaction;
 
 import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.SQLPlus;
@@ -16,6 +20,7 @@ import com.tyler.sqlplus.annotation.SQLPlusQuery;
 import com.tyler.sqlplus.annotation.SQLPlusUpdate;
 import com.tyler.sqlplus.annotation.Transactional;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
+import com.tyler.sqlplus.exception.QueryInterpretationException;
 import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.interpreter.QueryInterpreter;
 import com.tyler.sqlplus.utility.Fields;
@@ -33,7 +38,11 @@ public class TransactionalService {
 	public static <T> T create(Class<T> serviceClass, SQLPlus sqlPlus) throws InstantiationException, IllegalAccessException {
 		
 		ProxyFactory factory = new ProxyFactory();
-		factory.setSuperclass(serviceClass);
+		if (serviceClass.isInterface()) {
+			factory.setInterfaces(new Class[]{ serviceClass });
+		} else {
+			factory.setSuperclass(serviceClass);
+		}
 		factory.setFilter(method -> method.isAnnotationPresent(Transactional.class) ||
 		                            method.isAnnotationPresent(SQLPlusQuery.class) ||
 		                            method.isAnnotationPresent(SQLPlusUpdate.class));
@@ -85,11 +94,39 @@ public class TransactionalService {
 	}
 	
 	static Object invokeUpdate(Method queryMethod, Object[] invokeArgs, Session session) throws Exception {
-		String sql = queryMethod.getAnnotation(SQLPlusUpdate.class).value();
+		
+		SQLPlusUpdate updateAnnot = queryMethod.getAnnotation(SQLPlusUpdate.class);
+		String sql = updateAnnot.value();
 		Query query = session.createQuery(sql);
 		bindParams(query, queryMethod.getParameters(), invokeArgs);
-		query.executeUpdate();
-		return null;
+		
+		if (updateAnnot.returnKeys()) {
+			
+			Class<?> keyClass;
+			Type returnType = queryMethod.getGenericReturnType();
+			if (returnType instanceof Class) {
+				keyClass = (Class<?>) returnType;
+			} else if (returnType instanceof ParameterizedType) {
+				ParameterizedType paramType = (ParameterizedType) returnType;
+				keyClass = (Class<?>) paramType.getActualTypeArguments()[0];
+			} else {
+				throw new QueryInterpretationException("Cannot determine key return type for " + queryMethod);
+			}
+			
+			@SuppressWarnings("rawtypes")
+			Collection keys = query.executeUpdate(keyClass);
+			
+			if (Collection.class.isAssignableFrom(queryMethod.getReturnType())) {
+				return keys;
+			} else {
+				return keys.isEmpty() ? null : keys.iterator().next();
+			}
+			
+		} else {
+			query.executeUpdate();
+			return null;
+		}
+		
 	}
 	
 	static void bindParams(Query query, Parameter[] params, Object[] invokeArgs) throws Exception {
@@ -103,7 +140,14 @@ public class TransactionalService {
 				String queryParam = param.getAnnotation(BindParam.class).value();
 				query.setParameter(queryParam, invokeArg);
 			} else if (param.isAnnotationPresent(Bind.class)) {
-				query.bind(invokeArg);
+				if (invokeArg instanceof Iterable) {
+					for (Object element : (Iterable<?>) invokeArg) {
+						query.bind(element);
+					}
+				} else {
+					query.bind(invokeArg);
+				}
+				
 			}
 		}
 		

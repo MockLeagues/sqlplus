@@ -51,6 +51,9 @@ public final class ReflectionUtility {
 	}
 	
 	public static Optional<Field> findFieldWithAnnotation(Class<? extends Annotation> annotType, Class<?> klass) {
+		if (klass.isInterface()) {
+			return Optional.empty();
+		}
 		Class<?> searchClass = klass;
 		while (searchClass != Object.class) {
 			Optional<Field> injectField = Arrays.stream(searchClass.getDeclaredFields())

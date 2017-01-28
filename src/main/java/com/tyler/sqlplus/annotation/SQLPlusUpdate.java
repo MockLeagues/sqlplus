@@ -11,4 +11,6 @@ public @interface SQLPlusUpdate {
 	
 	String value();
 	
+	boolean returnKeys() default false;
+	
 }
