@@ -3,6 +3,7 @@ package com.tyler.sqlplus.proxy;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.Optional;
 
 import com.tyler.sqlplus.Query;
@@ -14,9 +15,10 @@ import com.tyler.sqlplus.annotation.SQLPlusInject;
 import com.tyler.sqlplus.annotation.SQLPlusQuery;
 import com.tyler.sqlplus.annotation.SQLPlusUpdate;
 import com.tyler.sqlplus.annotation.Transactional;
+import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.function.ReturningWork;
+import com.tyler.sqlplus.interpreter.QueryInterpreter;
 import com.tyler.sqlplus.utility.Fields;
 
 import javassist.util.proxy.Proxy;
@@ -77,12 +79,14 @@ public class TransactionalService {
 		
 		Class<?> returnType = queryMethod.getReturnType();
 		if (returnType == void.class) {
-			throw new SQLRuntimeException("@" + SQLPlusQuery.class.getSimpleName() + " annotated method " + queryMethod + " must declare a return type");
+			throw new AnnotationConfigurationException("@" + SQLPlusQuery.class.getSimpleName() + " annotated method " + queryMethod + " must declare a return type");
 		}
 		
 		Query query = session.createQuery(queryMethod.getAnnotation(SQLPlusQuery.class).value());
 		bindParams(query, queryMethod.getParameters(), invokeArgs);
-		return QueryInterpreter.interpret(query, queryMethod.getGenericReturnType(), queryMethod);
+		
+		Type genericReturnType = queryMethod.getGenericReturnType();
+		return QueryInterpreter.forType(genericReturnType).interpret(query, genericReturnType, queryMethod);
 	}
 	
 	static void bindParams(Query query, Parameter[] params, Object[] invokeArgs) throws Exception {

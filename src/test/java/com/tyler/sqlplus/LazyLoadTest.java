@@ -352,12 +352,11 @@ public class LazyLoadTest {
 			
 			Query query = conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ");
 			EmployeeWildcardGeneric employeeWildcardGeneric = query.getUniqueResultAs(EmployeeWildcardGeneric.class);
-			String lazyLoadSql = EmployeeWildcardGeneric.class.getDeclaredField("offices").getAnnotation(LoadQuery.class).value();
 			
 			assertThrows(
 				() -> employeeWildcardGeneric.getOffices(),
 				QueryInterpretationException.class,
-				"Cannot interpret query '" + lazyLoadSql + "' as " + EmployeeWildcardGeneric.class.getDeclaredField("offices").getGenericType()  + "; only wildcard generic info is present"
+				"No valid query interpreters found for " + EmployeeWildcardGeneric.class.getDeclaredField("offices").getGenericType() + ". Make sure generic type info is present"
 			);
 		});
 		
@@ -394,12 +393,11 @@ public class LazyLoadTest {
 			
 			Query query = conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ");
 			EmployeeNoGeneric employeeNoGeneric = query.getUniqueResultAs(EmployeeNoGeneric.class);
-			String lazyLoadSql = EmployeeNoGeneric.class.getDeclaredField("offices").getAnnotation(LoadQuery.class).value();
 			
 			assertThrows(
 				() -> employeeNoGeneric.getOffices(),
 				QueryInterpretationException.class,
-				"Cannot interpret query '" + lazyLoadSql + "' as " + EmployeeWildcardGeneric.class.getDeclaredField("offices").getType()  + "; no generic info is present"
+				"No valid query interpreters found for " + EmployeeWildcardGeneric.class.getDeclaredField("offices").getType() + ". Make sure generic type info is present"
 			);
 			
 		});

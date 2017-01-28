@@ -1,6 +1,7 @@
 package com.tyler.sqlplus.proxy;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Type;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -9,6 +10,7 @@ import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.SessionClosedException;
+import com.tyler.sqlplus.interpreter.QueryInterpreter;
 import com.tyler.sqlplus.utility.Fields;
 
 import javassist.util.proxy.Proxy;
@@ -78,7 +80,8 @@ public class EntityProxy {
 					}
 					String sql = loadQueryAnnot.value();
 					Query query = session.createQuery(sql).bind(self);
-					Object result = QueryInterpreter.interpret(query, loadField.getGenericType(), loadField);
+					Type loadType = loadField.getGenericType();
+					Object result = QueryInterpreter.forType(loadType).interpret(query, loadType, loadField);
 					Fields.set(loadField, self, result);
 					gettersLoaded.add(methodName);
 				}
