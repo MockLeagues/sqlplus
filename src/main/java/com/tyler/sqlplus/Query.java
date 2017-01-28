@@ -339,4 +339,9 @@ public class Query {
 		return paramLabel_index;
 	}
 	
+	@Override
+	public String toString() {
+		return sql;
+	}
+	
 }

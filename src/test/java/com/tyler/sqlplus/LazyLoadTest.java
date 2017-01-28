@@ -14,7 +14,8 @@ import org.junit.Test;
 
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.annotation.MapKey;
-import com.tyler.sqlplus.exception.LazyLoadException;
+import com.tyler.sqlplus.exception.AnnotationConfigurationException;
+import com.tyler.sqlplus.exception.QueryInterpretationException;
 import com.tyler.sqlplus.exception.SessionClosedException;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
@@ -247,7 +248,7 @@ public class LazyLoadTest {
 			
 			assertThrows(
 				() -> employee.getOffices(),
-				LazyLoadException.class,
+				AnnotationConfigurationException.class,
 				"Inferred lazy-load field 'offices' not found when executing method " + EmployeeLoadFromMethodWithUnresolvableField.class.getDeclaredMethod("getOffices")
 			);
 			
@@ -349,12 +350,15 @@ public class LazyLoadTest {
 		
 		h2.getSQLPlus().transact(conn -> {
 			
-			EmployeeWildcardGeneric employeeWildcardGeneric =
-				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
-			        .getUniqueResultAs(EmployeeWildcardGeneric.class);
+			Query query = conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ");
+			EmployeeWildcardGeneric employeeWildcardGeneric = query.getUniqueResultAs(EmployeeWildcardGeneric.class);
+			String lazyLoadSql = EmployeeWildcardGeneric.class.getDeclaredField("offices").getAnnotation(LoadQuery.class).value();
 			
-			assertThrows(() -> employeeWildcardGeneric.getOffices(), LazyLoadException.class, "Field " + EmployeeWildcardGeneric.class.getDeclaredField("offices") + " contains " +
-				"a wildcard ('?') generic type. This is not adequate for determining the type of lazy-loaded one to many collections");
+			assertThrows(
+				() -> employeeWildcardGeneric.getOffices(),
+				QueryInterpretationException.class,
+				"Cannot interpret query '" + lazyLoadSql + "' as " + EmployeeWildcardGeneric.class.getDeclaredField("offices").getGenericType()  + "; only wildcard generic info is present"
+			);
 		});
 		
 	}
@@ -388,12 +392,16 @@ public class LazyLoadTest {
 		
 		h2.getSQLPlus().transact(conn -> {
 			
-			EmployeeNoGeneric employeeNoGeneric =
-				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
-			        .getUniqueResultAs(EmployeeNoGeneric.class);
+			Query query = conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ");
+			EmployeeNoGeneric employeeNoGeneric = query.getUniqueResultAs(EmployeeNoGeneric.class);
+			String lazyLoadSql = EmployeeNoGeneric.class.getDeclaredField("offices").getAnnotation(LoadQuery.class).value();
 			
-			assertThrows(() -> employeeNoGeneric.getOffices(), LazyLoadException.class, "Field " + EmployeeNoGeneric.class.getDeclaredField("offices") + " does not contain generic type info. " +
-					"This is required for determining the types of lazy-loaded one to many relations");
+			assertThrows(
+				() -> employeeNoGeneric.getOffices(),
+				QueryInterpretationException.class,
+				"Cannot interpret query '" + lazyLoadSql + "' as " + EmployeeWildcardGeneric.class.getDeclaredField("offices").getType()  + "; no generic info is present"
+			);
+			
 		});
 		
 	}

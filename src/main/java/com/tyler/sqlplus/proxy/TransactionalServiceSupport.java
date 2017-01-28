@@ -7,7 +7,7 @@ import com.tyler.sqlplus.annotation.SQLPlusInject;
 /**
  * Base support class for classes which contain @Transactional methods
  */
-public class TransactionServiceSupport {
+public class TransactionalServiceSupport {
 
 	@SQLPlusInject
 	private SQLPlus sqlPlus;

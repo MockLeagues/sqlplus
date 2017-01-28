@@ -3,7 +3,7 @@ package com.tyler.sqlplus;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.function.Work;
-import com.tyler.sqlplus.proxy.TransactionAwareService;
+import com.tyler.sqlplus.proxy.TransactionalService;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -57,8 +57,8 @@ public class SQLPlus {
 		this.dataSource = dataSource;
 	}
 
-	public <T> T createTransactionAwareService(Class<T> klass) throws InstantiationException, IllegalAccessException {
-		return TransactionAwareService.create(klass, this);
+	public <T> T createService(Class<T> klass) throws InstantiationException, IllegalAccessException {
+		return TransactionalService.create(klass, this);
 	}
 
 	public Session getCurrentSession() {

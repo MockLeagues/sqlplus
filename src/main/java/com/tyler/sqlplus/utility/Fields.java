@@ -1,13 +1,16 @@
 package com.tyler.sqlplus.utility;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.function.ThrowingBiConsumer;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Utilities for working with {@link Field} objects
@@ -124,6 +127,20 @@ public final class Fields {
 		return newStr.toString().toUpperCase();
 	}
 
+	public static Optional<Field> findFieldWithAnnotation(Class<? extends Annotation> annotType, Class<?> klass) {
+		Class<?> searchClass = klass;
+		while (searchClass != Object.class) {
+			Optional<Field> injectField = Arrays.stream(searchClass.getDeclaredFields())
+			                                    .filter(field -> field.isAnnotationPresent(annotType))
+			                                    .findFirst();
+			if (injectField.isPresent()) {
+				return injectField;
+			}
+			searchClass = searchClass.getSuperclass();
+		}
+		return Optional.empty();
+	}
+	
 	private static String capitalize(String s) {
 		return String.valueOf(s.charAt(0)).toUpperCase() + s.substring(1);
 	}

@@ -4,9 +4,11 @@ import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.exception.LazyLoadException;
+import com.tyler.sqlplus.exception.AnnotationConfigurationException;
+import com.tyler.sqlplus.exception.SessionClosedException;
 import com.tyler.sqlplus.utility.Fields;
 
 import javassist.util.proxy.Proxy;
@@ -54,12 +56,12 @@ public class EntityProxy {
 							loadField = type.getDeclaredField(loadFieldName);
 						}
 						catch (NoSuchFieldException ex) {
-							throw new LazyLoadException(
+							throw new AnnotationConfigurationException(
 								"Inferred lazy-load field '" + loadFieldName + "' not found when executing method " + invokedMethod);
 						}
 					}
 					else {
-						throw new LazyLoadException("Could not determine field to lazy-load to");
+						throw new AnnotationConfigurationException("Could not determine field to lazy-load to");
 					}
 				}
 				else if (hasGetPrefix) {
@@ -71,8 +73,13 @@ public class EntityProxy {
 				}
 				
 				if (loadField != null && loadQueryAnnot != null) {
-					Object loadedResult = LazyLoader.load(self, loadField, loadQueryAnnot.value(), session);
-					Fields.set(loadField, self, loadedResult);
+					if (!session.isOpen()) {
+						throw new SessionClosedException("Cannot lazy-load field " + loadField + ", session is no longer open");
+					}
+					String sql = loadQueryAnnot.value();
+					Query query = session.createQuery(sql).bind(self);
+					Object result = QueryInterpreter.interpret(query, loadField.getGenericType(), loadField);
+					Fields.set(loadField, self, result);
 					gettersLoaded.add(methodName);
 				}
 			}

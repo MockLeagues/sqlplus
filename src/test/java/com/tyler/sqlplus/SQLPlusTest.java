@@ -1,21 +1,15 @@
 package com.tyler.sqlplus;
 
-import com.tyler.sqlplus.annotation.SQLPlusInject;
-import com.tyler.sqlplus.annotation.Transactional;
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.proxy.TransactionServiceSupport;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
-import org.junit.Rule;
-import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.Rule;
+import org.junit.Test;
+
+import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 
 public class SQLPlusTest {
 
@@ -46,68 +40,4 @@ public class SQLPlusTest {
 		assertTrue(sessionsRetrieved.get(0) == sessionsRetrieved.get(1));
 	}
 	
-	static class TransactionAwareService {
-
-		@SQLPlusInject
-		private SQLPlus sqlplus;
-
-		@Transactional
-		public List<Address> getAddresses() {
-			return sqlplus.getCurrentSession()
-			              .createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address")
-			              .fetchAs(Address.class);
-		}
-		
-	}
-	
-	@Test
-	public void testTransactionAwareServicesExecuteMethodsInTransaction() throws Exception {
-		
-		h2.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
-			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
-		);
-		
-		TransactionAwareService service = h2.getSQLPlus().createTransactionAwareService(TransactionAwareService.class);
-		List<Address> addresses = service.getAddresses();
-		assertEquals(3, addresses.size());
-	}
-	
-	static class TransactionAwareServiceBadField {
-		@SQLPlusInject
-		private String notASession;
-	}
-	
-	@Test
-	public void testTransactionAwareServiceThrowsErrorIfInjectFieldTypeIsNotSqlPlus() throws Exception {
-		assertThrows(
-			() -> h2.getSQLPlus().createTransactionAwareService(TransactionAwareServiceBadField.class),
-			ReflectionException.class,
-			SQLPlusInject.class + " annotated field " + TransactionAwareServiceBadField.class.getDeclaredField("notASession") + " must be of type " + SQLPlus.class
-		);
-	}
-
-	static class SupportedService extends TransactionServiceSupport {
-
-		@Transactional
-		public List<Address> getAddresses() {
-			return session().createQuery("select * from address").fetchAs(Address.class);
-		}
-
-	}
-
-	@Test
-	public void testServiceClassExtendingTransactionServiceSupport() throws Exception {
-		h2.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
-			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
-		);
-
-		SupportedService service = h2.getSQLPlus().createTransactionAwareService(SupportedService.class);
-		List<Address> addresses = service.getAddresses();
-		assertEquals(3, addresses.size());
-	}
-
 }
