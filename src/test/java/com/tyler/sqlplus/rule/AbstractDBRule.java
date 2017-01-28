@@ -1,26 +1,19 @@
 package com.tyler.sqlplus.rule;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import com.tyler.sqlplus.SQLPlus;
+import com.tyler.sqlplus.annotation.LoadQuery;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.function.Functions;
+import org.junit.rules.ExternalResource;
+
+import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.exception.SQLRuntimeException;
-import org.junit.rules.ExternalResource;
-
-import com.tyler.sqlplus.SQLPlus;
-
 public abstract class AbstractDBRule extends ExternalResource {
 
-	private SQLPlus sqlPlus;
-	
-	public AbstractDBRule() {
-		this.sqlPlus = new SQLPlus(this::getConnection);
-	}
+	private SQLPlus sqlPlus = new SQLPlus(this::getConnection);
 	
 	public SQLPlus getSQLPlus() {
 		return sqlPlus;
@@ -56,6 +49,7 @@ public abstract class AbstractDBRule extends ExternalResource {
 	
 	@Override
 	public void before() {
+		destroySchema();
 		setupSchema();
 	}
 	
@@ -69,7 +63,7 @@ public abstract class AbstractDBRule extends ExternalResource {
 		public enum Type { HOURLY, SALARY; }
 
 		public Integer employeeId;
-		public H2Rule.Employee.Type type;
+		public Employee.Type type;
 		public String name;
 		public LocalDate hired;
 		public Integer salary;
@@ -79,7 +73,7 @@ public abstract class AbstractDBRule extends ExternalResource {
 			"from address a " +
 			"where a.address_id = :addressId"
 		)
-		public H2Rule.Address address;
+		public Address address;
 		@SuppressWarnings("unused") private int addressId;
 
 		@LoadQuery(
@@ -87,13 +81,13 @@ public abstract class AbstractDBRule extends ExternalResource {
 			"from office o " +
 			"where o.employee_id = :employeeId"
 		)
-		public List<H2Rule.Office> offices;
+		public List<Office> offices;
 
-		public List<H2Rule.Office> getOffices() {
+		public List<Office> getOffices() {
 			return offices;
 		}
 
-		public H2Rule.Address getAddress() {
+		public Address getAddress() {
 			return address;
 		}
 
@@ -119,7 +113,7 @@ public abstract class AbstractDBRule extends ExternalResource {
 			"from employee e " +
 			"where e.address_id = :addressId"
 		)
-		public H2Rule.Employee employee;
+		public Employee employee;
 
 		public Address() {}
 
@@ -130,7 +124,7 @@ public abstract class AbstractDBRule extends ExternalResource {
 			this.zip = zip;
 		}
 
-		public H2Rule.Employee getEmployee() {
+		public Employee getEmployee() {
 			return employee;
 		}
 
@@ -209,17 +203,26 @@ public abstract class AbstractDBRule extends ExternalResource {
 	public void destroySchema() {
 		try (Connection conn = getConnection()) {
 			Statement st = conn.createStatement();
-			st.executeUpdate("drop table address");
-			st.executeUpdate("drop table meeting");
-			st.executeUpdate("drop table employee");
-			st.executeUpdate("drop table office");
-			st.executeUpdate("drop table types_table");
+			st.executeUpdate("drop table if exists address");
+			st.executeUpdate("drop table if exists meeting");
+			st.executeUpdate("drop table if exists employee");
+			st.executeUpdate("drop table if exists office");
+			st.executeUpdate("drop table if exists types_table");
 		}
 		catch (SQLException e) {
 			throw new SQLRuntimeException(e);
 		}
 	}
 
-	public abstract Connection getConnection();
+	private Connection getConnection() {
+		return Functions.runSQL(() -> DriverManager.getConnection(getUrl(), getUsername(), getPassword()));
+	}
+
+	public abstract String getUrl();
+
+	public abstract String getUsername();
+
+	public abstract String getPassword();
 
 }
+

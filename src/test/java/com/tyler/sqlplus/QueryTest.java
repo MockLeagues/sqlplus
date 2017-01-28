@@ -6,9 +6,10 @@ import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.rule.AbstractDBRule.Address;
 import com.tyler.sqlplus.rule.AbstractDBRule.Employee;
 import com.tyler.sqlplus.rule.AbstractDBRule.Employee.Type;
-import com.tyler.sqlplus.rule.H2Rule;
-import org.junit.Rule;
+import com.tyler.sqlplus.test.DatabaseTest;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -19,14 +20,12 @@ import java.util.Map;
 import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
 import static org.junit.Assert.*;
 
-public class QueryTest {
+@RunWith(Parameterized.class)
+public class QueryTest extends DatabaseTest {
 
-	@Rule
-	public H2Rule h2 = new H2Rule();
-	
 	@Test
 	public void testErrorThrownIfUnkownParamAdded() throws SQLException {
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				Query q = conn.createQuery("select * from employee where employee_id = :id");
 				q.setParameter("idx", "123");
@@ -36,8 +35,8 @@ public class QueryTest {
 	
 	@Test
 	public void testErrorThrownIfParamValueNotSet() throws Exception {
-		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+		dbRule.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where state = :state and city = :city").setParameter("state", "s").getUniqueResultAs(Address.class);
 			}, QueryStructureException.class, "Missing parameter values for the following parameters: [city]");
@@ -46,7 +45,7 @@ public class QueryTest {
 	
 	@Test
 	public void testThrowsIfParamIndexOutOfRange() throws Exception {
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where city = ?").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
 			}, QueryStructureException.class, "Parameter index 2 is out of range of this query's parameters (max parameters: 1)");
@@ -55,7 +54,7 @@ public class QueryTest {
 	
 	@Test
 	public void testThrowsIfDuplicateParamAdded() throws Exception {
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where city = :city and street = :city").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
 			}, QueryStructureException.class, "Duplicate parameter 'city' in query:\n" +
@@ -65,7 +64,7 @@ public class QueryTest {
 	
 	@Test
 	public void testErrorThrownIfNoParamsSet() throws Exception {
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select * from employee where name = :name").fetch();
 			}, QueryStructureException.class, "No parameters set");
@@ -74,12 +73,12 @@ public class QueryTest {
 	
 	@Test
 	public void testsQueryingWithParameterLabels() throws Exception {
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			Address result = conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a where state = :state and city = :city")
 			                     .setParameter("state", "CA")
 			                     .setParameter("city", "Othertown")
@@ -91,9 +90,9 @@ public class QueryTest {
 	@Test
 	public void testUnderscoreFieldNamesAreProperlyConvertedToCamelCaseEquivalents() throws Exception {
 
-		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+		dbRule.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 
 			String sql = "select ADDRESS_ID, STREET, STATE, CITY, ZIP from address a";
 
@@ -108,12 +107,12 @@ public class QueryTest {
 	@Test
 	public void testQueryingWithWithMixtureOfParameterLabelsAndQuestionMarks() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			String sql =
 				"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
@@ -131,12 +130,12 @@ public class QueryTest {
 	@Test
 	public void testCreatingQueryWithInitialKnownParams() throws Exception {
 
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
 		);
 
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			Address addr = conn.createQuery("select * from address where city=? and state=?", "Anytown", "MN").getUniqueResultAs(Address.class);
 			assertEquals("Maple Street", addr.street);
 			assertEquals("Anytown", addr.city);
@@ -148,12 +147,12 @@ public class QueryTest {
 	@Test
 	public void testFetchingAsMaps() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
 		);
 		
-		List<Map<String, Object>> rows = h2.getSQLPlus().query(conn -> conn.createQuery("select * from address").fetch());
+		List<Map<String, Object>> rows = dbRule.getSQLPlus().query(conn -> conn.createQuery("select street as STREET, city as CITY, state as STATE, zip as ZIP from address").fetch());
 		assertEquals(2, rows.size());
 		
 		Map<String, Object> row1 = rows.get(0);
@@ -172,14 +171,14 @@ public class QueryTest {
 	@Test
 	public void testBatchExec() throws Exception {
 		
-		h2.getSQLPlus().batchExec(
+		dbRule.getSQLPlus().batchExec(
 			"insert into address (street, city, state, zip) values ('street1', 'city1', 'state1', 'zip1')",
 			"insert into address (street, city, state, zip) values ('street2', 'city2', 'state2', 'zip2')",
 			"insert into address (street, city, state, zip) values ('street3', 'city3', 'state3', 'zip3')",
 			"insert into address (street, city, state, zip) values ('street4', 'city4', 'state4', 'zip4')"
 		);
 	
-		String[][] results = h2.query("select * from address");
+		String[][] results = dbRule.query("select * from address");
 		String[][] expect = {
 			{"1", "street1", "city1", "state1", "zip1"},
 			{"2", "street2", "city2", "state2", "zip2"},
@@ -198,11 +197,11 @@ public class QueryTest {
 		for (int i = 1; i <= numAddress; i++) {
 			insertSqls.add("insert into address (street, city, state, zip) values ('street" + i + "', 'city" + i + "', 'state" + i + "', 'zip" + i + "')");
 		}
-		h2.getSQLPlus().batchExec(insertSqls.stream().toArray(String[]::new));
+		dbRule.getSQLPlus().batchExec(insertSqls.stream().toArray(String[]::new));
 		
 		int[] numBatchesSeen = {0};
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			Query q = conn.createQuery("select street as \"street\", city as \"city\" from address");
 			q.batchProcess(Address.class, 4, batch -> {
 				assertEquals(4, batch.size());
@@ -221,11 +220,11 @@ public class QueryTest {
 		for (int i = 1; i <= numAddress; i++) {
 			insertSqls.add("insert into address (street, city, state, zip) values ('street" + i + "', 'city" + i + "', 'state" + i + "', 'zip" + i + "')");
 		}
-		h2.getSQLPlus().batchExec(insertSqls.stream().toArray(String[]::new));
+		dbRule.getSQLPlus().batchExec(insertSqls.stream().toArray(String[]::new));
 		
 		int[] numBatchesSeen = {0};
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			Query q = conn.createQuery("select street as \"street\", city as \"city\" from address");
 			q.batchProcess(Address.class, 4, batch -> {
 				if (numBatchesSeen[0] == 5) {
@@ -243,9 +242,9 @@ public class QueryTest {
 	
 	@Test
 	public void testFieldsNotPresentInResultSetAreLeftNullInPOJO() throws Exception {
-		h2.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+		dbRule.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		
-		Address result = h2.getSQLPlus().query(sess -> sess.createQuery("select street as \"street\", city as \"city\" from address").getUniqueResultAs(Address.class));
+		Address result = dbRule.getSQLPlus().query(sess -> sess.createQuery("select street as \"street\", city as \"city\" from address").getUniqueResultAs(Address.class));
 		assertNull(result.state);
 		assertNull(result.zip);
 		assertNotNull(result.street);
@@ -254,8 +253,8 @@ public class QueryTest {
 	
 	@Test
 	public void testMapEnumTypes() throws Exception {
-		h2.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
-		Employee emp = h2.getSQLPlus().query(sess -> {
+		dbRule.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
+		Employee emp = dbRule.getSQLPlus().query(sess -> {
 			return sess.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", salary as \"salary\", hired as \"hired\" from employee")
 			           .getUniqueResultAs(Employee.class);
 		});
@@ -265,7 +264,7 @@ public class QueryTest {
 	@Test
 	public void testBatchesAreAddedWhenExplicitlyAdded() throws Exception {
 
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
@@ -286,14 +285,14 @@ public class QueryTest {
 			{"2", "SALARY", "test2", "2015-01-02", "200", null}
 		};
 		
-		String[][] actual = h2.query("select employee_id, type, name, hired, salary, address_id from employee");
+		String[][] actual = dbRule.query("select employee_id, type, name, hired, salary, address_id from employee");
 		assertArrayEquals(expect, actual);
 	}
 	
 	@Test
 	public void testTheLastManualBatchIsAutoAddedIfNotExplicitlyAdded() throws Exception {
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
@@ -314,13 +313,13 @@ public class QueryTest {
 			{"2", "SALARY", "test2", "2015-01-02", "200", null}
 		};
 		
-		String[][] actual = h2.query("select employee_id, type, name, hired, salary, address_id from employee");
+		String[][] actual = dbRule.query("select employee_id, type, name, hired, salary, address_id from employee");
 		assertArrayEquals(expect, actual);
 	}
 	
 	@Test
 	public void testFinishingABatchWithMissingParametersThrowsError() throws Exception {
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			Query q = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
 			    .setParameter("name", "test1")
@@ -339,14 +338,14 @@ public class QueryTest {
 		toCreate.name = "tester-pojo";
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .bind(toCreate)
 			    .executeUpdate();
 		});
 		
-		String[] actualRow = h2.query("select type, name, hired, salary from employee")[0];
+		String[] actualRow = dbRule.query("select type, name, hired, salary from employee")[0];
 		String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  hiredAt.toString(), "20000" };
 		assertArrayEquals(expectRow, actualRow);
 	}
@@ -359,14 +358,14 @@ public class QueryTest {
 		toCreate.type = Type.HOURLY;
 		toCreate.name = "tester-pojo";
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .bind(toCreate)
 			    .executeUpdate();
 		});
 		
-		String[] actualRow = h2.query("select type, name, hired, salary from employee")[0];
+		String[] actualRow = dbRule.query("select type, name, hired, salary from employee")[0];
 		String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  null, null };
 		assertArrayEquals(expectRow, actualRow);
 		assertArrayEquals(expectRow, actualRow);
@@ -386,7 +385,7 @@ public class QueryTest {
 		toCreate.salary = 20000;
 		toCreate.type = Type.HOURLY;
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)").bind(toCreate);
 			}, ReflectionException.class);
@@ -395,9 +394,9 @@ public class QueryTest {
 	
 	@Test
 	public void returnGeneratedKeys() throws Exception {
-		h2.batch("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
+		dbRule.batch("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			List<Integer> keys = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			                         .setParameter("type", "HOURLY")
 			                         .setParameter("name", "tester-2")
@@ -414,7 +413,7 @@ public class QueryTest {
 		class TransactionException extends RuntimeException {}
 		
 		try {
-			h2.getSQLPlus().transact(conn -> {
+			dbRule.getSQLPlus().transact(conn -> {
 				conn.createQuery("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)").executeUpdate();
 				conn.createQuery("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-2', '2015-01-01', 20500)").executeUpdate();
 				throw new TransactionException();
@@ -422,7 +421,7 @@ public class QueryTest {
 			
 		} catch (SQLRuntimeException e) {
 			assertEquals(TransactionException.class, e.getCause().getClass()); // Make sure the error we got was from us throwing the transaction exception
-			assertArrayEquals(new String[][]{}, h2.query("select * from employee"));
+			assertArrayEquals(new String[][]{}, dbRule.query("select * from employee"));
 		}
 	}
 
@@ -430,7 +429,7 @@ public class QueryTest {
 	public void testDeadlockIsNotEncounteredWhen2SeparateThreadsNeedEachOthersLockedTables() throws Exception {
 
 	Thread addressOwner = new Thread(() -> {
-			h2.getSQLPlus().transact(sess -> {
+			dbRule.getSQLPlus().transact(sess -> {
 				sess.createQuery("insert into address (street, city, state, zip) values('Maple Street', 'Othertown', 'MN', '12345')").executeUpdate();
 				Thread.sleep(500);
 				sess.createQuery("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-2', '2015-01-01', 20500, 1)").executeUpdate();
@@ -438,7 +437,7 @@ public class QueryTest {
 		});
 
 		Thread employeeOwner = new Thread(() -> {
-			h2.getSQLPlus().transact(sess -> {
+			dbRule.getSQLPlus().transact(sess -> {
 				sess.createQuery("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)").executeUpdate();
 				Thread.sleep(500);
 				sess.createQuery("insert into address (street, city, state, zip) values('Maple Street', 'Springfield', 'MN', '12345')").executeUpdate();
@@ -455,13 +454,13 @@ public class QueryTest {
 	public void testLocksAreReleasedIfExceptionIsThrownBeforeQueryIsExecuted() throws Exception {
 		
 		try {
-			h2.getSQLPlus().transact(sess -> {
+			dbRule.getSQLPlus().transact(sess -> {
 				sess.createQuery("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)");
 				throw new RuntimeException("test-exception!");
 			});
 		} catch (Exception e) {
 			assertEquals(e.getCause().getMessage(), "test-exception!");
-			h2.batch("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)");
+			dbRule.batch("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)");
 		}
 		
 	}
@@ -469,10 +468,10 @@ public class QueryTest {
 	@Test
 	public void flushWillWriteDataToDatabase() throws Exception {
 		
-		String[][] actual = h2.getSQLPlus().query(sess -> {
+		String[][] actual = dbRule.getSQLPlus().query(sess -> {
 			sess.createQuery("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)").executeUpdate();
 			sess.flush();
-			return h2.query("select type, name, hired, salary from employee");
+			return dbRule.query("select type, name, hired, salary from employee");
 		});
 		
 		String[][] expect = {{ "SALARY", "tester-1", "2015-01-01", "20500" }};

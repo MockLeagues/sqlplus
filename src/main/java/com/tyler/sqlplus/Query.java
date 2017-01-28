@@ -1,37 +1,28 @@
 package com.tyler.sqlplus;
 
-import static java.util.stream.Collectors.toList;
-
-import java.lang.reflect.Field;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-
 import com.tyler.sqlplus.conversion.ConversionRegistry;
 import com.tyler.sqlplus.conversion.FieldReader;
 import com.tyler.sqlplus.conversion.FieldWriter;
-import com.tyler.sqlplus.exception.NoResultsException;
-import com.tyler.sqlplus.exception.NonUniqueResultException;
-import com.tyler.sqlplus.exception.QueryStructureException;
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.exception.*;
 import com.tyler.sqlplus.function.BatchConsumer;
 import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.mapper.ResultMapper;
 import com.tyler.sqlplus.mapper.ResultMappers;
 import com.tyler.sqlplus.mapper.ResultStream;
 import com.tyler.sqlplus.utility.Fields;
-
 import javassist.util.proxy.Proxy;
+
+import java.lang.reflect.Field;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Provides encapsulation for an SQL query, allowing results to be retrieved and streamed as POJOs
@@ -238,7 +229,7 @@ public class Query {
 		}
 		
 		String formattedSql = sql.replaceAll(REGEX_PARAM, "?");
-		PreparedStatement ps = Functions.runSQL(() -> session.getJdbcConnection().prepareStatement(formattedSql, returnKeys ? 0 : Statement.RETURN_GENERATED_KEYS));
+		PreparedStatement ps = Functions.runSQL(() -> session.getJdbcConnection().prepareStatement(formattedSql, returnKeys ? Statement.RETURN_GENERATED_KEYS : 0));
 			
 		for (Map<Integer, Object> paramBatch : this.paramBatches) {
 

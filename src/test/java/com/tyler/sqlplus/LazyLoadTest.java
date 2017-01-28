@@ -5,14 +5,14 @@ import com.tyler.sqlplus.annotation.MapKey;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.QueryInterpretationException;
 import com.tyler.sqlplus.exception.SessionClosedException;
-import com.tyler.sqlplus.rule.AbstractDBRule;
 import com.tyler.sqlplus.rule.AbstractDBRule.Address;
 import com.tyler.sqlplus.rule.AbstractDBRule.Employee;
 import com.tyler.sqlplus.rule.AbstractDBRule.Employee.Type;
 import com.tyler.sqlplus.rule.AbstractDBRule.Office;
-import com.tyler.sqlplus.rule.H2Rule;
-import org.junit.Rule;
+import com.tyler.sqlplus.test.DatabaseTest;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -21,20 +21,18 @@ import java.util.Map;
 import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
 import static org.junit.Assert.*;
 
-public class LazyLoadTest {
+@RunWith(Parameterized.class)
+public class LazyLoadTest extends DatabaseTest {
 
-	@Rule
-	public AbstractDBRule h2 = new H2Rule();
-	
 	@Test
 	public void testLazyLoadForeignKeyRelation() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			Employee employee = 
 					conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\", address_id as \"addressId\" from employee e ")
@@ -55,12 +53,12 @@ public class LazyLoadTest {
 	@Test
 	public void testLazyLoadSingleRelationWithAnnotationOnField() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			Address singleAddress = 
 				conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
@@ -82,14 +80,14 @@ public class LazyLoadTest {
 	@Test
 	public void testLazyLoadMultipleRelationsWithAnnotationOnField() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
 			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			Employee employee = 
 				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
@@ -128,14 +126,14 @@ public class LazyLoadTest {
 	@Test
 	public void testLazyLoadWithAnnotationOnMethodWithInferredFieldName() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
 			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			EmployeeLoadFromMethod  employee = 
 				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
@@ -172,14 +170,14 @@ public class LazyLoadTest {
 	@Test
 	public void testLazyLoadWithAnnotationOnMethodWithExplicitFieldName() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
 			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			EmployeeLoadFromMethodWithExplicitField  employee = 
 				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
@@ -198,19 +196,19 @@ public class LazyLoadTest {
 	@Test
 	public void testLazyLoadCachesDataAfterFirstRetrieval() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			Address singleAddress = 
 			    conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
 			        .getUniqueResultAs(Address.class);
 			
 			Employee cachedEmployee = singleAddress.getEmployee();
-			h2.batch("update employee set name = 'new-name' where employee_id = 1");
+			dbRule.batch("update employee set name = 'new-name' where employee_id = 1");
 			cachedEmployee = singleAddress.getEmployee(); // Should not have to make another trip to the DB
 			
 			assertEquals("tester-1", cachedEmployee.name);
@@ -237,8 +235,8 @@ public class LazyLoadTest {
 	
 	@Test
 	public void testErrorThrownIfLoadQueryOnMethodWithUnresolvableField() throws Exception {
-		h2.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			EmployeeLoadFromMethodWithUnresolvableField employee = 
 				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
@@ -274,14 +272,14 @@ public class LazyLoadTest {
 	@Test
 	public void testLoadMapWithMapKeySpecified() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')",
 			"insert into office(office_name, `primary`, employee_id) values ('Office A', 0, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office B', 1, 1)",
 			"insert into office(office_name, `primary`, employee_id) values ('Office C', 0, 1)"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			EmployeeLazyLoadMaps employee = 
 				conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ")
@@ -306,12 +304,12 @@ public class LazyLoadTest {
 	@Test
 	public void testLazyLoadFailsOutsideSession() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		Address foundAddress = h2.getSQLPlus().query(conn -> {
+		Address foundAddress = dbRule.getSQLPlus().query(conn -> {
 			return conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
 			           .getUniqueResultAs(Address.class);
 		});
@@ -341,12 +339,12 @@ public class LazyLoadTest {
 	@Test
 	public void testErrorThrownWhenLazyLoadWildcardGeneric() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			Query query = conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ");
 			EmployeeWildcardGeneric employeeWildcardGeneric = query.getUniqueResultAs(EmployeeWildcardGeneric.class);
@@ -382,12 +380,12 @@ public class LazyLoadTest {
 	@Test
 	public void testErrorThrownWhenLazyLoadUntypedCollection() throws Exception {
 		
-		h2.batch(
+		dbRule.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		h2.getSQLPlus().transact(conn -> {
+		dbRule.getSQLPlus().transact(conn -> {
 			
 			Query query = conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ");
 			EmployeeNoGeneric employeeNoGeneric = query.getUniqueResultAs(EmployeeNoGeneric.class);

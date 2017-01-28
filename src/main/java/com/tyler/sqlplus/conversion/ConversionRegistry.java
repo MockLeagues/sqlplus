@@ -1,5 +1,7 @@
 package com.tyler.sqlplus.conversion;
 
+import com.tyler.sqlplus.exception.ConversionException;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
@@ -14,15 +16,13 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.tyler.sqlplus.exception.ConversionException;
-
 public class ConversionRegistry {
 
 	private static final Map<Class<?>, FieldReader<?>> READER_REGISTRY = new LinkedHashMap<>();
 	private static final Map<Class<?>, FieldWriter<?>> WRITER_REGISTRY = new LinkedHashMap<>();
 	
 	static {
-		
+
 		registerStandardReader(int.class, (rs, col, type) -> rs.getInt(col));
 		registerStandardWriter(int.class, (ps, i, o) -> ps.setInt(i, o));
 		
