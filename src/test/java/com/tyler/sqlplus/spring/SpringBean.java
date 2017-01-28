@@ -11,7 +11,7 @@ public class SpringBean {
 	@Autowired
 	private SQLPlus sqlPlus;
 	
-	public SQLPlus getSqlPlus() {
+	public SQLPlus getSQLPlus() {
 		return sqlPlus;
 	}
 	

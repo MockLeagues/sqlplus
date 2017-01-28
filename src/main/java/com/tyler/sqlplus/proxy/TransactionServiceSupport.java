@@ -2,14 +2,14 @@ package com.tyler.sqlplus.proxy;
 
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.SQLPlus;
-import com.tyler.sqlplus.annotation.SqlPlusInject;
+import com.tyler.sqlplus.annotation.SQLPlusInject;
 
 /**
  * Base support class for classes which contain @Transactional methods
  */
 public class TransactionServiceSupport {
 
-	@SqlPlusInject
+	@SQLPlusInject
 	private SQLPlus sqlPlus;
 
 	protected Session session() {

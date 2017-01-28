@@ -9,12 +9,12 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 public class SpringInjectionTest {
 
 	@Test
-	public void testSqlPlusGetsInjectedWhenSettingConfigurationObjectInBeansXML() {
+	public void testSQLPlusGetsInjectedWhenSettingConfigurationObjectInBeansXML() {
 		@SuppressWarnings("resource")
 		ApplicationContext context = new ClassPathXmlApplicationContext("beans.xml");
 		SpringBean bean = context.getBean(SpringBean.class);
 		assertNotNull(bean);
-		assertNotNull(bean.getSqlPlus());
+		assertNotNull(bean.getSQLPlus());
 	}
 	
 }

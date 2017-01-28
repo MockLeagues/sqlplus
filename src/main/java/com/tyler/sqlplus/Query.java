@@ -295,7 +295,6 @@ public class Query {
 	 */
 	private void addBatch(LinkedHashMap<Integer, Object> newBatch) {
 		
-		// See if we are missing any labeled parameters
 		List<String> missingParams = new ArrayList<>();
 		paramLabel_paramIndex.forEach((param, index) -> {
 			if (!newBatch.containsKey(index)) {

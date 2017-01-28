@@ -2,7 +2,7 @@ package com.tyler.sqlplus.proxy;
 
 import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.Transactional;
-import com.tyler.sqlplus.annotation.SqlPlusInject;
+import com.tyler.sqlplus.annotation.SQLPlusInject;
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.utility.Fields;
 import javassist.util.proxy.Proxy;
@@ -14,7 +14,7 @@ import java.util.Optional;
 
 /**
  * Creates proxy objects which wrap {@link Transactional} annotated methods in SqlPlus transactions.
- * Proxy classes created in this manner can contain a {@link SqlPlusInject} annotated field into which
+ * Proxy classes created in this manner can contain a {@link SQLPlusInject} annotated field into which
  * the sqlplus instance will be injected and therefore queried for the current session
  */
 public class TransactionAwareService {
@@ -31,7 +31,7 @@ public class TransactionAwareService {
 		Optional<Field> sqlPlusField = findSqlPlusInjectField(serviceClass);
 		if (sqlPlusField.isPresent() && sqlPlusField.get().getType() != SQLPlus.class) {
 			throw new ReflectionException(
-				SqlPlusInject.class + " annotated field " + sqlPlusField.get() + " must be of type " + SQLPlus.class);
+				SQLPlusInject.class + " annotated field " + sqlPlusField.get() + " must be of type " + SQLPlus.class);
 		}
 		
 		((Proxy)serviceProxy).setHandler((self, thisMethod, proceed, args) -> {
@@ -52,7 +52,7 @@ public class TransactionAwareService {
 		Class<?> searchClass = klass;
 		while (searchClass != Object.class) {
 			Optional<Field> injectField = Arrays.stream(searchClass.getDeclaredFields())
-			                                    .filter(field -> field.isAnnotationPresent(SqlPlusInject.class))
+			                                    .filter(field -> field.isAnnotationPresent(SQLPlusInject.class))
 			                                    .findFirst();
 			if (injectField.isPresent()) {
 				return injectField;
