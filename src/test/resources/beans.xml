@@ -14,7 +14,7 @@
 		<property name="driverClass" value="org.h2.Driver" />
 	</bean>
 
-	<bean id="sqlPlus" class="com.tyler.sqlplus.SqlPlus">
+	<bean id="sqlPlus" class="com.tyler.sqlplus.SQLPlus">
 		<constructor-arg>
 			<ref bean="dataSource" />
 		</constructor-arg>

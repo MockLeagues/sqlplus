@@ -27,6 +27,14 @@ public interface Functions {
 		
 	}
 	
+	
+	@FunctionalInterface
+	public static interface SQLExceptionRunnable {
+		
+		public void run() throws SQLException;
+		
+	}
+	
 	@FunctionalInterface
 	public static interface ThrowingFunction<I, O> {
 		
@@ -50,9 +58,17 @@ public interface Functions {
 		}
 	}
 	
-	public static <O> O runSQL(SQLExceptionSupplier<O> runnable) {
+	public static <O> O runSQL(SQLExceptionSupplier<O> supplier) {
 		try {
-			return runnable.run();
+			return supplier.run();
+		} catch (SQLException e) {
+			throw new SQLRuntimeException(e);
+		}
+	}
+	
+	public static void runSQL(SQLExceptionRunnable runnable) {
+		try {
+			runnable.run();
 		} catch (SQLException e) {
 			throw new SQLRuntimeException(e);
 		}

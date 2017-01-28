@@ -15,8 +15,8 @@ import java.util.Map;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.tyler.sqlplus.exception.POJOBindException;
-import com.tyler.sqlplus.exception.QuerySyntaxException;
+import com.tyler.sqlplus.exception.QueryStructureException;
+import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
@@ -34,7 +34,7 @@ public class QueryTest {
 			assertThrows(() -> {
 				Query q = conn.createQuery("select * from employee where employee_id = :id");
 				q.setParameter("idx", "123");
-			}, QuerySyntaxException.class, "Unknown query parameter: idx");
+			}, QueryStructureException.class, "Unknown query parameter: idx");
 		});
 	}
 	
@@ -44,7 +44,7 @@ public class QueryTest {
 		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where state = :state and city = :city").setParameter("state", "s").getUniqueResultAs(Address.class);
-			}, QuerySyntaxException.class, "Missing parameter values for the following parameters: [city]");
+			}, QueryStructureException.class, "Missing parameter values for the following parameters: [city]");
 		});
 	}
 	
@@ -53,7 +53,7 @@ public class QueryTest {
 		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where city = ?").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
-			}, QuerySyntaxException.class, "Parameter index 2 is out of range of this query's parameters (max parameters: 1)");
+			}, QueryStructureException.class, "Parameter index 2 is out of range of this query's parameters (max parameters: 1)");
 		});
 	}
 	
@@ -62,7 +62,7 @@ public class QueryTest {
 		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where city = :city and street = :city").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
-			}, QuerySyntaxException.class, "Duplicate parameter 'city' in query:\n" +
+			}, QueryStructureException.class, "Duplicate parameter 'city' in query:\n" +
 							"select address_id from address where city = :city and street = :city");
 		});
 	}
@@ -72,7 +72,7 @@ public class QueryTest {
 		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select * from employee where name = :name").fetch();
-			}, QuerySyntaxException.class, "No parameters set");
+			}, QueryStructureException.class, "No parameters set");
 		});
 	}
 	
@@ -330,7 +330,7 @@ public class QueryTest {
 			    .setParameter("name", "test1")
 			    .setParameter("hired", "2015-01-01");
 			
-			assertThrows(q::finishBatch, QuerySyntaxException.class, "Missing parameter values for the following parameters: [salary]");
+			assertThrows(q::finishBatch, QueryStructureException.class, "Missing parameter values for the following parameters: [salary]");
 		});
 	}
 	
@@ -393,7 +393,7 @@ public class QueryTest {
 		h2.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)").bind(toCreate);
-			}, POJOBindException.class);
+			}, ReflectionException.class);
 		});
 	}
 	

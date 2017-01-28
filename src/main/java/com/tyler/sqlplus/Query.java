@@ -1,32 +1,40 @@
 package com.tyler.sqlplus;
 
-import com.tyler.sqlplus.conversion.ConversionRegistry;
-import com.tyler.sqlplus.conversion.FieldReader;
-import com.tyler.sqlplus.conversion.FieldWriter;
-import com.tyler.sqlplus.exception.*;
-import com.tyler.sqlplus.function.BatchConsumer;
-import com.tyler.sqlplus.mapper.ResultMapper;
-import com.tyler.sqlplus.mapper.ResultMappers;
-import com.tyler.sqlplus.mapper.ResultStream;
-import com.tyler.sqlplus.utility.Fields;
-import javassist.util.proxy.Proxy;
+import static java.util.stream.Collectors.toList;
 
 import java.lang.reflect.Field;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toList;
+import com.tyler.sqlplus.conversion.ConversionRegistry;
+import com.tyler.sqlplus.conversion.FieldReader;
+import com.tyler.sqlplus.conversion.FieldWriter;
+import com.tyler.sqlplus.exception.NoResultsException;
+import com.tyler.sqlplus.exception.NonUniqueResultException;
+import com.tyler.sqlplus.exception.QueryStructureException;
+import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.function.BatchConsumer;
+import com.tyler.sqlplus.function.Functions;
+import com.tyler.sqlplus.mapper.ResultMapper;
+import com.tyler.sqlplus.mapper.ResultMappers;
+import com.tyler.sqlplus.mapper.ResultStream;
+import com.tyler.sqlplus.utility.Fields;
+
+import javassist.util.proxy.Proxy;
 
 /**
  * Provides encapsulation for an SQL query, allowing results to be retrieved and streamed as POJOs
- * @author Tyler
- *
  */
 public class Query {
 
@@ -65,7 +73,7 @@ public class Query {
 	
 	public Query setParameter(Integer index, Object val) {
 		if (index > paramLabel_paramIndex.size()) {
-			throw new QuerySyntaxException(
+			throw new QueryStructureException(
 				"Parameter index " + index + " is out of range of this query's parameters (max parameters: " + paramLabel_paramIndex.size() + ")");
 		}
 		return setParameter(index + "", val);
@@ -73,7 +81,7 @@ public class Query {
 	
 	public Query setParameter(String key, Object val) {
 		if (!paramLabel_paramIndex.containsKey(key)) {
-			throw new QuerySyntaxException("Unknown query parameter: " + key);
+			throw new QueryStructureException("Unknown query parameter: " + key);
 		}
 		Integer paramIndex = paramLabel_paramIndex.get(key);
 		manualParamBatch.put(paramIndex, val);
@@ -85,14 +93,7 @@ public class Query {
 	 */
 	public List<Map<String, Object>> fetch() {
 		ResultMapper<Map<String, Object>> rowMapper = ResultMappers.forMap();
-		return stream().map(rs -> {
-			try {
-				return rowMapper.map(rs);
-			}
-			catch (SQLException e) {
-				throw new SQLRuntimeException(e);
-			}
-		}).collect(toList());
+		return stream().map(rs -> Functions.runSQL(() -> rowMapper.map(rs))).collect(toList());
 	}
 	/**
 	 * Executes this query, mapping the single result to an instance of the given POJO class. If more than 1 result is returned,
@@ -127,34 +128,20 @@ public class Query {
 		streamAs(batchType).forEach(data -> {
 			batch.add(data);
 			if (batch.size() == batchSize) {
-				try {
-					processor.acceptBatch(batch);
-				} catch (Exception e) {
-					throw new SQLRuntimeException(e);
-				}
+				Functions.runSQL(() -> processor.acceptBatch(batch));
 				batch.clear();
 			}
 		});
 		
 		// Will have leftover if batch size does not evenly divide into total results
 		if (!batch.isEmpty()) {
-			try {
-				processor.acceptBatch(batch);
-			} catch (Exception e) {
-				throw new SQLRuntimeException(e);
-			}
+			Functions.runSQL(() -> processor.acceptBatch(batch));
 		}
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
 		ResultMapper<T> pojoMapper = ResultMappers.forClass(klass, conversionRegistry, session);
-		return stream().map(rs -> {
-			try {
-				return pojoMapper.map(rs);
-			} catch (SQLException e) {
-				throw new POJOBindException(e);
-			}
-		});
+		return stream().map(rs -> Functions.runSQL(() -> pojoMapper.map(rs)));
 	}
 	
 	public Stream<ResultSet> stream() {
@@ -237,43 +224,29 @@ public class Query {
 		}
 		
 		if (this.paramBatches.isEmpty() && !paramLabel_paramIndex.isEmpty()) {
-			throw new QuerySyntaxException("No parameters set");
+			throw new QueryStructureException("No parameters set");
 		}
 		
-		try {
-		
-			String formattedSql = sql.replaceAll(REGEX_PARAM, "?");
-			PreparedStatement ps = session.getJdbcConnection().prepareStatement(formattedSql, returnKeys ? 0 : Statement.RETURN_GENERATED_KEYS);
+		String formattedSql = sql.replaceAll(REGEX_PARAM, "?");
+		PreparedStatement ps = Functions.runSQL(() -> session.getJdbcConnection().prepareStatement(formattedSql, returnKeys ? 0 : Statement.RETURN_GENERATED_KEYS));
 			
-			for (Map<Integer, Object> paramBatch : this.paramBatches) {
+		for (Map<Integer, Object> paramBatch : this.paramBatches) {
 
-				paramBatch.forEach((paramIndex, objParam) -> {
-					if (objParam == null) {
-						try {
-							ps.setObject(paramIndex, null);
-						} catch (SQLException e) {
-							throw new SQLRuntimeException(e);
-						}
-					} else {
-						FieldWriter writer = conversionRegistry.getWriter(objParam.getClass());
-						try {
-							writer.write(ps, paramIndex, objParam);
-						} catch (SQLException e) {
-							throw new SQLRuntimeException(e);
-						}
-					}
-				});
-				
-				if (this.paramBatches.size() > 1) {
-					ps.addBatch();
+			paramBatch.forEach((paramIndex, objParam) -> {
+				if (objParam == null) {
+					Functions.runSQL(() -> ps.setObject(paramIndex, null));
+				} else {
+					FieldWriter writer = conversionRegistry.getWriter(objParam.getClass());
+					Functions.runSQL(() -> writer.write(ps, paramIndex, objParam));
 				}
-			}
+			});
 			
-			return ps;
+			if (this.paramBatches.size() > 1) {
+				Functions.runSQL(() -> ps.addBatch());
+			}
 		}
-		catch (SQLException e) {
-			throw new SQLRuntimeException(e);
-		}
+		
+		return ps;
 	}
 	
 	/**
@@ -295,7 +268,7 @@ public class Query {
 			try {
 				mappedField = klass.getDeclaredField(paramLabel);
 			} catch (NoSuchFieldException e) {
-				throw new POJOBindException("No member exists in " + klass + " to bind a value for parameter '" + paramLabel + "'");
+				throw new ReflectionException("No member exists in " + klass + " to bind a value for query parameter '" + paramLabel + "'");
 			}
 			
 			Object member = Fields.get(mappedField, o);
@@ -330,7 +303,7 @@ public class Query {
 			}
 		});
 		if (!missingParams.isEmpty()) {
-			throw new QuerySyntaxException("Missing parameter values for the following parameters: " + missingParams);
+			throw new QueryStructureException("Missing parameter values for the following parameters: " + missingParams);
 		}
 		
 		paramBatches.add(newBatch);
@@ -358,7 +331,7 @@ public class Query {
 			else {
 				paramLabel = paramLabel.substring(1);
 				if (paramLabel_index.containsKey(paramLabel)) {
-					throw new QuerySyntaxException("Duplicate parameter '" + paramLabel + "' in query:\n" + sql);
+					throw new QueryStructureException("Duplicate parameter '" + paramLabel + "' in query:\n" + sql);
 				}
 				paramLabel_index.put(paramLabel, paramIndex);
 			}
