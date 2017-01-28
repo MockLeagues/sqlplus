@@ -51,15 +51,14 @@ public class TransactionalService {
 		T serviceProxy = (T) factory.createClass().newInstance();
 		
 		Optional<Field> sqlPlusField = ReflectionUtility.findFieldWithAnnotation(SQLPlusInject.class, serviceClass);
-		if (sqlPlusField.isPresent() && sqlPlusField.get().getType() != SQLPlus.class) {
-			throw new AnnotationConfigurationException("@" + SQLPlusInject.class.getSimpleName() + " annotated field " + sqlPlusField.get() + " must be of type " + SQLPlus.class);
+		if (sqlPlusField.isPresent()) {
+			if (sqlPlusField.get().getType() != SQLPlus.class) {
+				throw new AnnotationConfigurationException("@" + SQLPlusInject.class.getSimpleName() + " annotated field " + sqlPlusField.get() + " must be of type " + SQLPlus.class);
+			}
+			Fields.set(sqlPlusField.get(), serviceProxy, sqlPlus);
 		}
 		
 		((Proxy) serviceProxy).setHandler((self, overriddenMethod, proceed, args) -> {
-			
-			if (sqlPlusField.isPresent()) {
-				Fields.set(sqlPlusField.get(), self, sqlPlus);
-			}
 			
 			ReturningWork<Session, Object> workToDoInTransaction;
 			if (overriddenMethod.isAnnotationPresent(SQLPlusQuery.class)) {
