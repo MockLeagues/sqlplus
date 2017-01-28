@@ -178,7 +178,17 @@ public class Query {
 	 * Execute this query's payload as an update statement
 	 */
 	public void executeUpdate() {
-		executeUpdate(Object.class);
+		try {
+			PreparedStatement ps = prepareStatement(false);
+			if (paramBatches.size() > 1) {
+				ps.executeBatch();
+			} else {
+				ps.executeUpdate();
+			}
+		}
+		catch (SQLException e) {
+			throw new SQLRuntimeException(e);
+		}
 	}
 	
 	/**
