@@ -9,5 +9,9 @@ public class ReflectionException extends RuntimeException {
 	public ReflectionException(Exception ex) {
 		super(ex);
 	}
+
+	public ReflectionException(String msg, Exception e) {
+		super(msg, e);
+	}
 	
 }

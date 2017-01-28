@@ -1,19 +1,26 @@
 package com.tyler.sqlplus.mapper;
 
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.conversion.ConversionRegistry;
 import com.tyler.sqlplus.conversion.FieldReader;
-import com.tyler.sqlplus.exception.SqlRuntimeException;
+import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.proxy.EntityProxy;
 import com.tyler.sqlplus.utility.Fields;
-
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Field;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.util.*;
 
 /**
  * Utilities for creating various result mappers
@@ -62,7 +69,7 @@ public final class ResultMappers {
 			try {
 				row = impl.newInstance();
 			} catch (InstantiationException | IllegalAccessException e) {
-				throw new SqlRuntimeException("Could not instantiate instance of map implementation " + impl);
+				throw new ReflectionException("Could not instantiate instance of map implementation " + impl, e);
 			}
 			
 			ResultSetMetaData meta = rs.getMetaData();
@@ -96,22 +103,15 @@ public final class ResultMappers {
 
 				E instance;
 				try {
-					instance = shouldReturnProxy ? EntityProxy.create(klass, session) : klass.newInstance();
-				} catch (InstantiationException | IllegalAccessException e) {
-					throw new RuntimeException("Could not construct instance of " + klass + ", verify it has a public no-args constructor", e);
+					instance = shouldReturnProxy ? EntityProxy.create(klass, session) : newInstance(klass);
+				} catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+					throw new ReflectionException("Could not construct instance of " + klass, e);
 				}
 
 				loadableFields.forEach((loadableField, columnName) -> {
-
-					FieldReader reader = conversionRegistry.getReader(loadableField.getType());
-
-					try {
-						Object fieldValue = reader.read(rs, columnName);
-						Fields.set(loadableField, instance, fieldValue);
-					} catch (SQLException e) {
-						throw new SqlRuntimeException(e);
-					}
-
+					FieldReader<?> reader = conversionRegistry.getReader(loadableField.getType());
+					Object fieldValue = Functions.runSQL(() -> reader.read(rs, columnName));
+					Fields.set(loadableField, instance, fieldValue);
 				});
 				
 				return instance;
@@ -121,6 +121,20 @@ public final class ResultMappers {
 		
 	}
 
+	/**
+	 * Creates a new instance of the given class by invoking its default constructor. The constructor need not be public, but
+	 * must exist
+	 */
+	static <T> T newInstance(Class<T> klass) throws NoSuchMethodException, IllegalAccessException, InstantiationException, InvocationTargetException {
+		try {
+			Constructor<T> defaultConstructor = klass.getDeclaredConstructor();
+			defaultConstructor.setAccessible(true);
+			return defaultConstructor.newInstance();
+		} catch (NoSuchMethodException e) { // Give a cleaner error message
+			throw new ReflectionException(klass + " requires a no-argument constructor for instantation");
+		}
+	}
+	
 	/**
 	 * Determines if a given class type should result in proxy objects being returned when mapping POJOs.
 	 * Proxy objects are returned if there is at least 1 field or method in the class with a @LoadQuery annotation

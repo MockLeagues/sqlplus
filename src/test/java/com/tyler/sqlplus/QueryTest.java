@@ -1,14 +1,10 @@
 package com.tyler.sqlplus;
 
-import com.tyler.sqlplus.exception.POJOBindException;
-import com.tyler.sqlplus.exception.QuerySyntaxException;
-import com.tyler.sqlplus.exception.SqlRuntimeException;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee.Type;
-import org.junit.Rule;
-import org.junit.Test;
+import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -16,8 +12,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
-import static org.junit.Assert.*;
+import org.junit.Rule;
+import org.junit.Test;
+
+import com.tyler.sqlplus.exception.POJOBindException;
+import com.tyler.sqlplus.exception.QuerySyntaxException;
+import com.tyler.sqlplus.exception.SqlRuntimeException;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee;
+import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee.Type;
 
 public class QueryTest {
 
@@ -137,12 +141,6 @@ public class QueryTest {
 		);
 
 		h2.getSQLPlus().transact(conn -> {
-
-			String sql =
-				"select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" " +
-				"from address a " +
-				"where a.city = ? and a.state = ?";
-
 			Address addr = conn.createQuery("select * from address where city=? and state=?", "Anytown", "MN").getUniqueResultAs(Address.class);
 			assertEquals("Maple Street", addr.street);
 			assertEquals("Anytown", addr.city);
@@ -457,4 +455,19 @@ public class QueryTest {
 		employeeOwner.join();
 	}
 
+	@Test
+	public void testLocksAreReleasedIfExceptionIsThrownBeforeQueryIsExecuted() throws Exception {
+		
+		try {
+			h2.getSQLPlus().transact(sess -> {
+				sess.createQuery("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)");
+				throw new RuntimeException("test-exception!");
+			});
+		} catch (Exception e) {
+			assertEquals(e.getCause().getMessage(), "test-exception!");
+			h2.batch("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)");
+		}
+		
+	}
+	
 }

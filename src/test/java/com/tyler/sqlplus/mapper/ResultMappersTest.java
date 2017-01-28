@@ -244,5 +244,28 @@ public class ResultMappersTest {
 		assertFalse(pojo instanceof Proxy);
 		assertTrue(pojo.getClass() == NormalPOJO.class);
 	}
+
+	static class PrivateConstructorPOJO {
+		String id, name;
+		private PrivateConstructorPOJO() {}
+	}
+	
+	@Test
+	public void testPrivateDefaultConstructorCanBeUsed() throws Exception {
+		
+		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
+		when(rsMeta.getColumnCount()).thenReturn(2);
+		when(rsMeta.getColumnLabel(1)).thenReturn("id");
+		when(rsMeta.getColumnLabel(2)).thenReturn("name");
+		
+		ResultSet rsToMap = mock(ResultSet.class);
+		
+		when(rsToMap.getMetaData()).thenReturn(rsMeta);
+		when(rsToMap.getString("id")).thenReturn("12345");
+		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
+
+		// Throws if error
+		ResultMappers.forClass(PrivateConstructorPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+	}
 	
 }
