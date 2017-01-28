@@ -24,14 +24,15 @@ public class EntityProxy {
 	/**
 	 * Creates a proxy of the given class type which will intercept method calls in order to lazy-load related entities
 	 */
-	@SuppressWarnings("unchecked")
 	public static <T> T create(Class<T> type, Session session) throws InstantiationException, IllegalAccessException {
+		
+		final Set<String> gettersLoaded = new HashSet<>();
 		
 		ProxyFactory factory = new ProxyFactory();
 		factory.setSuperclass(type);
-		T proxy = (T) factory.createClass().newInstance();
 		
-		final Set<String> gettersLoaded = new HashSet<>();
+		@SuppressWarnings("unchecked")
+		T proxy = (T) factory.createClass().newInstance();
 		
 		((Proxy)proxy).setHandler((self, invokedMethod, proceed, args) -> {
 			
@@ -81,7 +82,8 @@ public class EntityProxy {
 					String sql = loadQueryAnnot.value();
 					Query query = session.createQuery(sql).bind(self);
 					Type loadType = loadField.getGenericType();
-					Object result = QueryInterpreter.forType(loadType).interpret(query, loadType, loadField);
+					QueryInterpreter interpreter = QueryInterpreter.forType(loadType);
+					Object result = interpreter.interpret(query, loadType, loadField);
 					Fields.set(loadField, self, result);
 					gettersLoaded.add(methodName);
 				}

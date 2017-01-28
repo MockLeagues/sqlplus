@@ -16,7 +16,7 @@ import com.tyler.sqlplus.annotation.SQLPlusInject;
 import com.tyler.sqlplus.annotation.SQLPlusQuery;
 import com.tyler.sqlplus.annotation.SQLPlusUpdate;
 import com.tyler.sqlplus.annotation.Transactional;
-import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule;
 import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
 
@@ -62,7 +62,7 @@ public class ProxyServiceTest {
 	public void testTransactionAwareServiceThrowsErrorIfInjectFieldTypeIsNotSqlPlus() throws Exception {
 		assertThrows(
 			() -> h2.getSQLPlus().createService(TransactionAwareServiceBadField.class),
-			ReflectionException.class,
+			AnnotationConfigurationException.class,
 			"@" + SQLPlusInject.class.getSimpleName() + " annotated field " + TransactionAwareServiceBadField.class.getDeclaredField("notASession") + " must be of type " + SQLPlus.class
 		);
 	}

@@ -1,15 +1,18 @@
 package com.tyler.sqlplus.utility;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.SortedSet;
@@ -45,6 +48,20 @@ public final class ReflectionUtility {
 				throw new ReflectionException(e);
 			}
 		}
+	}
+	
+	public static Optional<Field> findFieldWithAnnotation(Class<? extends Annotation> annotType, Class<?> klass) {
+		Class<?> searchClass = klass;
+		while (searchClass != Object.class) {
+			Optional<Field> injectField = Arrays.stream(searchClass.getDeclaredFields())
+			                                    .filter(field -> field.isAnnotationPresent(annotType))
+			                                    .findFirst();
+			if (injectField.isPresent()) {
+				return injectField;
+			}
+			searchClass = searchClass.getSuperclass();
+		}
+		return Optional.empty();
 	}
 	
 	public static Type[] getGenericTypes(Field field) {

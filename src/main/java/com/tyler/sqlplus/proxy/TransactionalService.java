@@ -16,18 +16,17 @@ import com.tyler.sqlplus.annotation.SQLPlusQuery;
 import com.tyler.sqlplus.annotation.SQLPlusUpdate;
 import com.tyler.sqlplus.annotation.Transactional;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
-import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.interpreter.QueryInterpreter;
 import com.tyler.sqlplus.utility.Fields;
+import com.tyler.sqlplus.utility.ReflectionUtility;
 
 import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
 
 /**
- * Creates proxy objects which wrap {@link Transactional} annotated methods in SqlPlus transactions.
- * Proxy classes created in this manner can contain a {@link SQLPlusInject} annotated field into which
- * the sqlplus instance will be injected and therefore queried for the current session
+ * Creates proxy objects capable of wrapping {@link Transaction} annotated methods in SQLPlus transactions as
+ * well as synthesizing query and update methods
  */
 public class TransactionalService {
 
@@ -42,9 +41,9 @@ public class TransactionalService {
 		@SuppressWarnings("unchecked")
 		T serviceProxy = (T) factory.createClass().newInstance();
 		
-		Optional<Field> sqlPlusField = Fields.findFieldWithAnnotation(SQLPlusInject.class, serviceClass);
+		Optional<Field> sqlPlusField = ReflectionUtility.findFieldWithAnnotation(SQLPlusInject.class, serviceClass);
 		if (sqlPlusField.isPresent() && sqlPlusField.get().getType() != SQLPlus.class) {
-			throw new ReflectionException("@" + SQLPlusInject.class.getSimpleName() + " annotated field " + sqlPlusField.get() + " must be of type " + SQLPlus.class);
+			throw new AnnotationConfigurationException("@" + SQLPlusInject.class.getSimpleName() + " annotated field " + sqlPlusField.get() + " must be of type " + SQLPlus.class);
 		}
 		
 		((Proxy) serviceProxy).setHandler((self, overriddenMethod, proceed, args) -> {
@@ -68,12 +67,6 @@ public class TransactionalService {
 		return serviceProxy;
 	}
 
-	static Object invokeUpdate(Method queryMethod, Object[] invokeArgs, Session session) throws Exception {
-		Query query = session.createQuery(queryMethod.getAnnotation(SQLPlusUpdate.class).value());
-		bindParams(query, queryMethod.getParameters(), invokeArgs);
-		query.executeUpdate();
-		return null;
-	}
 	
 	static Object invokeQuery(Method queryMethod, Object[] invokeArgs, Session session) throws Exception {
 		
@@ -82,11 +75,21 @@ public class TransactionalService {
 			throw new AnnotationConfigurationException("@" + SQLPlusQuery.class.getSimpleName() + " annotated method " + queryMethod + " must declare a return type");
 		}
 		
-		Query query = session.createQuery(queryMethod.getAnnotation(SQLPlusQuery.class).value());
+		String sql = queryMethod.getAnnotation(SQLPlusQuery.class).value();
+		Query query = session.createQuery(sql);
 		bindParams(query, queryMethod.getParameters(), invokeArgs);
 		
 		Type genericReturnType = queryMethod.getGenericReturnType();
-		return QueryInterpreter.forType(genericReturnType).interpret(query, genericReturnType, queryMethod);
+		QueryInterpreter interpreter = QueryInterpreter.forType(genericReturnType);
+		return interpreter.interpret(query, genericReturnType, queryMethod);
+	}
+	
+	static Object invokeUpdate(Method queryMethod, Object[] invokeArgs, Session session) throws Exception {
+		String sql = queryMethod.getAnnotation(SQLPlusUpdate.class).value();
+		Query query = session.createQuery(sql);
+		bindParams(query, queryMethod.getParameters(), invokeArgs);
+		query.executeUpdate();
+		return null;
 	}
 	
 	static void bindParams(Query query, Parameter[] params, Object[] invokeArgs) throws Exception {
