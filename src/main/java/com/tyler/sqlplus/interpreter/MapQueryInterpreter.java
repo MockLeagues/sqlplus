@@ -41,11 +41,7 @@ public class MapQueryInterpreter extends QueryInterpreter {
 		}
 		
 		ParameterizedType paramType = (ParameterizedType) type;
-		Type valueType = paramType.getActualTypeArguments()[1];
-		if ("?".equals(valueType.toString())) {
-			throw new QueryInterpretationException("Cannot interpret query '" + query + "' as " + paramType + "; only wildcard generic types are present");
-		}
-		Class<?> valueClass = (Class<?>) valueType;
+		Class<?> valueClass = (Class<?>) paramType.getActualTypeArguments()[1];
 		
 		String mapKey = context.getDeclaredAnnotation(MapKey.class).value();
 		Field keyField;
@@ -59,7 +55,7 @@ public class MapQueryInterpreter extends QueryInterpreter {
 			Object key = Fields.get(keyField, entity);
 			if (key == null) {
 				throw new QueryInterpretationException(
-					"Null value encountered for key field '" + mapKey + "' while constructing " + valueType + " for insertion into map. " +
+					"Null value encountered for key field '" + mapKey + "' while constructing " + valueClass + " for insertion into map. " +
 					"Double check your query column names match up with the entity field names");
 			}
 			return key;
