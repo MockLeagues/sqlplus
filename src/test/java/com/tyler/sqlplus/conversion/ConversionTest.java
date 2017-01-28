@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Date;
 
-import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
+import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
 import static org.junit.Assert.*;
 
 public class ConversionTest {

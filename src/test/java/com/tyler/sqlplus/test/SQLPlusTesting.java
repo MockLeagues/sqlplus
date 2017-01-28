@@ -5,7 +5,7 @@ import static org.junit.Assert.fail;
 
 import com.tyler.sqlplus.function.Task;
 
-public class SqlPlusTesting {
+public class SQLPlusTesting {
 
 	public static void assertThrows(Task t, Class<? extends Throwable> expectType) {
 		assertThrows(t, expectType, null);

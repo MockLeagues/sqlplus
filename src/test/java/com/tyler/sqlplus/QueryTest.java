@@ -1,6 +1,6 @@
 package com.tyler.sqlplus;
 
-import static com.tyler.sqlplus.test.SqlPlusTesting.assertThrows;
+import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
