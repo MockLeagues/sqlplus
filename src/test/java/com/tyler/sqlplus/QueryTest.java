@@ -470,4 +470,17 @@ public class QueryTest {
 		
 	}
 	
+	@Test
+	public void flushWillWriteDataToDatabase() throws Exception {
+		
+		String[][] actual = h2.getSQLPlus().query(sess -> {
+			sess.createQuery("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)").executeUpdate();
+			sess.flush();
+			return h2.query("select type, name, hired, salary from employee");
+		});
+		
+		String[][] expect = {{ "SALARY", "tester-1", "2015-01-01", "20500" }};
+		assertArrayEquals(expect, actual);
+	}
+	
 }

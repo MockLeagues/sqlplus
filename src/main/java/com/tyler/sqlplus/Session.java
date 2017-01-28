@@ -1,11 +1,12 @@
 package com.tyler.sqlplus;
 
-import com.tyler.sqlplus.exception.SessionClosedException;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+
+import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.exception.SessionClosedException;
 
 /**
  * Represents an individual unit of work within the SqlPlus environment
@@ -29,6 +30,17 @@ public class Session implements Closeable {
 		return q;
 	}
 
+	/**
+	 * Flushes current transaction data to the database
+	 */
+	public void flush() {
+		try {
+			conn.commit();
+		} catch (SQLException e) {
+			throw new SQLRuntimeException(e);
+		}
+	}
+	
 	/**
 	 * Stages a new query within this session. If the session is no longer active, a {@link SessionClosedException}
 	 * will be thrown
