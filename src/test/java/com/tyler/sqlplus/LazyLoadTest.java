@@ -1,32 +1,30 @@
 package com.tyler.sqlplus;
 
-import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-
-import org.junit.Rule;
-import org.junit.Test;
-
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.annotation.MapKey;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.QueryInterpretationException;
 import com.tyler.sqlplus.exception.SessionClosedException;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee.Type;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Office;
+import com.tyler.sqlplus.rule.AbstractDBRule;
+import com.tyler.sqlplus.rule.AbstractDBRule.Address;
+import com.tyler.sqlplus.rule.AbstractDBRule.Employee;
+import com.tyler.sqlplus.rule.AbstractDBRule.Employee.Type;
+import com.tyler.sqlplus.rule.AbstractDBRule.Office;
+import com.tyler.sqlplus.rule.H2Rule;
+import org.junit.Rule;
+import org.junit.Test;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
+import static org.junit.Assert.*;
 
 public class LazyLoadTest {
 
 	@Rule
-	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
+	public AbstractDBRule h2 = new H2Rule();
 	
 	@Test
 	public void testLazyLoadForeignKeyRelation() throws Exception {

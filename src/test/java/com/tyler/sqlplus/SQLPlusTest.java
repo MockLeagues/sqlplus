@@ -1,20 +1,19 @@
 package com.tyler.sqlplus;
 
-import static org.junit.Assert.assertTrue;
+import com.tyler.sqlplus.rule.H2Rule;
+import org.junit.Rule;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import org.junit.Rule;
-import org.junit.Test;
-
-import com.tyler.sqlplus.rule.H2EmployeeDBRule;
+import static org.junit.Assert.assertTrue;
 
 public class SQLPlusTest {
 
 	@Rule
-	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
+	public H2Rule h2 = new H2Rule();
 	
 	@Test
 	public void testCurrentThreadCorrectlyPullsCurrentSession() throws Exception {

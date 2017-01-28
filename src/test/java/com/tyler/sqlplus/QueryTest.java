@@ -1,10 +1,14 @@
 package com.tyler.sqlplus;
 
-import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import com.tyler.sqlplus.exception.QueryStructureException;
+import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.rule.AbstractDBRule.Address;
+import com.tyler.sqlplus.rule.AbstractDBRule.Employee;
+import com.tyler.sqlplus.rule.AbstractDBRule.Employee.Type;
+import com.tyler.sqlplus.rule.H2Rule;
+import org.junit.Rule;
+import org.junit.Test;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -12,21 +16,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Rule;
-import org.junit.Test;
-
-import com.tyler.sqlplus.exception.QueryStructureException;
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Employee.Type;
+import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
+import static org.junit.Assert.*;
 
 public class QueryTest {
 
 	@Rule
-	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
+	public H2Rule h2 = new H2Rule();
 	
 	@Test
 	public void testErrorThrownIfUnkownParamAdded() throws SQLException {

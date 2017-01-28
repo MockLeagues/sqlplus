@@ -18,12 +18,12 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.tyler.sqlplus.rule.AbstractDBRule;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule;
+import com.tyler.sqlplus.rule.H2Rule;
 
 public class ConversionTest {
 
 	@Rule
-	public final AbstractDBRule h2 = new H2EmployeeDBRule();
+	public final AbstractDBRule h2 = new H2Rule();
 	
 	enum Size { SMALL, MEDIUM, LARGE };
 	

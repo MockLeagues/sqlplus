@@ -1,32 +1,27 @@
 package com.tyler.sqlplus.proxy;
 
-import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import com.tyler.sqlplus.SQLPlus;
+import com.tyler.sqlplus.annotation.*;
+import com.tyler.sqlplus.exception.AnnotationConfigurationException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.rule.AbstractDBRule;
+import com.tyler.sqlplus.rule.AbstractDBRule.Address;
+import com.tyler.sqlplus.rule.H2Rule;
+import org.junit.Rule;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.junit.Rule;
-import org.junit.Test;
-
-import com.tyler.sqlplus.SQLPlus;
-import com.tyler.sqlplus.annotation.BindObject;
-import com.tyler.sqlplus.annotation.BindParam;
-import com.tyler.sqlplus.annotation.Database;
-import com.tyler.sqlplus.annotation.DAOQuery;
-import com.tyler.sqlplus.annotation.DAOUpdate;
-import com.tyler.sqlplus.annotation.Transactional;
-import com.tyler.sqlplus.exception.AnnotationConfigurationException;
-import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule;
-import com.tyler.sqlplus.rule.H2EmployeeDBRule.Address;
+import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 public class TransactionalServiceTest {
 
 	@Rule
-	public H2EmployeeDBRule h2 = new H2EmployeeDBRule();
+	public AbstractDBRule h2 = new H2Rule();
 	
 	static class TransactionAwareService {
 
