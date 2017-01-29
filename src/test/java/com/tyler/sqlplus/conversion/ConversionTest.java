@@ -57,7 +57,12 @@ public class ConversionTest extends DatabaseTest {
 	public void littleIntIsReadWhenNull() throws Exception {
 		testRead("decimal_field", "10.5", "int_field", "tinyInt", 0);
 	}
-	
+
+	@Test
+	public void littleIntIsWritten() throws Exception {
+		testWrite("int_field", 1, "1");
+	}
+
 	@Test
 	public void bigIntIsReadWhenPresent() throws Exception {
 		testRead("int_field", "10", "int_field", "bigInt", new Integer(10));
@@ -67,7 +72,17 @@ public class ConversionTest extends DatabaseTest {
 	public void bigIntIsReadWhenNull() throws Exception {
 		testRead("decimal_field", "10.5", "int_field", "bigInt", null);
 	}
-	
+
+	@Test
+	public void bigIntIsWrittenWhenPresent() throws Exception {
+		testWrite("int_field", new Integer(1), "1");
+	}
+
+	@Test
+	public void nullCanBeWrittenToIntField() throws Exception {
+		testWrite("int_field", null, null);
+	}
+
 	@Test
 	public void littleShortIsReadWhenPresent() throws Exception {
 		testRead("int_field", "10", "int_field", "tinyShort", (short) 10);
@@ -76,6 +91,11 @@ public class ConversionTest extends DatabaseTest {
 	@Test
 	public void littleShortIsReadWhenNull() throws Exception {
 		testRead("decimal_field", "10.5", "int_field", "tinyShort", (short) 0);
+	}
+
+	@Test
+	public void littleShortIsWritten() throws Exception {
+		testWrite("int_field", (short) 1, "1");
 	}
 
 	@Test
@@ -89,6 +109,11 @@ public class ConversionTest extends DatabaseTest {
 	}
 
 	@Test
+	public void bigShortIsWrittenWhenPresent() throws Exception {
+		testWrite("int_field", new Short((short) 1), "1");
+	}
+
+	@Test
 	public void littleLongIsReadWhenPresent() throws Exception {
 		testRead("int_field", "10", "int_field", "tinyLong", (long) 10);
 	}
@@ -96,6 +121,11 @@ public class ConversionTest extends DatabaseTest {
 	@Test
 	public void littleLongIsReadWhenNull() throws Exception {
 		testRead("decimal_field", "10.5", "int_field", "tinyLong", (long) 0);
+	}
+
+	@Test
+	public void littleLongIsWritten() throws Exception {
+		testWrite("int_field", 1L, "1");
 	}
 
 	@Test
@@ -107,7 +137,12 @@ public class ConversionTest extends DatabaseTest {
 	public void bigLongIsReadWhenNull() throws Exception {
 		testRead("decimal_field", "10.5", "int_field", "bigLong", null);
 	}
-	
+
+	@Test
+	public void bigLongIsWrittenWhenPresent() throws Exception {
+		testWrite("int_field", new Long(1L), "1");
+	}
+
 	@Test
 	public void tinyFloatIsReadWhenPresent() throws Exception {
 		testRead("float_field", "1.5", "float_field", "tinyFloat", 1.5f);
@@ -119,6 +154,11 @@ public class ConversionTest extends DatabaseTest {
 	}
 
 	@Test
+	public void littleFloatIsWritten() throws Exception {
+		testWrite("float_field", 1.0f, "1.0");
+	}
+
+	@Test
 	public void bigFloatIsReadWhenPresent() throws Exception {
 		testRead("float_field", "1.5", "float_field", "bigFloat", new Float(1.5f));
 	}
@@ -127,7 +167,17 @@ public class ConversionTest extends DatabaseTest {
 	public void bigFloatIsReadWhenNull() throws Exception {
 		testRead("int_field", "5", "float_field", "bigFloat", null);
 	}
-	
+
+	@Test
+	public void bigFloatIsWrittenWhenPresent() throws Exception {
+		testWrite("float_field", new Float(1.0f), "1.0");
+	}
+
+	@Test
+	public void nullCanBeWrittenToFloatField() throws Exception {
+		testWrite("float_field", null, null);
+	}
+
 	@Test
 	public void tinyDoubleIsReadWhenPresent() throws Exception {
 		testRead("decimal_field", "1.5", "decimal_field", "tinyDouble", 1.5d);
@@ -139,6 +189,11 @@ public class ConversionTest extends DatabaseTest {
 	}
 
 	@Test
+	public void tinyDoubleIsWritten() throws Exception {
+		testWrite("decimal_field", 1.0d, "1.00");
+	}
+
+	@Test
 	public void bigDoubleIsReadWhenPresent() throws Exception {
 		testRead("decimal_field", "1.5", "decimal_field", "bigDouble", new Double(1.5d));
 	}
@@ -147,7 +202,17 @@ public class ConversionTest extends DatabaseTest {
 	public void bigDoubleIsReadWhenNull() throws Exception {
 		testRead("int_field", "5", "decimal_field", "bigDouble", null);
 	}
-	
+
+	@Test
+	public void bigDoubleIsWritten() throws Exception {
+		testWrite("decimal_field", new Double(1.0d), "1.00");
+	}
+
+	@Test
+	public void nullCanBeWrittenToDecimalField() throws Exception {
+		testWrite("decimal_field", null, null);
+	}
+
 	@Test
 	public void tinyBooleanIsReadWhenPresent() throws Exception {
 		testRead("tiny_int_field", "1", "tiny_int_field", "tinyBoolean", true);
@@ -159,6 +224,11 @@ public class ConversionTest extends DatabaseTest {
 	}
 
 	@Test
+	public void tinyBooleanIsWritten() throws Exception {
+		testWrite("tiny_int_field", true, "1");
+	}
+
+	@Test
 	public void bigBooleanIsReadWhenPresent() throws Exception {
 		testRead("tiny_int_field", "1", "tiny_int_field", "bigBoolean", new Boolean(true));
 	}
@@ -167,7 +237,17 @@ public class ConversionTest extends DatabaseTest {
 	public void bigBooleanIsReadAsNull() throws Exception {
 		testRead("int_field", "5", "tiny_int_field", "bigBoolean", null);
 	}
-	
+
+	@Test
+	public void bigBooleanIsWritten() throws Exception {
+		testWrite("tiny_int_field", Boolean.TRUE, "1");
+	}
+
+	@Test
+	public void nullCanBeWrittenToTinyIntField() throws Exception {
+		testWrite("tiny_int_field", null, null);
+	}
+
 	@Test
 	public void tinyCharIsReadWhenPresent() throws Exception {
 		testRead("char_field", "'a'", "char_field", "tinyChar", 'a');
@@ -179,6 +259,11 @@ public class ConversionTest extends DatabaseTest {
 	}
 
 	@Test
+	public void tinyCharIsWritten() throws Exception {
+		testWrite("char_field", 'a', "a");
+	}
+
+	@Test
 	public void bigCharIsReadWhenPresent() throws Exception {
 		testRead("char_field", "'a'", "char_field", "bigChar", new Character('a'));
 	}
@@ -187,7 +272,17 @@ public class ConversionTest extends DatabaseTest {
 	public void bigCharIsReadAsNull() throws Exception {
 		testRead("int_field", "5", "char_field", "bigChar", null);
 	}
-	
+
+	@Test
+	public void bigCharIsWritten() throws Exception {
+		testWrite("char_field", new Character('a'), "a");
+	}
+
+	@Test
+	public void nullCanBeWrittenToCharField() throws Exception {
+		testWrite("char_field", null, null);
+	}
+
 	@Test
 	public void stringIsReadWhenPresent() throws Exception {
 		testRead("varchar_field", "'abc'", "varchar_field", "string", "abc");
@@ -197,10 +292,25 @@ public class ConversionTest extends DatabaseTest {
 	public void stringIsReadWhenNull() throws Exception {
 		testRead("int_field", "1", "varchar_field", "string", null);
 	}
-	
+
+	@Test
+	public void stringIsWritten() throws Exception {
+		testWrite("varchar_field", "'abc'", "'abc'");
+	}
+
+	@Test
+	public void nullCanBeWrittenToStringField() throws Exception {
+		testWrite("varchar_field", null, null);
+	}
+
 	@Test
 	public void bigIntegerIsReadWhenPresent() throws Exception {
 		testRead("int_field", "1", "int_field", "hugeInt", new BigInteger("1"));
+	}
+
+	@Test
+	public void bigIntegerIsWritten() throws Exception {
+		testWrite("int_field", new BigInteger("1"), "1");
 	}
 
 	@Test
@@ -211,6 +321,11 @@ public class ConversionTest extends DatabaseTest {
 	@Test
 	public void bigDecimalIsReadWhenPresent() throws Exception {
 		testRead("decimal_field", "1.50", "decimal_field", "hugeDouble", new BigDecimal("1.50"));
+	}
+
+	@Test
+	public void bigDecimalIsWritten() throws Exception {
+		testWrite("decimal_field", new BigDecimal("1.50"), "1.50");
 	}
 
 	@Test
@@ -228,9 +343,59 @@ public class ConversionTest extends DatabaseTest {
 		testRead("int_field", "1", "enum_field", "enumField", null);
 	}
 
+	@Test
+	public void localDateFieldIsReadWhenPresent() throws Exception {
+		testRead("date_field", "'2005-01-05'", "date_field", "localDate", LocalDate.of(2005, 1, 5));
+	}
+
+	@Test
+	public void localDateFieldIsReadWhenNull() throws Exception {
+		testRead("int_field", "1", "date_field", "localDate", null);
+	}
+
+	@Test
+	public void localDateFieldIsWritten() throws Exception {
+		testWrite("date_field", LocalDate.of(2005, 1, 1), "2005-01-01");
+	}
+
+	@Test
+	public void localTimeFieldIsReadWhenPresent() throws Exception {
+		testRead("time_field", "'05:30:00'", "time_field", "localTime", LocalTime.of(5, 30));
+	}
+
+	@Test
+	public void localTimeFieldIsReadWhenNull() throws Exception {
+		testRead("int_field", "1", "time_field", "localTime", null);
+	}
+
+	@Test
+	public void localTimeFieldIsWrittenWhenOnlyHoursArePresent() throws Exception {
+		testWrite("time_field", LocalTime.of(5, 0), "05:00:00");
+	}
+
+	@Test
+	public void localTimeFieldIsWrittenWhenHoursAndMinutesArePresent() throws Exception {
+		testWrite("time_field", LocalTime.of(5, 10), "05:10:00");
+	}
+
+	@Test
+	public void localTimeFieldIsWrittenWhenHoursAndMinutesAndSecondsArePresent() throws Exception {
+		testWrite("time_field", LocalTime.of(5, 10, 15), "05:10:15");
+	}
+
+	@Test
+	public void localDateTimeIsReadWhenPresent() throws Exception {
+		testRead("datetime_field", "'2005-01-05 05:30:15'", "datetime_field", "localDateTime", LocalDateTime.of(2005, 1, 5, 5, 30, 15));
+	}
+
+	@Test
+	public void localDateTimeIsReadWhenNull() throws Exception {
+		testRead("int_field", "1", "datetime_field", "localDateTime", null);
+	}
+
 	@SuppressWarnings("deprecation")
 	@Test
-	public void testTimestampDbFieldCanBeMappedToStandardDateTypes() throws Exception {
+	public void timestampFieldCanBeMappedToStandardDateTypes() throws Exception {
 		
 		db.batch("insert into types_table " +
 		         "(timestamp_field, date_field, datetime_field, time_field) values " +
@@ -348,9 +513,6 @@ public class ConversionTest extends DatabaseTest {
 		});
 	}
 
-	/**
-	 * Tests a value is read as the expected object after inserting a field value
-	 */
 	private void testRead(String insertCol, String insertVal, String readCol, String readAlias, Object expect) throws Exception {
 
 		String insertSql = String.format("insert into types_table(%s) values (%s)", insertCol, insertVal);
@@ -362,6 +524,18 @@ public class ConversionTest extends DatabaseTest {
 		Object actualResult = resultField.get(queryResult);
 
 		assertEquals(expect, actualResult);
+	}
+
+	private void testWrite(String fieldName, Object writeValue, String expectResult) {
+
+		String insertSQL = String.format("insert into types_table(%s) values(?)", fieldName);
+		String querySQL = String.format("select %s from types_table", fieldName);
+
+		db.getSQLPlus().transact(s -> s.createQuery(insertSQL, writeValue).executeUpdate());
+
+		String[][] actual = db.query(querySQL);
+		String[][] expect = {{ expectResult }};
+		assertArrayEquals(actual, expect);
 	}
 
 }

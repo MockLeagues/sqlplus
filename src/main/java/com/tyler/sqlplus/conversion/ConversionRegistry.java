@@ -11,6 +11,7 @@ import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -261,7 +262,11 @@ public class ConversionRegistry {
 				}
 			}
 			else {
-				return LocalDate.parse(rs.getString(column));
+				String stringVal = rs.getString(column);
+				if (rs.wasNull()) {
+					return null;
+				}
+				return LocalDate.parse(stringVal);
 			}
 		});
 		
@@ -277,7 +282,8 @@ public class ConversionRegistry {
 		registerStandardReader(LocalDateTime.class, (rs, column, type) -> {
 			Object dbObj = rs.getObject(column);
 			if (dbObj == null) {
-				return LocalDateTime.parse(rs.getString(column));
+				String strVal = rs.getString(column);
+				return strVal == null ? null : LocalDateTime.parse(strVal);
 			}
 			else {
 				if (dbObj.getClass() == Timestamp.class) {
@@ -287,7 +293,8 @@ public class ConversionRegistry {
 					return ((java.sql.Date)dbObj).toLocalDate().atStartOfDay();
 				}
 				else {
-					return LocalDateTime.parse(String.valueOf(dbObj));
+					String strVal = String.valueOf(dbObj);
+					return strVal == null ? null : LocalDateTime.parse(strVal);
 				}
 			}
 		});
@@ -304,17 +311,19 @@ public class ConversionRegistry {
 		registerStandardReader(LocalTime.class, (rs, column, type) -> {
 			Object dbObj = rs.getObject(column);
 			if (dbObj == null) {
-				return LocalTime.parse(rs.getString(column));
+				String stringVal = rs.getString(column);
+				return stringVal == null ? null : LocalTime.parse(stringVal);
 			}
 			if (dbObj.getClass() == Timestamp.class) {
 				return ((Timestamp)dbObj).toLocalDateTime().toLocalTime();
 			}
 			else if (dbObj.getClass() == java.sql.Date.class) {
 				throw new UnsupportedOperationException(
-					"Cannot convert date field to java.time.LocalTime field; date fields do not contain time components");
+					"Cannot convert date field to " + LocalTime.class.getName() + " field; date fields do not contain time components");
 			}
 			else {
-				return LocalTime.parse(String.valueOf(dbObj));
+				String stringVal = String.valueOf(dbObj);
+				return stringVal == null ? null : LocalTime.parse(stringVal);
 			}
 		});
 		
@@ -323,18 +332,18 @@ public class ConversionRegistry {
 				ps.setNull(i, Types.TIME);
 			}
 			else {
-				ps.setString(i, o.toString());
+				ps.setString(i, DateTimeFormatter.ofPattern("HH:mm:ss").format(o));
 			}
 		});
 		
 		registerStandardReader(Enum.class, (rs, column, type) -> {
 			try {
-				Method valueOf = type.getDeclaredMethod("valueOf", String.class);
-				valueOf.setAccessible(true);
 				String columnVal = rs.getString(column);
 				if (rs.wasNull()) {
 					return null;
 				}
+				Method valueOf = type.getDeclaredMethod("valueOf", String.class);
+				valueOf.setAccessible(true);
 				return (Enum<?>) valueOf.invoke(null, columnVal);
 			} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 				throw new RuntimeException(e);
@@ -354,10 +363,6 @@ public class ConversionRegistry {
 		registerStandardWriter(Object.class, (ps, i, o) -> ps.setObject(i, o));
 	}
 
-	public static boolean containsStandardReader(Class<?> type) {
-		return READER_REGISTRY.containsKey(type);
-	}
-	
 	public static <T> void registerStandardReader(Class<T> type, FieldReader<T> reader) {
 		READER_REGISTRY.put(type, reader);
 	}

@@ -9,11 +9,11 @@ import java.sql.SQLException;
 @FunctionalInterface
 public interface FieldReader<T> {
 
-	public default T read(ResultSet rs, int colIndex, Class<?> targetType) throws SQLException {
+	default T read(ResultSet rs, int colIndex, Class<?> targetType) throws SQLException {
 		String labelForIndex = rs.getMetaData().getColumnLabel(colIndex);
 		return read(rs, labelForIndex, targetType);
 	}
 	
-	public T read(ResultSet rs, String column, Class<?> targetType) throws SQLException;
+	T read(ResultSet rs, String column, Class<?> targetType) throws SQLException;
 	
 }
