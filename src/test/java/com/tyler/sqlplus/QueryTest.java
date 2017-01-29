@@ -88,20 +88,6 @@ public class QueryTest extends DatabaseTest {
 	}
 
 	@Test
-	public void pojoFieldsCanBeMappedByConvertingUnderscoreNamesToCorrespondingCamelCaseNames() throws Exception {
-
-		db.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
-
-		db.getSQLPlus().transact(conn -> {
-			Address addr = conn.createQuery("select ADDRESS_ID, STREET, STATE, CITY, ZIP from address a").getUniqueResultAs(Address.class);
-			assertEquals("Maple Street", addr.street);
-			assertEquals("Anytown", addr.city);
-			assertEquals("MN", addr.state);
-			assertEquals("12345", addr.zip);
-		});
-	}
-
-	@Test
 	public void paramsCanBeSetWithMixtureOfLabelsAndQuestionmarks() throws Exception {
 		
 		db.batch(
@@ -140,7 +126,21 @@ public class QueryTest extends DatabaseTest {
 			assertEquals("12345", addr.zip);
 		});
 	}
-	
+
+	@Test
+	public void pojoFieldsCanBeMappedByConvertingUnderscoreNamesToCorrespondingCamelCaseNames() throws Exception {
+
+		db.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+
+		db.getSQLPlus().transact(conn -> {
+			Address addr = conn.createQuery("select ADDRESS_ID, STREET, STATE, CITY, ZIP from address a").getUniqueResultAs(Address.class);
+			assertEquals("Maple Street", addr.street);
+			assertEquals("Anytown", addr.city);
+			assertEquals("MN", addr.state);
+			assertEquals("12345", addr.zip);
+		});
+	}
+
 	@Test
 	public void resultsCanBeFetchesAsMaps() throws Exception {
 		
@@ -249,16 +249,6 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void enumTypesCanBeMapped() throws Exception {
-		db.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
-		Employee emp = db.getSQLPlus().query(sess -> {
-			return sess.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", salary as \"salary\", hired as \"hired\" from employee")
-			           .getUniqueResultAs(Employee.class);
-		});
-		assertEquals(Type.HOURLY, emp.type);
-	}
-	
-	@Test
 	public void paramBatchesCanBeAddedExplicitly() throws Exception {
 
 		db.getSQLPlus().transact(conn -> {
@@ -346,10 +336,9 @@ public class QueryTest extends DatabaseTest {
 		String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  hiredAt.toString(), "20000" };
 		assertArrayEquals(expectRow, actualRow);
 	}
-
 	
 	@Test
-	public void nullParamsInBoundObjectSetsValuesToNull() throws Exception {
+	public void nullParamsInBindingObjectSetsValuesToNull() throws Exception {
 		
 		Employee toCreate = new Employee();
 		toCreate.type = Type.HOURLY;
@@ -495,5 +484,25 @@ public class QueryTest extends DatabaseTest {
 		String[][] expect = {{ "SALARY", "tester-1", "2015-01-01", "20500" }};
 		assertArrayEquals(expect, actual);
 	}
-	
+
+	@Test
+	public void queryResultsAreCachedForQueriesWithNoParams() throws Exception {
+		db.getSQLPlus().transact(sess -> {
+			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
+			assertFalse(sess.isLastResultCached());
+			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
+			assertTrue(sess.isLastResultCached());
+		});
+	}
+
+	@Test
+	public void queryResultsAreCachedForQueriesWithParams() throws Exception {
+		db.getSQLPlus().transact(sess -> {
+			sess.createQuery("select count(*) from address where street = ?", "maple").getUniqueResultAs(Integer.class);
+			assertFalse(sess.isLastResultCached());
+			sess.createQuery("select count(*) from address where street = ?", "maple").getUniqueResultAs(Integer.class);
+			assertTrue(sess.isLastResultCached());
+		});
+	}
+
 }

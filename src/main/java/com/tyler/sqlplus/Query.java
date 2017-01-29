@@ -83,29 +83,51 @@ public class Query {
 	 * Executes this query, mapping results to a simple list of maps
 	 */
 	public List<Map<String, Object>> fetch() {
+		return session.fetch(this);
+	}
+
+	/**
+	 * Called by the session if result is not present in its cache
+	 */
+	List<Map<String, Object>> fetchForCache() {
 		ResultMapper<Map<String, Object>> rowMapper = ResultMappers.forMap();
 		return stream().map(rs -> Functions.runSQL(() -> rowMapper.map(rs))).collect(toList());
 	}
+
 	/**
 	 * Executes this query, mapping the single result to an instance of the given POJO class. If more than 1 result is returned,
 	 * a NonUniqueResultException will be thrown
 	 */
 	public <T> T getUniqueResultAs(Class<T> resultClass) {
-		List<T> results = fetchAs(resultClass);
-		if (results.isEmpty()) {
-			throw new NoResultsException();
-		}
-		if (results.size() > 1) {
-			throw new NonUniqueResultException();
-		}
-		return results.get(0);
+		return session.getUniqueResult(this, resultClass);
+	}
+
+	/**
+	 * Called by the session if result is not present in its cache
+	 */
+	<T> T getUniqueResultForCache(Class<T> resultClass) {
+			List<T> results = fetchAs(resultClass);
+			if (results.isEmpty()) {
+				throw new NoResultsException();
+			}
+			if (results.size() > 1) {
+				throw new NonUniqueResultException();
+			}
+			return results.get(0);
 	}
 	
 	/**
 	 * Executes this query, mapping the results to the given POJO class
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
-		return streamAs(resultClass).collect(toList());
+		return session.fetch(this, resultClass);
+	}
+
+	/**
+	 * Called by the session if result is not present in its cache
+	 */
+	public <T> List<T> fetchForCache(Class<T> resultClass) {
+			return streamAs(resultClass).collect(toList());
 	}
 	
 	/**
@@ -328,7 +350,7 @@ public class Query {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(getFormattedSQL(), paramBatches, manualParamBatch);
+		return Objects.hash(getFormattedSQL(), getParameterHash());
 	}
 
 	@Override
@@ -339,8 +361,7 @@ public class Query {
 		if (o instanceof Query) {
 			Query other = (Query) o;
 			return Objects.equals(getFormattedSQL(), other.getFormattedSQL()) &&
-							Objects.equals(paramBatches, other.paramBatches) &&
-							Objects.equals(manualParamBatch, other.manualParamBatch);
+			       Objects.equals(getParameterValues(), other.getParameterValues());
 		}
 		return false;
 	}
@@ -349,5 +370,20 @@ public class Query {
 	public String toString() {
 		return sql;
 	}
-	
+
+	private int getParameterHash() {
+		int paramBatchesSum = paramBatches.stream()
+						.mapToInt(m -> m.values().stream().mapToInt(Object::hashCode).sum())
+						.sum();
+		int manualBatchSum = manualParamBatch.values().stream().mapToInt(Object::hashCode).sum();
+		return paramBatchesSum + manualBatchSum;
+	}
+
+	private Collection<Object> getParameterValues() {
+		Collection<Object> values = new ArrayList<>();
+		paramBatches.forEach(batch -> values.addAll(batch.values()));
+		values.addAll(manualParamBatch.values());
+		return values;
+	}
+
 }

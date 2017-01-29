@@ -7,11 +7,17 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Represents an individual unit of work within the SqlPlus environment
  */
 public class Session implements Closeable {
+
+	private Map<Query, Object> firstLevelCache = new HashMap<>();
+	private boolean lastResultCached = false;
 
 	/**
 	 * Package-private so as to not break encapsulation.
@@ -32,6 +38,34 @@ public class Session implements Closeable {
 			q.setParameter(i + 1, params[i]);
 		}
 		return q;
+	}
+
+	List<Map<String, Object>> fetch(Query query) {
+		lastResultCached = true;
+		return (List<Map<String, Object>>) firstLevelCache.computeIfAbsent(query, q -> {
+			lastResultCached = false;
+			return query.fetchForCache();
+		});
+	}
+
+	<T> T getUniqueResult(Query query, Class<T> resultClass) {
+		lastResultCached = true;
+		return (T) firstLevelCache.computeIfAbsent(query, q -> {
+			lastResultCached = false;
+			return query.getUniqueResultForCache(resultClass);
+		});
+	}
+
+	public <T> List<T> fetch(Query query, Class<T> resultClass) {
+		lastResultCached = true;
+		return (List<T>) firstLevelCache.computeIfAbsent(query, q -> {
+			lastResultCached = false;
+			return query.fetchForCache(resultClass);
+		});
+	}
+
+	public boolean isLastResultCached() {
+		return lastResultCached;
 	}
 
 	/**
