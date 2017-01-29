@@ -601,10 +601,9 @@ public class ConversionRegistry {
 	}
 
 	public <T> SQLConverter<T> getConverter(Field field) {
-		String converterName = field.isAnnotationPresent(Conversion.class) ? field.getAnnotation(Conversion.class).value() : field.getType().getName();
-		try {
-			return getConverter(converterName);
-		} catch (IllegalArgumentException e) {
+		if (field.isAnnotationPresent(Conversion.class)) {
+			return getConverter(field.getAnnotation(Conversion.class).value());
+		} else {
 			return getConverter((Class<T>) field.getType());
 		}
 	}
