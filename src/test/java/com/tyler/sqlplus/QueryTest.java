@@ -505,4 +505,37 @@ public class QueryTest extends DatabaseTest {
 		});
 	}
 
+	@Test
+	public void executingUpdateInvalidatesCacheIfRowsAreAffected() throws Exception {
+		db.getSQLPlus().transact(sess -> {
+			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
+			assertFalse(sess.isLastResultCached());
+			sess.createQuery("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')").executeUpdate(); // Invalidate the cache
+			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
+			assertFalse(sess.isLastResultCached());
+		});
+	}
+
+	@Test
+	public void executingUpdateDoesNotInvalidateCacheIfNoRowsAreAffected() throws Exception {
+		db.getSQLPlus().transact(sess -> {
+			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
+			assertFalse(sess.isLastResultCached());
+			sess.createQuery("update address set street = 'maple' where state = 'AK'").executeUpdate();
+			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
+			assertTrue(sess.isLastResultCached());
+		});
+	}
+
+	@Test
+	public void executingUpdateForKeyInvalidatesCache() throws Exception {
+		db.getSQLPlus().transact(sess -> {
+			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
+			assertFalse(sess.isLastResultCached());
+			sess.createQuery("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')").executeUpdate(Integer.class);
+			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
+			assertFalse(sess.isLastResultCached());
+		});
+	}
+
 }

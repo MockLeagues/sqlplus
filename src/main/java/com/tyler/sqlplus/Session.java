@@ -40,30 +40,6 @@ public class Session implements Closeable {
 		return q;
 	}
 
-	List<Map<String, Object>> fetch(Query query) {
-		lastResultCached = true;
-		return (List<Map<String, Object>>) firstLevelCache.computeIfAbsent(query, q -> {
-			lastResultCached = false;
-			return query.fetchForCache();
-		});
-	}
-
-	<T> T getUniqueResult(Query query, Class<T> resultClass) {
-		lastResultCached = true;
-		return (T) firstLevelCache.computeIfAbsent(query, q -> {
-			lastResultCached = false;
-			return query.getUniqueResultForCache(resultClass);
-		});
-	}
-
-	public <T> List<T> fetch(Query query, Class<T> resultClass) {
-		lastResultCached = true;
-		return (List<T>) firstLevelCache.computeIfAbsent(query, q -> {
-			lastResultCached = false;
-			return query.fetchForCache(resultClass);
-		});
-	}
-
 	public boolean isLastResultCached() {
 		return lastResultCached;
 	}
@@ -86,6 +62,34 @@ public class Session implements Closeable {
 	public Query createQuery(String sql) {
 		assertOpen();
 		return new Query(sql, this);
+	}
+
+	void invalidateFirstLevelCache() {
+		firstLevelCache.clear();
+	}
+
+	List<Map<String, Object>> fetch(Query query) {
+		lastResultCached = true;
+		return (List<Map<String, Object>>) firstLevelCache.computeIfAbsent(query, q -> {
+			lastResultCached = false;
+			return query.fetchForCache();
+		});
+	}
+
+	<T> T getUniqueResult(Query query, Class<T> resultClass) {
+		lastResultCached = true;
+		return (T) firstLevelCache.computeIfAbsent(query, q -> {
+			lastResultCached = false;
+			return query.getUniqueResultForCache(resultClass);
+		});
+	}
+
+	<T> List<T> fetch(Query query, Class<T> resultClass) {
+		lastResultCached = true;
+		return (List<T>) firstLevelCache.computeIfAbsent(query, q -> {
+			lastResultCached = false;
+			return query.fetchForCache(resultClass);
+		});
 	}
 
 	private void assertOpen() {

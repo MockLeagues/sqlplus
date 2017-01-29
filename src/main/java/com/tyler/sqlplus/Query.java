@@ -172,11 +172,19 @@ public class Query {
 	public int[] executeUpdate() {
 		try {
 			PreparedStatement ps = prepareStatement(false);
+
+			int[] affectedRowsPerBatch;
 			if (paramBatches.size() > 1) {
-				return ps.executeBatch();
+				affectedRowsPerBatch = ps.executeBatch();
 			} else {
-				return new int[]{ ps.executeUpdate() };
+				affectedRowsPerBatch = new int[]{ ps.executeUpdate() };
 			}
+
+			int totalAffectedRows = Arrays.stream(affectedRowsPerBatch).sum();
+			if (totalAffectedRows > 0) {
+				session.invalidateFirstLevelCache();
+			}
+			return affectedRowsPerBatch;
 		}
 		catch (SQLException e) {
 			throw new SQLRuntimeException(e);
@@ -204,6 +212,8 @@ public class Query {
 			while (rsKeys.next()) {
 				keys.add(reader.read(rsKeys, 1, targetKeyClass));
 			}
+
+			session.invalidateFirstLevelCache();
 			return keys;
 					
 		} catch (SQLException e) {
