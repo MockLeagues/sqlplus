@@ -17,22 +17,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class ResultMappersTest {
-
-	@Test
-	public void testMapStringArray() throws Exception {
-		
-		ResultSetMetaData rsMeta = mock(ResultSetMetaData.class);
-		when(rsMeta.getColumnCount()).thenReturn(2);
-		
-		ResultSet rsToMap = mock(ResultSet.class);
-		when(rsToMap.getMetaData()).thenReturn(rsMeta);
-		when(rsToMap.getString(1)).thenReturn("valA");
-		when(rsToMap.getString(2)).thenReturn("valB");
-		
-		String[] row = ResultMappers.forStringArray().map(rsToMap);
-		assertArrayEquals(new String[]{"valA", "valB"}, row);
-	}
+public class RowMappersTest {
 	
 	public static class MyPOJO {
 		
@@ -98,7 +83,7 @@ public class ResultMappersTest {
 		when(rsToMap.getString("enumField")).thenReturn("SMALL");
 		when(rsToMap.getString("localDateField")).thenReturn("2015-01-01");
 		
-		MyPOJO pojo = ResultMappers.forClass(MyPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		MyPOJO pojo = RowMapperFactory.newMapper(MyPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		
 		assertEquals(1, pojo.intField);
 		assertEquals(new Float(1.5), new Float(pojo.floatField));
@@ -137,7 +122,7 @@ public class ResultMappersTest {
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		when(rsToMap.getInt("presentField")).thenReturn(1);
 		
-		POJOWithNullFields pojo = ResultMappers.forClass(POJOWithNullFields.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		POJOWithNullFields pojo = RowMapperFactory.newMapper(POJOWithNullFields.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		
 		assertEquals(new Integer(1), pojo.presentField);
 		assertNull(pojo.nonPresentField);
@@ -158,7 +143,7 @@ public class ResultMappersTest {
 		ResultSet rsToMap = mock(ResultSet.class);
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		
-		Map<Field, String> mappableFields = ResultMappers.determineLoadableFields(rsToMap, POJOMappableFields.class);
+		Map<Field, String> mappableFields = RowMapperFactory.determineLoadableFields(rsToMap, POJOMappableFields.class);
 		
 		assertTrue(mappableFields.containsKey(POJOMappableFields.class.getDeclaredField("mappableA")));
 		assertFalse(mappableFields.containsKey(POJOMappableFields.class.getDeclaredField("mappableB")));
@@ -187,7 +172,7 @@ public class ResultMappersTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		ProxiablePOJOByField proxy = ResultMappers.forClass(ProxiablePOJOByField.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		ProxiablePOJOByField proxy = RowMapperFactory.newMapper(ProxiablePOJOByField.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		assertTrue(proxy instanceof Proxy);
 	}
 	
@@ -218,7 +203,7 @@ public class ResultMappersTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		ProxiablePOJOByMethod proxy = ResultMappers.forClass(ProxiablePOJOByMethod.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		ProxiablePOJOByMethod proxy = RowMapperFactory.newMapper(ProxiablePOJOByMethod.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		assertTrue(proxy instanceof Proxy);
 	}
 	
@@ -240,7 +225,7 @@ public class ResultMappersTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		NormalPOJO pojo = ResultMappers.forClass(NormalPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		NormalPOJO pojo = RowMapperFactory.newMapper(NormalPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 		assertFalse(pojo instanceof Proxy);
 		assertTrue(pojo.getClass() == NormalPOJO.class);
 	}
@@ -265,7 +250,7 @@ public class ResultMappersTest {
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 
 		// Throws if error
-		ResultMappers.forClass(PrivateConstructorPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		RowMapperFactory.newMapper(PrivateConstructorPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
 	}
 	
 }

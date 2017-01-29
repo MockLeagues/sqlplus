@@ -6,8 +6,8 @@ import com.tyler.sqlplus.conversion.FieldWriter;
 import com.tyler.sqlplus.exception.*;
 import com.tyler.sqlplus.function.BatchConsumer;
 import com.tyler.sqlplus.function.Functions;
-import com.tyler.sqlplus.mapper.ResultMapper;
-import com.tyler.sqlplus.mapper.ResultMappers;
+import com.tyler.sqlplus.mapper.RowMapper;
+import com.tyler.sqlplus.mapper.RowMapperFactory;
 import com.tyler.sqlplus.mapper.ResultStream;
 import com.tyler.sqlplus.utility.Fields;
 import javassist.util.proxy.Proxy;
@@ -78,21 +78,6 @@ public class Query {
 		manualParamBatch.put(paramIndex, val);
 		return this;
 	}
-	
-	/**
-	 * Executes this query, mapping results to a simple list of maps
-	 */
-	public List<Map<String, Object>> fetch() {
-		return session.fetch(this);
-	}
-
-	/**
-	 * Called by the session if result is not present in its cache
-	 */
-	List<Map<String, Object>> fetchForCache() {
-		ResultMapper<Map<String, Object>> rowMapper = ResultMappers.forMap();
-		return stream().map(rs -> Functions.runSQL(() -> rowMapper.map(rs))).collect(toList());
-	}
 
 	/**
 	 * Executes this query, mapping the single result to an instance of the given POJO class. If more than 1 result is returned,
@@ -115,7 +100,15 @@ public class Query {
 			}
 			return results.get(0);
 	}
-	
+
+	/**
+	 * Executes this query, mapping the results to a list of maps
+	 */
+	public List<Map<String, Object>> fetch() {
+		Object result = fetchAs(Map.class);
+		return (List<Map<String, Object>>) result;
+	}
+
 	/**
 	 * Executes this query, mapping the results to the given POJO class
 	 */
@@ -153,8 +146,8 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		ResultMapper<T> pojoMapper = ResultMappers.forClass(klass, conversionRegistry, session);
-		return stream().map(rs -> Functions.runSQL(() -> pojoMapper.map(rs)));
+		RowMapper<T> mapper = RowMapperFactory.newMapper(klass, conversionRegistry, session);
+		return stream().map(rs -> Functions.runSQL(() -> mapper.map(rs)));
 	}
 	
 	public Stream<ResultSet> stream() {

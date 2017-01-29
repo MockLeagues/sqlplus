@@ -19,7 +19,12 @@ import java.util.*;
 /**
  * Produces entity proxies to use when mapping POJOs from result sets
  */
-public class EntityProxy {
+public class BeanProxy {
+
+	/**
+	 * Caches which classes are proxy-able, i.e. have fields or methods annotated with @LoadQuery
+	 */
+	static final Map<Class<?>, Boolean> TYPE_PROXIABLE = new HashMap<>();
 
 	/**
 	 * Creates a proxy of the given class type which will intercept method calls in order to lazy-load related entities
@@ -105,15 +110,17 @@ public class EntityProxy {
 	 * Proxy objects are returned if there is at least 1 field or method in the class with a @LoadQuery annotation
 	 */
 	public static boolean isProxiable(Class<?> type) {
+		return TYPE_PROXIABLE.computeIfAbsent(type, t -> {
 
-		List<AccessibleObject> fieldsAndMethods = new ArrayList<>();
-		fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredFields()));
-		fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredMethods()));
+			List<AccessibleObject> fieldsAndMethods = new ArrayList<>();
+			fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredFields()));
+			fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredMethods()));
 
-		return fieldsAndMethods.stream()
-		                       .filter(o -> o.isAnnotationPresent(LoadQuery.class))
-		                       .findFirst()
-		                       .isPresent();
+			return fieldsAndMethods.stream()
+							               .filter(o -> o.isAnnotationPresent(LoadQuery.class))
+							               .findFirst()
+							               .isPresent();
+		});
 	}
 
 }

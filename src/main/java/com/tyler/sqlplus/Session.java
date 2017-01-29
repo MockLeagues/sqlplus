@@ -68,14 +68,6 @@ public class Session implements Closeable {
 		firstLevelCache.clear();
 	}
 
-	List<Map<String, Object>> fetch(Query query) {
-		lastResultCached = true;
-		return (List<Map<String, Object>>) firstLevelCache.computeIfAbsent(query, q -> {
-			lastResultCached = false;
-			return query.fetchForCache();
-		});
-	}
-
 	<T> T getUniqueResult(Query query, Class<T> resultClass) {
 		lastResultCached = true;
 		return (T) firstLevelCache.computeIfAbsent(query, q -> {

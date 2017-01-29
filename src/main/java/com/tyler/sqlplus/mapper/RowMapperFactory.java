@@ -6,7 +6,7 @@ import com.tyler.sqlplus.conversion.FieldReader;
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.function.Functions;
-import com.tyler.sqlplus.proxy.EntityProxy;
+import com.tyler.sqlplus.proxy.BeanProxy;
 import com.tyler.sqlplus.utility.Fields;
 import com.tyler.sqlplus.utility.ReflectionUtility;
 
@@ -14,78 +14,26 @@ import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
- * Utilities for creating various result mappers
+ * Utility for creating result mappers for Java class types
  */
-public final class ResultMappers {
-
-	private static final ResultMapper<String[]> STRING_ARRAY = rs -> {
-		List<String> row = new ArrayList<>();
-		ResultSetMetaData meta = rs.getMetaData();
-		for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
-			row.add(rs.getString(col));
-		}
-		return row.toArray(new String[row.size()]);
-	};
+public final class RowMapperFactory {
 	
-	private static final ResultMapper<Map<String, Object>> MAP = forMap(HashMap.class);
+	private RowMapperFactory() {}
 
 	/**
-	 * Caches which classes are proxyable, i.e. have fields or methods annotated with @LoadQuery
-	 */
-	static final Map<Class<?>, Boolean> TYPE_PROXIABLE = new HashMap<>();
-	
-	private ResultMappers() {}
-
-	/**
-	 * Creates a result mapper which maps rows to string arrays
-	 */
-	public static ResultMapper<String[]> forStringArray() {
-		return STRING_ARRAY;
-	}
-	
-	/**
-	 * Creates a result mapper which maps rows to hash maps
-	 */
-	public static ResultMapper<Map<String, Object>> forMap() {
-		return MAP;
-	}
-	
-	/**
-	 * Creates a result mapper which maps rows to java Map objects of the given implementation
-	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static ResultMapper<Map<String, Object>> forMap(Class<? extends Map> impl) {
-		return rs -> {
-			Map<String, Object> row;
-			try {
-				row = impl.newInstance();
-			} catch (InstantiationException | IllegalAccessException e) {
-				throw new ReflectionException("Could not instantiate instance of map implementation " + impl, e);
-			}
-			
-			ResultSetMetaData meta = rs.getMetaData();
-			for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
-				row.put(meta.getColumnLabel(col), rs.getObject(col));
-			}
-			
-			return row;
-		};
-	};
-
-	/**
-	 * Creates a {@link ResultMapper} which will map ResultSet rows to objects of the given type.
+	 * Creates a {@link RowMapper} which will map ResultSet rows to objects of the given type.
+	 * <br>
 	 * If the given type is determined to be a scalar value according to the given conversion registry, then
 	 * a mapper will be returned which simply maps scalar values of the given type from the first column.
+	 * <br>
 	 * If the given class type has any fields or methods annotated with @LoadQuery (denoting a lazy-loaded collection), a proxy
 	 * object will be returned;
 	 */
-	public static <E> ResultMapper<E> forClass(Class<E> klass, ConversionRegistry converter, Session session) {
+	public static <E> RowMapper<E> newMapper(Class<E> klass, ConversionRegistry converter, Session session) {
 
 		// Scalar == value that cannot be reduced. These values will have dedicated readers. Therefore, if a reader exists for the type, it is scalar
 		boolean isScalar = converter.containsReader(klass);
@@ -98,9 +46,30 @@ public final class ResultMappers {
 			};
 		}
 
-		boolean shouldReturnProxy = TYPE_PROXIABLE.computeIfAbsent(klass, EntityProxy::isProxiable);
+		// Special case for maps
+		if (Map.class.isAssignableFrom(klass)) {
+			return rs -> {
 
-		return new ResultMapper<E>() {
+				Map<String, Object> row;
+				try {
+					row = klass == Map.class ? new HashMap<>() : (Map<String, Object>) klass.newInstance();
+				} catch (InstantiationException | IllegalAccessException e) {
+					throw new ReflectionException("Could not instantiate instance of map implementation " + klass, e);
+				}
+
+				ResultSetMetaData meta = rs.getMetaData();
+				for (int col = 1, colMax = meta.getColumnCount(); col <= colMax; col++) {
+					row.put(meta.getColumnLabel(col), rs.getObject(col));
+				}
+
+				return (E) row;
+			};
+		}
+
+		// Else it is a POJO
+		boolean shouldReturnProxy = BeanProxy.isProxiable(klass);
+
+		return new RowMapper<E>() {
 
 			private Map<Field, String> loadableFields;
 			
@@ -111,7 +80,7 @@ public final class ResultMappers {
 					loadableFields = determineLoadableFields(rs, klass);
 				}
 
-				E instance = shouldReturnProxy ? EntityProxy.create(klass, session) : ReflectionUtility.newInstance(klass);
+				E instance = shouldReturnProxy ? BeanProxy.create(klass, session) : ReflectionUtility.newInstance(klass);
 
 				loadableFields.forEach((loadableField, columnName) -> {
 					Class<?> fieldType = loadableField.getType();

@@ -66,7 +66,7 @@ public class QueryTest extends DatabaseTest {
 	public void errorThrownIfNoParamsSet() throws Exception {
 		db.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
-				conn.createQuery("select * from employee where name = :name").fetch();
+				conn.createQuery("select * from employee where name = :name").fetchAs(Map.class);
 			}, QueryStructureException.class, "No parameters set");
 		});
 	}
@@ -142,7 +142,7 @@ public class QueryTest extends DatabaseTest {
 	}
 
 	@Test
-	public void resultsCanBeFetchesAsMaps() throws Exception {
+	public void resultsCanBeFetchedAsMaps() throws Exception {
 		
 		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
