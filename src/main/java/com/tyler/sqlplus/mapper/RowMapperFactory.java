@@ -1,7 +1,7 @@
 package com.tyler.sqlplus.mapper;
 
 import com.tyler.sqlplus.Session;
-import com.tyler.sqlplus.conversion.ConversionRegistry;
+import com.tyler.sqlplus.conversion.SQLConverter;
 import com.tyler.sqlplus.conversion.FieldReader;
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
@@ -33,7 +33,7 @@ public final class RowMapperFactory {
 	 * If the given class type has any fields or methods annotated with @LoadQuery (denoting a lazy-loaded collection), a proxy
 	 * object will be returned;
 	 */
-	public static <E> RowMapper<E> newMapper(Class<E> klass, ConversionRegistry converter, Session session) {
+	public static <E> RowMapper<E> newMapper(Class<E> klass, SQLConverter converter, Session session) {
 
 		// Scalar == value that cannot be reduced. These values will have dedicated readers. Therefore, if a reader exists for the type, it is scalar
 		boolean isScalar = converter.containsReader(klass);
@@ -66,7 +66,6 @@ public final class RowMapperFactory {
 			};
 		}
 
-		// Else it is a POJO
 		boolean shouldReturnProxy = BeanProxy.isProxiable(klass);
 
 		return new RowMapper<E>() {

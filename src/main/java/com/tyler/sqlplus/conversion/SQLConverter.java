@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class ConversionRegistry {
+public class SQLConverter {
 
 	private static final Map<Class<?>, FieldReader<?>> READER_REGISTRY = new LinkedHashMap<>();
 	private static final Map<Class<?>, FieldWriter<?>> WRITER_REGISTRY = new LinkedHashMap<>();
@@ -278,7 +278,7 @@ public class ConversionRegistry {
 	private Map<Class<?>, FieldReader<?>> readers;
 	private Map<Class<?>, FieldWriter<?>> writers;
 	
-	public ConversionRegistry() {
+	public SQLConverter() {
 		readers = new HashMap<>(READER_REGISTRY);
 		writers = new HashMap<>(WRITER_REGISTRY);
 	}

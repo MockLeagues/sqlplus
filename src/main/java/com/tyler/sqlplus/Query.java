@@ -1,6 +1,6 @@
 package com.tyler.sqlplus;
 
-import com.tyler.sqlplus.conversion.ConversionRegistry;
+import com.tyler.sqlplus.conversion.SQLConverter;
 import com.tyler.sqlplus.conversion.FieldReader;
 import com.tyler.sqlplus.conversion.FieldWriter;
 import com.tyler.sqlplus.exception.*;
@@ -36,7 +36,7 @@ public class Query {
 	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
-	private ConversionRegistry conversionRegistry = new ConversionRegistry();
+	private SQLConverter converter = new SQLConverter();
 	
 	/** Should only be constructed by the Session class */
 	Query(String sql, Session session) {
@@ -50,7 +50,7 @@ public class Query {
 	 * be used when constructing POJO objects
 	 */
 	public <T> Query setReader(Class<T> type, FieldReader<T> reader) {
-		conversionRegistry.registerReader(type, reader);
+		converter.registerReader(type, reader);
 		return this;
 	}
 	
@@ -58,7 +58,7 @@ public class Query {
 	 * Sets the function to use for writing parameter objects of the given type for this query
 	 */
 	public <T> Query setWriter(Class<T> type, FieldWriter<T> writer) {
-		conversionRegistry.registerWriter(type, writer);
+		converter.registerWriter(type, writer);
 		return this;
 	}
 	
@@ -146,7 +146,7 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		RowMapper<T> mapper = RowMapperFactory.newMapper(klass, conversionRegistry, session);
+		RowMapper<T> mapper = RowMapperFactory.newMapper(klass, converter, session);
 		return stream().map(rs -> Functions.runSQL(() -> mapper.map(rs)));
 	}
 	
@@ -201,7 +201,7 @@ public class Query {
 			List<T> keys = new ArrayList<>();
 			ResultSet rsKeys = ps.getGeneratedKeys();
 			
-			FieldReader<T> reader = conversionRegistry.getReader(targetKeyClass);
+			FieldReader<T> reader = converter.getReader(targetKeyClass);
 			while (rsKeys.next()) {
 				keys.add(reader.read(rsKeys, 1, targetKeyClass));
 			}
@@ -241,7 +241,7 @@ public class Query {
 				if (objParam == null) {
 					Functions.runSQL(() -> ps.setObject(paramIndex, null));
 				} else {
-					FieldWriter writer = conversionRegistry.getWriter(objParam.getClass());
+					FieldWriter writer = converter.getWriter(objParam.getClass());
 					Functions.runSQL(() -> writer.write(ps, paramIndex, objParam));
 				}
 			});

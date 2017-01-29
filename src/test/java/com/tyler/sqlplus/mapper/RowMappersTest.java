@@ -2,7 +2,7 @@ package com.tyler.sqlplus.mapper;
 
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.conversion.ConversionRegistry;
+import com.tyler.sqlplus.conversion.SQLConverter;
 import javassist.util.proxy.Proxy;
 import org.junit.Test;
 
@@ -83,7 +83,7 @@ public class RowMappersTest {
 		when(rsToMap.getString("enumField")).thenReturn("SMALL");
 		when(rsToMap.getString("localDateField")).thenReturn("2015-01-01");
 		
-		MyPOJO pojo = RowMapperFactory.newMapper(MyPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		MyPOJO pojo = RowMapperFactory.newMapper(MyPOJO.class, new SQLConverter(), mock(Session.class)).map(rsToMap);
 		
 		assertEquals(1, pojo.intField);
 		assertEquals(new Float(1.5), new Float(pojo.floatField));
@@ -122,7 +122,7 @@ public class RowMappersTest {
 		when(rsToMap.getMetaData()).thenReturn(rsMeta);
 		when(rsToMap.getInt("presentField")).thenReturn(1);
 		
-		POJOWithNullFields pojo = RowMapperFactory.newMapper(POJOWithNullFields.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		POJOWithNullFields pojo = RowMapperFactory.newMapper(POJOWithNullFields.class, new SQLConverter(), mock(Session.class)).map(rsToMap);
 		
 		assertEquals(new Integer(1), pojo.presentField);
 		assertNull(pojo.nonPresentField);
@@ -172,7 +172,7 @@ public class RowMappersTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		ProxiablePOJOByField proxy = RowMapperFactory.newMapper(ProxiablePOJOByField.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		ProxiablePOJOByField proxy = RowMapperFactory.newMapper(ProxiablePOJOByField.class, new SQLConverter(), mock(Session.class)).map(rsToMap);
 		assertTrue(proxy instanceof Proxy);
 	}
 	
@@ -203,7 +203,7 @@ public class RowMappersTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		ProxiablePOJOByMethod proxy = RowMapperFactory.newMapper(ProxiablePOJOByMethod.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		ProxiablePOJOByMethod proxy = RowMapperFactory.newMapper(ProxiablePOJOByMethod.class, new SQLConverter(), mock(Session.class)).map(rsToMap);
 		assertTrue(proxy instanceof Proxy);
 	}
 	
@@ -225,7 +225,7 @@ public class RowMappersTest {
 		when(rsToMap.getString("id")).thenReturn("12345");
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 		
-		NormalPOJO pojo = RowMapperFactory.newMapper(NormalPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		NormalPOJO pojo = RowMapperFactory.newMapper(NormalPOJO.class, new SQLConverter(), mock(Session.class)).map(rsToMap);
 		assertFalse(pojo instanceof Proxy);
 		assertTrue(pojo.getClass() == NormalPOJO.class);
 	}
@@ -250,7 +250,7 @@ public class RowMappersTest {
 		when(rsToMap.getString("name")).thenReturn("fakeyMcMadeup");
 
 		// Throws if error
-		RowMapperFactory.newMapper(PrivateConstructorPOJO.class, new ConversionRegistry(), mock(Session.class)).map(rsToMap);
+		RowMapperFactory.newMapper(PrivateConstructorPOJO.class, new SQLConverter(), mock(Session.class)).map(rsToMap);
 	}
 	
 }
