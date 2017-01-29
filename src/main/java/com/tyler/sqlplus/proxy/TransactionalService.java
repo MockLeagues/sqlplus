@@ -1,35 +1,25 @@
 package com.tyler.sqlplus.proxy;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.Collection;
-import java.util.Optional;
-
 import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.Session;
-import com.tyler.sqlplus.annotation.BindObject;
-import com.tyler.sqlplus.annotation.BindParam;
-import com.tyler.sqlplus.annotation.Database;
-import com.tyler.sqlplus.annotation.DAOQuery;
-import com.tyler.sqlplus.annotation.DAOUpdate;
-import com.tyler.sqlplus.annotation.Transactional;
+import com.tyler.sqlplus.annotation.*;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.QueryInterpretationException;
 import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.interpreter.QueryInterpreter;
 import com.tyler.sqlplus.utility.Fields;
 import com.tyler.sqlplus.utility.ReflectionUtility;
-
 import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
 
+import java.lang.reflect.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Optional;
+
 /**
- * Creates proxy objects capable of wrapping {@link Transaction} annotated methods in SQLPlus transactions as
+ * Creates proxy objects capable of wrapping {@link Transactional} annotated methods in SQLPlus transactions as
  * well as synthesizing query and update methods
  */
 public class TransactionalService {
@@ -97,32 +87,46 @@ public class TransactionalService {
 		String sql = updateAnnot.value();
 		Query query = session.createQuery(sql);
 		bindParams(query, queryMethod.getParameters(), invokeArgs);
-		
-		if (updateAnnot.returnKeys()) {
-			
-			Class<?> keyClass;
-			Type returnType = queryMethod.getGenericReturnType();
-			if (returnType instanceof Class) {
-				keyClass = (Class<?>) returnType;
-			} else if (returnType instanceof ParameterizedType) {
-				ParameterizedType paramType = (ParameterizedType) returnType;
-				keyClass = (Class<?>) paramType.getActualTypeArguments()[0];
-			} else {
-				throw new QueryInterpretationException("Cannot determine key return type for " + queryMethod);
-			}
-			
-			@SuppressWarnings("rawtypes")
-			Collection keys = query.executeUpdate(keyClass);
-			
-			if (Collection.class.isAssignableFrom(queryMethod.getReturnType())) {
-				return keys;
-			} else {
-				return keys.isEmpty() ? null : keys.iterator().next();
-			}
-			
-		} else {
-			query.executeUpdate();
-			return null;
+
+		switch (updateAnnot.returnInfo()) {
+
+			case GENERATED_KEYS:
+
+				Class<?> keyClass;
+				Type genericReturnType = queryMethod.getGenericReturnType();
+				if (genericReturnType instanceof Class) {
+					keyClass = (Class<?>) genericReturnType;
+				} else if (genericReturnType instanceof ParameterizedType) {
+					ParameterizedType paramType = (ParameterizedType) genericReturnType;
+					keyClass = (Class<?>) paramType.getActualTypeArguments()[0];
+				} else {
+					throw new QueryInterpretationException("Cannot determine key return type for " + queryMethod);
+				}
+
+				@SuppressWarnings("rawtypes")
+				Collection keys = query.executeUpdate(keyClass);
+
+				if (Collection.class.isAssignableFrom(queryMethod.getReturnType())) {
+					return keys;
+				} else {
+					return keys.isEmpty() ? null : keys.iterator().next();
+				}
+
+			case AFFECTED_ROWS:
+
+				int[] affectedRows = query.executeUpdate();
+				Class<?> returnType = queryMethod.getReturnType();
+				if (int.class == returnType || Integer.class == returnType) {
+					return Arrays.stream(affectedRows).sum();
+				} else if (Integer[].class.isAssignableFrom(returnType) || int[].class.isAssignableFrom(returnType)) {
+					return affectedRows;
+				} else {
+					throw new QueryInterpretationException("Cannot interpret update counts as " + returnType + ", must be either an integer or integer array");
+				}
+
+			case NONE:
+			default:
+				return query.executeUpdate();
 		}
 		
 	}

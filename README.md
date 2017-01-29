@@ -241,10 +241,16 @@ abstract class WidgetService {
 	public abstract void createWidgets(@BindObject Collection<Widget> widget);
 	  
 	/**
-	 * If you want to retrieve generated keys for an insert, simply pass 'true' for the 'returnKeys' value
+	 * If you want to retrieve generated keys for an insert, you can specify a return info of GENERATED_KEYS:
 	 */
-	@DAOUpdate(value = "insert into widget(name, color) values (:name, :color)", returnKeys = true)
+	@DAOUpdate(value = "insert into widget(name, color) values (:name, :color)", returnInfo = ReturnInfo.GENERATED_KEYS)
 	public abstract Integer createWidgetWithKey(@BindObject Widget widget);
+	
+	/**
+	 * You can also retrieve the total update count by passing AFFECTED_ROWS for the return info:
+	 */
+	@DAOUpdate(value = "delete from widgets where color = :color", returnInfo = ReturnInfo.AFFECTED_ROWS)
+	public abstract int deleteWidgets(@BindParam("color") String color);
 	
 	/**
 	 * Of course, you still have the ability to execute a custom transactional method

@@ -2,6 +2,7 @@ package com.tyler.sqlplus.proxy;
 
 import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.*;
+import com.tyler.sqlplus.annotation.DAOUpdate.ReturnInfo;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Address;
@@ -125,22 +126,34 @@ public class TransactionalServiceTest extends DatabaseTest {
 		
 		@DAOUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
-			returnKeys = true
+			returnInfo = ReturnInfo.GENERATED_KEYS
 		)
 		public abstract Integer createAddressWithKey(@BindObject Address address);
-		
+
 		@DAOUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
-			returnKeys = true
+			returnInfo = ReturnInfo.GENERATED_KEYS
 		)
 		public abstract List<Integer> createAddressesWithKeys(@BindObject Collection<Address> addresses);
 		
 		@DAOUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
-			returnKeys = true
+			returnInfo = ReturnInfo.GENERATED_KEYS
 		)
 		public abstract List<Integer> createAddressesWithKeysVarargs(@BindObject Address... addresses);
-		
+
+		@DAOUpdate(
+			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
+			returnInfo = ReturnInfo.AFFECTED_ROWS
+		)
+		public abstract int[] createAddressesWithAffectedRowsArray(@BindObject Address... address);
+
+		@DAOUpdate(
+			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
+			returnInfo = ReturnInfo.AFFECTED_ROWS
+		)
+		public abstract int createAddressesWithAffectedRowsSingleInt(@BindObject Address... address);
+
 	}
 	
 	@Test
@@ -308,5 +321,47 @@ public class TransactionalServiceTest extends DatabaseTest {
 		assertEquals(new Integer(1), keys.get(0));
 		assertEquals(new Integer(2), keys.get(1));
 	}
-	
+
+	@Test
+	public void updateShouldReturnArrayOfUpdateCountsWithArrayReturnType() throws Exception {
+
+		Address add1 = new Address();
+		add1.city = "test-city";
+		add1.state = "test-state";
+		add1.street = "test-street";
+		add1.zip = "test-zip";
+
+		Address add2 = new Address();
+		add2.city = "test2-city";
+		add2.state = "test2-state";
+		add2.street = "test2-street";
+		add2.zip = "test2-zip";
+
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
+		int[] updates = service.createAddressesWithAffectedRowsArray(add1, add2);
+
+		assertArrayEquals(updates, new int[]{ 1, 1} );
+	}
+
+	@Test
+	public void updateShouldReturnTotalUpdateCountWithSingleIntegerReturnType() throws Exception {
+
+		Address add1 = new Address();
+		add1.city = "test-city";
+		add1.state = "test-state";
+		add1.street = "test-street";
+		add1.zip = "test-zip";
+
+		Address add2 = new Address();
+		add2.city = "test2-city";
+		add2.state = "test2-state";
+		add2.street = "test2-street";
+		add2.zip = "test2-zip";
+
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
+		int updates = service.createAddressesWithAffectedRowsSingleInt(add1, add2);
+
+		assertEquals(updates, 2);
+	}
+
 }

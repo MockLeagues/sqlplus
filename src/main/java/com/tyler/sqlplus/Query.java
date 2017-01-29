@@ -145,15 +145,15 @@ public class Query {
 	}
 	
 	/**
-	 * Execute this query's payload as an update statement
+	 * Execute this query's payload as an update statement, returning an array of update counts for each batched statement
 	 */
-	public void executeUpdate() {
+	public int[] executeUpdate() {
 		try {
 			PreparedStatement ps = prepareStatement(false);
 			if (paramBatches.size() > 1) {
-				ps.executeBatch();
+				return ps.executeBatch();
 			} else {
-				ps.executeUpdate();
+				return new int[]{ ps.executeUpdate() };
 			}
 		}
 		catch (SQLException e) {
@@ -165,7 +165,7 @@ public class Query {
 	 * Executes this query's payload as an update statement, returning the generated keys as instances of the given class
 	 */
 	public <T> List<T> executeUpdate(Class<T> targetKeyClass) {
-		
+
 		try {
 			
 			PreparedStatement ps = prepareStatement(true);
