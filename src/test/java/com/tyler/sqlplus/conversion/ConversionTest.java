@@ -1,5 +1,6 @@
 package com.tyler.sqlplus.conversion;
 
+import com.tyler.sqlplus.annotation.Conversion;
 import com.tyler.sqlplus.base.DatabaseTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,6 +38,10 @@ public class ConversionTest extends DatabaseTest {
 		BigDecimal hugeDouble;
 		boolean tinyBoolean;
 		Boolean bigBoolean;
+		@Conversion("yes_no")
+		boolean tinyYNBoolean;
+		@Conversion("yes_no")
+		Boolean bigYNBoolean;
 		char tinyChar;
 		Character bigChar;
 		String string;
@@ -217,15 +222,20 @@ public class ConversionTest extends DatabaseTest {
 	public void tinyBooleanIsReadWhenPresent() throws Exception {
 		testRead("tiny_int_field", "1", "tiny_int_field", "tinyBoolean", true);
 	}
-	
-	@Test
-	public void tinyBooleanIsReadAsFalseWhenNull() throws Exception {
-		testRead("int_field", "5", "tiny_int_field", "tinyBoolean", false);
-	}
 
 	@Test
 	public void tinyBooleanIsWritten() throws Exception {
 		testWrite("tiny_int_field", true, "1");
+	}
+
+	@Test
+	public void tinyYNBooleanIsReadWhenPresent() throws Exception {
+		testRead("char_field", "'Y'", "char_field", "tinyYNBoolean", true);
+	}
+
+	@Test
+	public void tinyYNBooleanIsReadAsFalseWhenNull() throws Exception {
+		testRead("int_field", "5", "char_field", "tinyYNBoolean", false);
 	}
 
 	@Test
@@ -236,6 +246,16 @@ public class ConversionTest extends DatabaseTest {
 	@Test
 	public void bigBooleanIsReadAsNull() throws Exception {
 		testRead("int_field", "5", "tiny_int_field", "bigBoolean", null);
+	}
+
+	@Test
+	public void bigYNBooleanIsReadWhenPresent() throws Exception {
+		testRead("char_field", "'Y'", "char_field", "bigYNBoolean", true);
+	}
+
+	@Test
+	public void bigYNBooleanIsReadAsFalseWhenNull() throws Exception {
+		testRead("int_field", "5", "char_field", "bigYNBoolean", null);
 	}
 
 	@Test

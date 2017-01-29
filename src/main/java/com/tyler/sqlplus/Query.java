@@ -1,14 +1,13 @@
 package com.tyler.sqlplus;
 
+import com.tyler.sqlplus.conversion.ConversionRegistry;
 import com.tyler.sqlplus.conversion.SQLConverter;
-import com.tyler.sqlplus.conversion.FieldReader;
-import com.tyler.sqlplus.conversion.FieldWriter;
 import com.tyler.sqlplus.exception.*;
 import com.tyler.sqlplus.function.BatchConsumer;
 import com.tyler.sqlplus.function.Functions;
+import com.tyler.sqlplus.mapper.ResultStream;
 import com.tyler.sqlplus.mapper.RowMapper;
 import com.tyler.sqlplus.mapper.RowMapperFactory;
-import com.tyler.sqlplus.mapper.ResultStream;
 import com.tyler.sqlplus.utility.Fields;
 import javassist.util.proxy.Proxy;
 
@@ -36,30 +35,13 @@ public class Query {
 	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
-	private SQLConverter converter = new SQLConverter();
+	private ConversionRegistry conversionRegistry = new ConversionRegistry();
 	
 	/** Should only be constructed by the Session class */
 	Query(String sql, Session session) {
 		this.session = session;
 		this.sql = sql;
 		this.paramLabel_paramIndex = parseParams(sql);
-	}
-	
-	/**
-	 * Sets the function to use for reading parameter objects from the result set produced by this query. These will
-	 * be used when constructing POJO objects
-	 */
-	public <T> Query setReader(Class<T> type, FieldReader<T> reader) {
-		converter.registerReader(type, reader);
-		return this;
-	}
-	
-	/**
-	 * Sets the function to use for writing parameter objects of the given type for this query
-	 */
-	public <T> Query setWriter(Class<T> type, FieldWriter<T> writer) {
-		converter.registerWriter(type, writer);
-		return this;
 	}
 	
 	public Query setParameter(Integer index, Object val) {
@@ -146,7 +128,7 @@ public class Query {
 	}
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
-		RowMapper<T> mapper = RowMapperFactory.newMapper(klass, converter, session);
+		RowMapper<T> mapper = RowMapperFactory.newMapper(klass, conversionRegistry, session);
 		return stream().map(rs -> Functions.runSQL(() -> mapper.map(rs)));
 	}
 	
@@ -201,9 +183,9 @@ public class Query {
 			List<T> keys = new ArrayList<>();
 			ResultSet rsKeys = ps.getGeneratedKeys();
 			
-			FieldReader<T> reader = converter.getReader(targetKeyClass);
+			SQLConverter<T> converter = conversionRegistry.getConverter(targetKeyClass);
 			while (rsKeys.next()) {
-				keys.add(reader.read(rsKeys, 1, targetKeyClass));
+				keys.add(converter.read(rsKeys, 1, targetKeyClass));
 			}
 
 			session.invalidateFirstLevelCache();
@@ -241,8 +223,8 @@ public class Query {
 				if (objParam == null) {
 					Functions.runSQL(() -> ps.setObject(paramIndex, null));
 				} else {
-					FieldWriter writer = converter.getWriter(objParam.getClass());
-					Functions.runSQL(() -> writer.write(ps, paramIndex, objParam));
+					SQLConverter converter = conversionRegistry.getConverter(objParam.getClass());
+					Functions.runSQL(() -> converter.write(ps, paramIndex, objParam));
 				}
 			});
 			

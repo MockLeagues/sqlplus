@@ -1,8 +1,8 @@
 package com.tyler.sqlplus.mapper;
 
 import com.tyler.sqlplus.Session;
+import com.tyler.sqlplus.conversion.ConversionRegistry;
 import com.tyler.sqlplus.conversion.SQLConverter;
-import com.tyler.sqlplus.conversion.FieldReader;
 import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.function.Functions;
@@ -33,16 +33,16 @@ public final class RowMapperFactory {
 	 * If the given class type has any fields or methods annotated with @LoadQuery (denoting a lazy-loaded collection), a proxy
 	 * object will be returned;
 	 */
-	public static <E> RowMapper<E> newMapper(Class<E> klass, SQLConverter converter, Session session) {
+	public static <E> RowMapper<E> newMapper(Class<E> klass, ConversionRegistry conversionRegistry, Session session) {
 
 		// Scalar == value that cannot be reduced. These values will have dedicated readers. Therefore, if a reader exists for the type, it is scalar
-		boolean isScalar = converter.containsReader(klass);
+		boolean isScalar = conversionRegistry.containsConverter(klass);
 		if (isScalar) {
 			return rs -> {
 				if (rs.getMetaData().getColumnCount() > 1) {
 					throw new SQLRuntimeException("Cannot map query results with more than 1 column to scalar " + klass);
 				}
-				return converter.getReader(klass).read(rs, 1, klass);
+				return conversionRegistry.getConverter(klass).read(rs, 1, klass);
 			};
 		}
 
@@ -83,8 +83,8 @@ public final class RowMapperFactory {
 
 				loadableFields.forEach((loadableField, columnName) -> {
 					Class<?> fieldType = loadableField.getType();
-					FieldReader<?> reader = converter.getReader(fieldType);
-					Object fieldValue = Functions.runSQL(() -> reader.read(rs, columnName, fieldType));
+					SQLConverter converter = conversionRegistry.getConverter(loadableField);
+					Object fieldValue = Functions.runSQL(() -> converter.read(rs, columnName, fieldType));
 					Fields.set(loadableField, instance, fieldValue);
 				});
 				
