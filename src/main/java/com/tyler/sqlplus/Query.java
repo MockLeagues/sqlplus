@@ -207,7 +207,7 @@ public class Query {
 			throw new QueryStructureException("No parameters set");
 		}
 		
-		String formattedSql = sql.replaceAll(REGEX_PARAM, "?");
+		String formattedSql = getFormattedSQL();
 		PreparedStatement ps = Functions.runSQL(() -> session.conn.prepareStatement(formattedSql, returnKeys ? Statement.RETURN_GENERATED_KEYS : 0));
 			
 		for (Map<Integer, Object> paramBatch : this.paramBatches) {
@@ -289,6 +289,13 @@ public class Query {
 	}
 
 	/**
+	 * Formats this query's SQL by replacing all parameter labels with '?'
+	 */
+	private String getFormattedSQL() {
+		return sql.replaceAll(REGEX_PARAM, "?");
+	}
+
+	/**
 	 * Produces a mapping of parameter labels to the 1-based index at which they appear in the given query string.
 	 * 
 	 * For any '?' params, the key will be equal to the string value of the index. For example, for the query
@@ -318,7 +325,26 @@ public class Query {
 		
 		return paramLabel_index;
 	}
-	
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(getFormattedSQL(), paramBatches, manualParamBatch);
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o instanceof Query) {
+			Query other = (Query) o;
+			return Objects.equals(getFormattedSQL(), other.getFormattedSQL()) &&
+							Objects.equals(paramBatches, other.paramBatches) &&
+							Objects.equals(manualParamBatch, other.manualParamBatch);
+		}
+		return false;
+	}
+
 	@Override
 	public String toString() {
 		return sql;

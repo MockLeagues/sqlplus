@@ -13,10 +13,7 @@ import org.junit.runners.Parameterized;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.tyler.sqlplus.base.SQLPlusTesting.assertThrows;
 import static org.junit.Assert.*;
