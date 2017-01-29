@@ -331,7 +331,11 @@ public class ConversionRegistry {
 			try {
 				Method valueOf = type.getDeclaredMethod("valueOf", String.class);
 				valueOf.setAccessible(true);
-				return (Enum<?>) valueOf.invoke(null, rs.getString(column));
+				String columnVal = rs.getString(column);
+				if (rs.wasNull()) {
+					return null;
+				}
+				return (Enum<?>) valueOf.invoke(null, columnVal);
 			} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 				throw new RuntimeException(e);
 			}

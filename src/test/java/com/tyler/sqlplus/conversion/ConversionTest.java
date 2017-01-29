@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -48,243 +49,185 @@ public class ConversionTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testReadPresentTinyInt() throws Exception {
-		db.batch("insert into types_table(int_field) values (10)");
-		int dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"tinyInt\" from types_table").getUniqueResultAs(TypesBag.class).tinyInt);
-		assertEquals(10, dbResult);
+	public void littleIntIsReadWhenPresent() throws Exception {
+		testRead("int_field", "10", "int_field", "tinyInt", 10);
 	}
 	
 	@Test
-	public void testReadNullTinyInt() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (10.5)");
-		int dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"tinyInt\" from types_table").getUniqueResultAs(TypesBag.class).tinyInt);
-		assertEquals(0, dbResult);
+	public void littleIntIsReadWhenNull() throws Exception {
+		testRead("decimal_field", "10.5", "int_field", "tinyInt", 0);
 	}
 	
 	@Test
-	public void testReadPresentBigInt() throws Exception {
-		db.batch("insert into types_table(int_field) values (10)");
-		Integer dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"bigInt\" from types_table").getUniqueResultAs(TypesBag.class).bigInt);
-		assertEquals(new Integer(10), dbResult);
+	public void bigIntIsReadWhenPresent() throws Exception {
+		testRead("int_field", "10", "int_field", "bigInt", new Integer(10));
 	}
 	
 	@Test
-	public void testReadNullBigInt() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (10.5)");
-		Integer dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"bigInt\" from types_table").getUniqueResultAs(TypesBag.class).bigInt);
-		assertNull(dbResult);
+	public void bigIntIsReadWhenNull() throws Exception {
+		testRead("decimal_field", "10.5", "int_field", "bigInt", null);
 	}
 	
 	@Test
-	public void testReadPresentTinyShort() throws Exception {
-		db.batch("insert into types_table(int_field) values (10)");
-		short dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"tinyShort\" from types_table").getUniqueResultAs(TypesBag.class).tinyShort);
-		assertEquals(10, dbResult);
+	public void littleShortIsReadWhenPresent() throws Exception {
+		testRead("int_field", "10", "int_field", "tinyShort", (short) 10);
 	}
 	
 	@Test
-	public void testReadNullTinyShort() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (10.5)");
-		short dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"tinyShort\" from types_table").getUniqueResultAs(TypesBag.class).tinyShort);
-		assertEquals(0, dbResult);
+	public void littleShortIsReadWhenNull() throws Exception {
+		testRead("decimal_field", "10.5", "int_field", "tinyShort", (short) 0);
+	}
+
+	@Test
+	public void bigShortIsReadWhenPresent() throws Exception {
+		testRead("int_field", "10", "int_field", "bigShort", new Short((short) 10));
 	}
 	
 	@Test
-	public void testReadPresentBigShort() throws Exception {
-		db.batch("insert into types_table(int_field) values (10)");
-		Short dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"bigShort\" from types_table").getUniqueResultAs(TypesBag.class).bigShort);
-		assertEquals(new Short((short) 10), dbResult);
+	public void bigShortIsReadWhenNull() throws Exception {
+		testRead("decimal_field", "10.5", "int_field", "bigShort", null);
+	}
+
+	@Test
+	public void littleLongIsReadWhenPresent() throws Exception {
+		testRead("int_field", "10", "int_field", "tinyLong", (long) 10);
+	}
+
+	@Test
+	public void littleLongIsReadWhenNull() throws Exception {
+		testRead("decimal_field", "10.5", "int_field", "tinyLong", (long) 0);
+	}
+
+	@Test
+	public void bigLongIsReadWhenPresent() throws Exception {
+		testRead("int_field", "10", "int_field", "bigLong", new Long(10));
+	}
+
+	@Test
+	public void bigLongIsReadWhenNull() throws Exception {
+		testRead("decimal_field", "10.5", "int_field", "bigLong", null);
 	}
 	
 	@Test
-	public void testReadNullBigShort() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (10.5)");
-		Short dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"bigShort\" from types_table").getUniqueResultAs(TypesBag.class).bigShort);
-		assertNull(dbResult);
+	public void tinyFloatIsReadWhenPresent() throws Exception {
+		testRead("float_field", "1.5", "float_field", "tinyFloat", 1.5f);
 	}
 	
 	@Test
-	public void testReadPresentTinyLong() throws Exception {
-		db.batch("insert into types_table(int_field) values (10)");
-		long dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"tinyLong\" from types_table").getUniqueResultAs(TypesBag.class).tinyLong);
-		assertEquals(10, dbResult);
+	public void tinyFloatIsReadWhenNull() throws Exception {
+		testRead("int_field", "5", "float_field", "tinyFloat", 0f);
+	}
+
+	@Test
+	public void bigFloatIsReadWhenPresent() throws Exception {
+		testRead("float_field", "1.5", "float_field", "bigFloat", new Float(1.5f));
+	}
+
+	@Test
+	public void bigFloatIsReadWhenNull() throws Exception {
+		testRead("int_field", "5", "float_field", "bigFloat", null);
 	}
 	
 	@Test
-	public void testReadNullTinyLong() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (10.5)");
-		long dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"tinyLong\" from types_table").getUniqueResultAs(TypesBag.class).tinyLong);
-		assertEquals(0, dbResult);
+	public void tinyDoubleIsReadWhenPresent() throws Exception {
+		testRead("decimal_field", "1.5", "decimal_field", "tinyDouble", 1.5d);
+	}
+
+	@Test
+	public void tinyDoubleIsReadWhenNull() throws Exception {
+		testRead("int_field", "5", "decimal_field", "tinyDouble", 0d);
+	}
+
+	@Test
+	public void bigDoubleIsReadWhenPresent() throws Exception {
+		testRead("decimal_field", "1.5", "decimal_field", "bigDouble", new Double(1.5d));
+	}
+
+	@Test
+	public void bigDoubleIsReadWhenNull() throws Exception {
+		testRead("int_field", "5", "decimal_field", "bigDouble", null);
 	}
 	
 	@Test
-	public void testReadPresentBigLong() throws Exception {
-		db.batch("insert into types_table(int_field) values (10)");
-		Long dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"bigLong\" from types_table").getUniqueResultAs(TypesBag.class).bigLong);
-		assertEquals(new Long((long) 10), dbResult);
+	public void tinyBooleanIsReadWhenPresent() throws Exception {
+		testRead("tiny_int_field", "1", "tiny_int_field", "tinyBoolean", true);
 	}
 	
 	@Test
-	public void testReadNullBigLong() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (10.5)");
-		Long dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"bigLong\" from types_table").getUniqueResultAs(TypesBag.class).bigLong);
-		assertNull(dbResult);
+	public void tinyBooleanIsReadAsFalseWhenNull() throws Exception {
+		testRead("int_field", "5", "tiny_int_field", "tinyBoolean", false);
+	}
+
+	@Test
+	public void bigBooleanIsReadWhenPresent() throws Exception {
+		testRead("tiny_int_field", "1", "tiny_int_field", "bigBoolean", new Boolean(true));
+	}
+
+	@Test
+	public void bigBooleanIsReadAsNull() throws Exception {
+		testRead("int_field", "5", "tiny_int_field", "bigBoolean", null);
 	}
 	
 	@Test
-	public void testReadPresentTinyFloat() throws Exception {
-		db.batch("insert into types_table(float_field) values (1.5)");
-		float dbResult = db.getSQLPlus().query(s -> s.createQuery("select float_field as \"tinyFloat\" from types_table").getUniqueResultAs(TypesBag.class).tinyFloat);
-		assertEquals(1.5f, dbResult, .1);
+	public void tinyCharIsReadWhenPresent() throws Exception {
+		testRead("char_field", "'a'", "char_field", "tinyChar", 'a');
 	}
 	
 	@Test
-	public void testReadNullTinyFloat() throws Exception {
-		db.batch("insert into types_table(int_field) values (5)");
-		float dbResult = db.getSQLPlus().query(s -> s.createQuery("select float_field as \"tinyFloat\" from types_table").getUniqueResultAs(TypesBag.class).tinyFloat);
-		assertEquals(0f, dbResult, .1);
+	public void tinyCharIsReadAsMinValueWhenNull() throws Exception {
+		testRead("int_field", "5", "char_field", "tinyChar", Character.MIN_VALUE);
+	}
+
+	@Test
+	public void bigCharIsReadWhenPresent() throws Exception {
+		testRead("char_field", "'a'", "char_field", "bigChar", new Character('a'));
+	}
+
+	@Test
+	public void bigCharIsReadAsNull() throws Exception {
+		testRead("int_field", "5", "char_field", "bigChar", null);
 	}
 	
 	@Test
-	public void testReadPresentBigFloat() throws Exception {
-		db.batch("insert into types_table(float_field) values (1.5)");
-		Float dbResult = db.getSQLPlus().query(s -> s.createQuery("select float_field as \"bigFloat\" from types_table").getUniqueResultAs(TypesBag.class).bigFloat);
-		assertEquals(new Float(1.5), dbResult);
+	public void stringIsReadWhenPresent() throws Exception {
+		testRead("varchar_field", "'abc'", "varchar_field", "string", "abc");
 	}
 	
 	@Test
-	public void testReadNullBigFloat() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (10.5)");
-		Float dbResult = db.getSQLPlus().query(s -> s.createQuery("select float_field as \"bigFloat\" from types_table").getUniqueResultAs(TypesBag.class).bigFloat);
-		assertNull(dbResult);
+	public void stringIsReadWhenNull() throws Exception {
+		testRead("int_field", "1", "varchar_field", "string", null);
 	}
 	
 	@Test
-	public void testReadPresentTinyDouble() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (1.5)");
-		double dbResult = db.getSQLPlus().query(s -> s.createQuery("select decimal_field as \"tinyDouble\" from types_table").getUniqueResultAs(TypesBag.class).tinyDouble);
-		assertEquals(1.5f, dbResult, .1);
+	public void bigIntegerIsReadWhenPresent() throws Exception {
+		testRead("int_field", "1", "int_field", "hugeInt", new BigInteger("1"));
 	}
-	
+
 	@Test
-	public void testReadNullTinyDouble() throws Exception {
-		db.batch("insert into types_table(int_field) values (5)");
-		double dbResult = db.getSQLPlus().query(s -> s.createQuery("select decimal_field as \"tinyDouble\" from types_table").getUniqueResultAs(TypesBag.class).tinyDouble);
-		assertEquals(0f, dbResult, .1);
+	public void bigIntegerIsReadWhenNull() throws Exception {
+		testRead("float_field", "1.0", "int_field", "hugeInt", null);
 	}
-	
+
 	@Test
-	public void testReadPresentBigDouble() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (1.5)");
-		Double dbResult = db.getSQLPlus().query(s -> s.createQuery("select decimal_field as \"bigDouble\" from types_table").getUniqueResultAs(TypesBag.class).bigDouble);
-		assertEquals(new Double(1.5), dbResult);
+	public void bigDecimalIsReadWhenPresent() throws Exception {
+		testRead("decimal_field", "1.50", "decimal_field", "hugeDouble", new BigDecimal("1.50"));
 	}
-	
+
 	@Test
-	public void testReadNullBigDouble() throws Exception {
-		db.batch("insert into types_table(int_field) values (1)");
-		Double dbResult = db.getSQLPlus().query(s -> s.createQuery("select decimal_field as \"bigDouble\" from types_table").getUniqueResultAs(TypesBag.class).bigDouble);
-		assertNull(dbResult);
+	public void bigDecimalIsReadWhenNull() throws Exception {
+		testRead("float_field", "1.5", "decimal_field", "hugeDouble", null);
 	}
-	
+
 	@Test
-	public void testReadPresentTinyBoolean() throws Exception {
-		db.batch("insert into types_table(tiny_int_field) values (1)");
-		boolean dbResult = db.getSQLPlus().query(s -> s.createQuery("select tiny_int_field as \"tinyBoolean\" from types_table").getUniqueResultAs(TypesBag.class).tinyBoolean);
-		assertTrue(dbResult);
+	public void enumIsReadWhenPresent() throws Exception {
+		testRead("enum_field", "'MEDIUM'", "enum_field", "enumField", Size.MEDIUM);
 	}
-	
+
 	@Test
-	public void testReadNullTinyBoolean() throws Exception {
-		db.batch("insert into types_table(int_field) values (5)");
-		boolean dbResult = db.getSQLPlus().query(s -> s.createQuery("select tiny_int_field as \"tinyBoolean\" from types_table").getUniqueResultAs(TypesBag.class).tinyBoolean);
-		assertFalse(dbResult);
+	public void enumIsReadWhenNull() throws Exception {
+		testRead("int_field", "1", "enum_field", "enumField", null);
 	}
-	
-	@Test
-	public void testReadPresentBigBoolean() throws Exception {
-		db.batch("insert into types_table(tiny_int_field) values (1)");
-		Boolean dbResult = db.getSQLPlus().query(s -> s.createQuery("select tiny_int_field as \"bigBoolean\" from types_table").getUniqueResultAs(TypesBag.class).bigBoolean);
-		assertTrue(dbResult);
-	}
-	
-	@Test
-	public void testReadNullBigBoolean() throws Exception {
-		db.batch("insert into types_table(int_field) values (1)");
-		Boolean dbResult = db.getSQLPlus().query(s -> s.createQuery("select tiny_int_field as \"bigBoolean\" from types_table").getUniqueResultAs(TypesBag.class).bigBoolean);
-		assertNull(dbResult);
-	}
-	
-	@Test
-	public void testReadPresentTinyChar() throws Exception {
-		db.batch("insert into types_table(char_field) values ('a')");
-		char dbResult = db.getSQLPlus().query(s -> s.createQuery("select char_field as \"tinyChar\" from types_table").getUniqueResultAs(TypesBag.class).tinyChar);
-		assertEquals('a', dbResult);
-	}
-	
-	@Test
-	public void testReadNullTinyChar() throws Exception {
-		db.batch("insert into types_table(int_field) values (5)");
-		char dbResult = db.getSQLPlus().query(s -> s.createQuery("select char_field as \"tinyChar\" from types_table").getUniqueResultAs(TypesBag.class).tinyChar);
-		assertEquals(Character.MIN_VALUE, dbResult);
-	}
-	
-	@Test
-	public void testReadPresentBigChar() throws Exception {
-		db.batch("insert into types_table(char_field) values ('a')");
-		Character dbResult = db.getSQLPlus().query(s -> s.createQuery("select char_field as \"bigChar\" from types_table").getUniqueResultAs(TypesBag.class).bigChar);
-		assertEquals(new Character('a'), dbResult);
-	}
-	
-	@Test
-	public void testReadNullBigChar() throws Exception {
-		db.batch("insert into types_table(int_field) values (1)");
-		Character dbResult = db.getSQLPlus().query(s -> s.createQuery("select char_field as \"bigChar\" from types_table").getUniqueResultAs(TypesBag.class).bigChar);
-		assertNull(dbResult);
-	}
-	
-	@Test
-	public void testReadPresentString() throws Exception {
-		db.batch("insert into types_table(varchar_field) values ('abc')");
-		String dbResult = db.getSQLPlus().query(s -> s.createQuery("select varchar_field as \"string\" from types_table").getUniqueResultAs(TypesBag.class).string);
-		assertEquals("abc", dbResult);
-	}
-	
-	@Test
-	public void testReadNullString() throws Exception {
-		db.batch("insert into types_table(int_field) values (1)");
-		String dbResult = db.getSQLPlus().query(s -> s.createQuery("select varchar_field as \"string\" from types_table").getUniqueResultAs(TypesBag.class).string);
-		assertNull(dbResult);
-	}
-	
-	@Test
-	public void testReadPresentBigInteger() throws Exception {
-		db.batch("insert into types_table(int_field) values (1)");
-		BigInteger dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"hugeInt\" from types_table").getUniqueResultAs(TypesBag.class).hugeInt);
-		assertEquals(new BigInteger("1"), dbResult);
-	}
-	
-	@Test
-	public void testReadNullBigInteger() throws Exception {
-		db.batch("insert into types_table(float_field) values (1.0)");
-		BigInteger dbResult = db.getSQLPlus().query(s -> s.createQuery("select int_field as \"hugeInt\" from types_table").getUniqueResultAs(TypesBag.class).hugeInt);
-		assertNull(dbResult);
-	}
-	
-	@Test
-	public void testReadPresentBigDecimal() throws Exception {
-		db.batch("insert into types_table(decimal_field) values (1.5)");
-		BigDecimal dbResult = db.getSQLPlus().query(s -> s.createQuery("select decimal_field as \"hugeDouble\" from types_table").getUniqueResultAs(TypesBag.class).hugeDouble);
-		assertEquals(new BigDecimal("1.50"), dbResult);
-	}
-	
-	@Test
-	public void testReadNullBigDecimal() throws Exception {
-		db.batch("insert into types_table(float_field) values (1.0)");
-		BigDecimal dbResult = db.getSQLPlus().query(s -> s.createQuery("select decimal_field as \"hugeDouble\" from types_table").getUniqueResultAs(TypesBag.class).hugeDouble);
-		assertNull(dbResult);
-	}
-	
+
 	@SuppressWarnings("deprecation")
 	@Test
 	public void testTimestampDbFieldCanBeMappedToStandardDateTypes() throws Exception {
@@ -404,12 +347,21 @@ public class ConversionTest extends DatabaseTest {
 			
 		});
 	}
-	
-	@Test
-	public void readEnumType() throws Exception {
-		db.batch("insert into types_table(enum_field) values ('MEDIUM')");
-		Size dbResult = db.getSQLPlus().query(s -> s.createQuery("select enum_field \"enumField\" from types_table").getUniqueResultAs(TypesBag.class)).enumField;
-		assertEquals(Size.MEDIUM, dbResult);
+
+	/**
+	 * Tests a value is read as the expected object after inserting a field value
+	 */
+	private void testRead(String insertCol, String insertVal, String readCol, String readAlias, Object expect) throws Exception {
+
+		String insertSql = String.format("insert into types_table(%s) values (%s)", insertCol, insertVal);
+		String readSql = String.format("select %s as \"%s\" from types_table", readCol, readAlias);
+
+		db.batch(insertSql);
+		TypesBag queryResult = db.getSQLPlus().query(s -> s.createQuery(readSql).getUniqueResultAs(TypesBag.class));
+		Field resultField = TypesBag.class.getDeclaredField(readAlias);
+		Object actualResult = resultField.get(queryResult);
+
+		assertEquals(expect, actualResult);
 	}
-	
+
 }
