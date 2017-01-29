@@ -9,13 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class SQLPlusTest extends DatabaseTest {
 
 	@Test
-	public void testCurrentThreadCorrectlyPullsCurrentSession() throws Exception {
+	public void sessionShouldBeSharedThroughoutCurrentThreadStack() throws Exception {
 		
 		List<Session> sessionsRetrieved = new ArrayList<>();
 		
@@ -37,5 +38,31 @@ public class SQLPlusTest extends DatabaseTest {
 		parentCall.call();
 		assertTrue(sessionsRetrieved.get(0) == sessionsRetrieved.get(1));
 	}
-	
+
+	@Test
+	public void newSessionOpenedInThreadShouldBeDifferentFromActiveSessionInAnotherThread() throws Exception {
+
+		Session[] threadSessions = { null, null };
+
+		Thread threadA = new Thread(() -> {
+			db.getSQLPlus().transact(sess -> {
+				threadSessions[0] = sess;
+				Thread.sleep(100); // Simulate active session
+			});
+		});
+
+		Thread threadB = new Thread(() -> {
+			db.getSQLPlus().transact(sess -> {
+				threadSessions[1] = sess;
+			});
+		});
+
+		threadA.start();
+		threadB.start();
+		threadA.join();
+		threadB.join();
+
+		assertFalse(threadSessions[0] == threadSessions[1]);
+	}
+
 }

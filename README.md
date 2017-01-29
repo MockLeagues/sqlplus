@@ -257,7 +257,7 @@ abstract class WidgetService {
 	 */
 	@Transactional
 	public int countWidgets() {
-		sqlPlus.getCurrentSession().createQuery("select count(*) from widget").fetchScalar(Integer.class);
+		sqlPlus.getCurrentSession().createQuery("select count(*) from widget").getUniqueResultAs(Integer.class);
 	}
 
 }
