@@ -22,6 +22,73 @@ public class ConversionRegistry {
 	private static final Map<String, SQLConverter> DEFAULT_REGISTRY = new LinkedHashMap<>();
 	static {
 
+		registerDefaultConverter(byte.class, new SQLConverter<Byte>() {
+
+			@Override
+			public Class<Byte> getConvertedClass() {
+				return byte.class;
+			}
+
+			@Override
+			public Byte read(ResultSet rs, String column, Class<?> targetType) throws SQLException {
+				return rs.getByte(column);
+			}
+
+			@Override
+			public void write(PreparedStatement ps, int parameterIndex, Byte byteVal) throws SQLException {
+				ps.setByte(parameterIndex, byteVal);
+			}
+
+		});
+
+		registerDefaultConverter(Byte.class, new SQLConverter<Byte>() {
+
+			@Override
+			public Class<Byte> getConvertedClass() {
+				return Byte.class;
+			}
+
+			@Override
+			public Byte read(ResultSet rs, String column, Class<?> targetType) throws SQLException {
+				byte byteVal = rs.getByte(column);
+				return rs.wasNull() ? null : byteVal;
+			}
+
+			@Override
+			public void write(PreparedStatement ps, int parameterIndex, Byte byteVal) throws SQLException {
+				if (byteVal == null) {
+					ps.setNull(parameterIndex, Types.TINYINT);
+				} else {
+					ps.setByte(parameterIndex, byteVal);
+				}
+			}
+
+		});
+
+		registerDefaultConverter(Integer.class, new SQLConverter<Integer>() {
+
+			@Override
+			public Class<Integer> getConvertedClass() {
+				return Integer.class;
+			}
+
+			@Override
+			public Integer read(ResultSet rs, String column, Class<?> targetType) throws SQLException {
+				int obj = rs.getInt(column);
+				return rs.wasNull() ? null : obj;
+			}
+
+			@Override
+			public void write(PreparedStatement ps, int parameterIndex, Integer integer) throws SQLException {
+				if (integer == null) {
+					ps.setNull(parameterIndex, Types.INTEGER);
+				} else {
+					ps.setInt(parameterIndex, integer);
+				}
+			}
+
+		});
+
 		registerDefaultConverter(int.class, new SQLConverter<Integer>() {
 
 			@Override
