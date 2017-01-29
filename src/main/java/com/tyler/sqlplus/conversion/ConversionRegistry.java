@@ -12,7 +12,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -197,79 +196,12 @@ public class ConversionRegistry {
 				ps.setString(i, o);
 			}
 		});
-		
-		registerStandardReader(Date.class, (rs, col, type)  -> {
-			Object dbObj = rs.getObject(col);
-			if (dbObj.getClass() == java.sql.Date.class) {
-				return new Date(((java.sql.Date)dbObj).getTime());
-			}
-			else if (dbObj.getClass() == Timestamp.class) {
-				return new Date(((Timestamp)dbObj).getTime());
-			}
-			else if (dbObj.getClass() == java.sql.Time.class) {
-				throw new UnsupportedOperationException("Cannot convert time field to java.util.Date");
-			}
-			else {
-				throw new ConversionException("Could not extract Date value from ResultSet object " + dbObj);
-			}
-		});
-		
-		registerStandardWriter(Date.class, (ps, i, o) -> {
-			if (o == null) {
-				ps.setNull(i, Types.DATE);
-			}
-			else {
-				ps.setDate(i, new java.sql.Date(o.getTime()));
-			}
-		});
-		
-		registerStandardReader(Timestamp.class, (rs, column, type) -> {
-			Object dbObj = rs.getObject(column);
-			if (dbObj == null) {
-				return null;
-			}
-			else if (dbObj.getClass() == Timestamp.class) {
-				return (Timestamp) dbObj;
-			}
-			else if (dbObj.getClass() == java.sql.Time.class) {
-				throw new UnsupportedOperationException("Cannot convert time field to java.sql.Timestamp");
-			}
-			else if (dbObj.getClass() == java.sql.Date.class) {
-				return new Timestamp(((java.sql.Date)dbObj).getTime());
-			}
-			else {
-				throw new ConversionException("Could not extract Timestamp value from ResultSet object " + dbObj);
-			}
-		});
-		
-		registerStandardWriter(Timestamp.class, (ps, i, o) -> {
-			if (o == null) {
-				ps.setNull(i, Types.TIMESTAMP);
-			}
-			else {
-				ps.setTimestamp(i, o);
-			}
-		});
-		
+
 		registerStandardReader(LocalDate.class, (rs, column, type) -> {
-			Object dbObj = rs.getObject(column);
-			if (dbObj != null) {
-				if (dbObj.getClass() == Timestamp.class) {
-					return ((Timestamp)dbObj).toLocalDateTime().toLocalDate();
-				}
-				else {
-					return LocalDate.parse(String.valueOf(dbObj));
-				}
-			}
-			else {
-				String stringVal = rs.getString(column);
-				if (rs.wasNull()) {
-					return null;
-				}
-				return LocalDate.parse(stringVal);
-			}
+			String strVal = rs.getString(column);
+			return rs.wasNull() ? null : LocalDate.parse(strVal);
 		});
-		
+
 		registerStandardWriter(LocalDate.class, (ps, i, o) -> {
 			if (o == null) {
 				ps.setNull(i, Types.DATE);
@@ -278,27 +210,12 @@ public class ConversionRegistry {
 				ps.setString(i, o.toString());
 			}
 		});
-		
+
 		registerStandardReader(LocalDateTime.class, (rs, column, type) -> {
-			Object dbObj = rs.getObject(column);
-			if (dbObj == null) {
-				String strVal = rs.getString(column);
-				return strVal == null ? null : LocalDateTime.parse(strVal);
-			}
-			else {
-				if (dbObj.getClass() == Timestamp.class) {
-					return ((Timestamp)dbObj).toLocalDateTime();
-				}
-				else if (dbObj.getClass() == java.sql.Date.class) {
-					return ((java.sql.Date)dbObj).toLocalDate().atStartOfDay();
-				}
-				else {
-					String strVal = String.valueOf(dbObj);
-					return strVal == null ? null : LocalDateTime.parse(strVal);
-				}
-			}
+			Timestamp timestamp = rs.getTimestamp(column);
+			return rs.wasNull() ? null : timestamp.toLocalDateTime();
 		});
-		
+
 		registerStandardWriter(LocalDateTime.class, (ps, i, o) -> {
 			if (o == null) {
 				ps.setNull(i, Types.DATE);
@@ -307,26 +224,12 @@ public class ConversionRegistry {
 				ps.setString(i, o.toString());
 			}
 		});
-		
+
 		registerStandardReader(LocalTime.class, (rs, column, type) -> {
-			Object dbObj = rs.getObject(column);
-			if (dbObj == null) {
-				String stringVal = rs.getString(column);
-				return stringVal == null ? null : LocalTime.parse(stringVal);
-			}
-			if (dbObj.getClass() == Timestamp.class) {
-				return ((Timestamp)dbObj).toLocalDateTime().toLocalTime();
-			}
-			else if (dbObj.getClass() == java.sql.Date.class) {
-				throw new UnsupportedOperationException(
-					"Cannot convert date field to " + LocalTime.class.getName() + " field; date fields do not contain time components");
-			}
-			else {
-				String stringVal = String.valueOf(dbObj);
-				return stringVal == null ? null : LocalTime.parse(stringVal);
-			}
+			String strVal = rs.getString(column);
+			return rs.wasNull() ? null : LocalTime.parse(strVal);
 		});
-		
+
 		registerStandardWriter(LocalTime.class, (ps, i, o) -> {
 			if (o == null) {
 				ps.setNull(i, Types.TIME);
@@ -335,7 +238,7 @@ public class ConversionRegistry {
 				ps.setString(i, DateTimeFormatter.ofPattern("HH:mm:ss").format(o));
 			}
 		});
-		
+
 		registerStandardReader(Enum.class, (rs, column, type) -> {
 			try {
 				String columnVal = rs.getString(column);
@@ -361,6 +264,7 @@ public class ConversionRegistry {
 		
 		registerStandardReader(Object.class, (rs, col, type) -> rs.getObject(col));
 		registerStandardWriter(Object.class, (ps, i, o) -> ps.setObject(i, o));
+
 	}
 
 	public static <T> void registerStandardReader(Class<T> type, FieldReader<T> reader) {

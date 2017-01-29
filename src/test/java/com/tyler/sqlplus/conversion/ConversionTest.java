@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Date;
 
-import static com.tyler.sqlplus.base.SQLPlusTesting.assertThrows;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class ConversionTest extends DatabaseTest {
@@ -391,126 +391,6 @@ public class ConversionTest extends DatabaseTest {
 	@Test
 	public void localDateTimeIsReadWhenNull() throws Exception {
 		testRead("int_field", "1", "datetime_field", "localDateTime", null);
-	}
-
-	@SuppressWarnings("deprecation")
-	@Test
-	public void timestampFieldCanBeMappedToStandardDateTypes() throws Exception {
-		
-		db.batch("insert into types_table " +
-		         "(timestamp_field, date_field, datetime_field, time_field) values " +
-		         "('2016-01-05 12:30:05', '2016-01-03', '2016-10-12 08:25:30', '10:30:45')");
-		
-		db.getSQLPlus().transact(session -> {
-			
-			TypesBag bag = session.createQuery("select timestamp_field as \"javaUtilDate\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(116, bag.javaUtilDate.getYear());
-			assertEquals(0, bag.javaUtilDate.getMonth());
-			assertEquals(5, bag.javaUtilDate.getDate());
-			assertEquals(12, bag.javaUtilDate.getHours());
-			assertEquals(30, bag.javaUtilDate.getMinutes());
-			assertEquals(5, bag.javaUtilDate.getSeconds());
-			
-			bag = session.createQuery("select timestamp_field as \"timestamp\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(Timestamp.valueOf("2016-01-05 12:30:05"), bag.timestamp);
-			
-			bag = session.createQuery("select timestamp_field as \"localDate\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(LocalDate.of(2016, 1, 5), bag.localDate);
-			
-			bag = session.createQuery("select timestamp_field as \"localDateTime\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(LocalDateTime.of(2016, 1, 5, 12, 30, 5), bag.localDateTime);
-			
-			bag = session.createQuery("select timestamp_field as \"localTime\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(LocalTime.of(12, 30, 5), bag.localTime);
-		});
-	}
-	
-	@SuppressWarnings("deprecation")
-	@Test
-	public void testDateDbFieldCanBeMappedToStandardDateTypes() throws Exception {
-		
-		db.batch("insert into types_table " +
-		         "(timestamp_field, date_field, datetime_field, time_field) values " +
-		         "('2016-01-05 12:30:05', '2016-01-03', '2016-10-12 08:25:30', '10:30:45')");
-		
-		db.getSQLPlus().transact(session -> {
-			
-			TypesBag bag = session.createQuery("select date_field as \"javaUtilDate\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(116, bag.javaUtilDate.getYear());
-			assertEquals(0, bag.javaUtilDate.getMonth());
-			assertEquals(3, bag.javaUtilDate.getDate());
-			
-			bag = session.createQuery("select date_field as \"timestamp\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(Timestamp.valueOf("2016-01-03 00:00:00"), bag.timestamp);
-			
-			bag = session.createQuery("select date_field as \"localDate\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(LocalDate.of(2016, 1, 3), bag.localDate);
-			
-			bag = session.createQuery("select date_field as \"localDateTime\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(LocalDateTime.of(2016, 1, 3, 0, 0, 0), bag.localDateTime);
-			
-			assertThrows(
-				() -> session.createQuery("select date_field as \"localTime\" from types_table").getUniqueResultAs(TypesBag.class),
-				UnsupportedOperationException.class,
-				"Cannot convert date field to java.time.LocalTime field; date fields do not contain time components"
-			);
-		});
-	}
-	
-	@SuppressWarnings("deprecation")
-	@Test
-	public void testDateTimeDbFieldCanBeMappedToStandardDateTypes() throws Exception {
-		
-		db.batch("insert into types_table " +
-		         "(timestamp_field, date_field, datetime_field, time_field) values " +
-		         "('2016-01-05 12:30:05', '2016-01-03', '2016-10-12 08:25:30', '10:30:45')");
-		
-		db.getSQLPlus().transact(session -> {
-			
-			TypesBag bag = session.createQuery("select datetime_field as \"javaUtilDate\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(116, bag.javaUtilDate.getYear());
-			assertEquals(9, bag.javaUtilDate.getMonth());
-			assertEquals(12, bag.javaUtilDate.getDate());
-			assertEquals(8, bag.javaUtilDate.getHours());
-			assertEquals(25, bag.javaUtilDate.getMinutes());
-			assertEquals(30, bag.javaUtilDate.getSeconds());
-			
-			bag = session.createQuery("select datetime_field as \"timestamp\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(Timestamp.valueOf("2016-10-12 08:25:30"), bag.timestamp);
-			
-			bag = session.createQuery("select datetime_field as \"localDate\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(LocalDate.of(2016, 10, 12), bag.localDate);
-			
-			bag = session.createQuery("select datetime_field as \"localDateTime\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(LocalDateTime.of(2016, 10, 12, 8, 25, 30), bag.localDateTime);
-			
-			bag = session.createQuery("select datetime_field as \"localTime\" from types_table").getUniqueResultAs(TypesBag.class);
-			assertEquals(LocalTime.of(8, 25, 30), bag.localTime);
-		});
-	}
-	
-	@Test
-	public void testTimeDbFieldCanBeMappedToStandardDateTypes() throws Exception {
-		
-		db.batch("insert into types_table " +
-		         "(timestamp_field, date_field, datetime_field, time_field) values " +
-		         "('2016-01-05 12:30:05', '2016-01-03', '2016-10-12 08:25:30', '10:30:45')");
-		
-		db.getSQLPlus().transact(session -> {
-			
-			assertThrows(
-				() -> session.createQuery("select time_field as \"javaUtilDate\" from types_table").getUniqueResultAs(TypesBag.class),
-				UnsupportedOperationException.class,
-				"Cannot convert time field to java.util.Date"
-			);
-			
-			assertThrows(
-				() -> session.createQuery("select time_field as \"timestamp\" from types_table").getUniqueResultAs(TypesBag.class),
-				UnsupportedOperationException.class,
-				"Cannot convert time field to java.sql.Timestamp"
-			);
-			
-		});
 	}
 
 	private void testRead(String insertCol, String insertVal, String readCol, String readAlias, Object expect) throws Exception {
