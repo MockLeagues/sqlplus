@@ -13,7 +13,7 @@ import static junit.framework.TestCase.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-public class SQLPlusTest extends DatabaseTest {
+public class CurrentSessionTest extends DatabaseTest {
 
 	@Test
 	public void sessionShouldBeSharedThroughoutCurrentThreadStack() throws Exception {

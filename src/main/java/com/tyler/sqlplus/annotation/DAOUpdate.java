@@ -12,7 +12,9 @@ public @interface DAOUpdate {
 	enum ReturnInfo {GENERATED_KEYS, AFFECTED_ROWS, NONE; }
 
 	String value();
-	
+
+	int isolation() default -1;
+
 	ReturnInfo returnInfo() default ReturnInfo.NONE;
 	
 }

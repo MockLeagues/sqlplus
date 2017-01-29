@@ -1,6 +1,7 @@
 package com.tyler.sqlplus;
 
 import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.function.Work;
 import com.tyler.sqlplus.proxy.TransactionalService;
@@ -70,7 +71,7 @@ public class SQLPlus {
 	}
 
 	/**
-	 * Executes an action inside of a single database transaction.
+	 * Executes an action inside of a single database transaction using the default isolation level.
 	 * 
 	 * If any exceptions are thrown, the transaction is immediately rolled back
 	 */
@@ -80,11 +81,32 @@ public class SQLPlus {
 			return null;
 		});
 	}
+
+	/**
+	 * Executes an action inside of a single database transaction using the given isolation level.
+	 *
+	 * If any exceptions are thrown, the transaction is immediately rolled back
+	 */
+	public void transact(int isolation, Work<Session> action) {
+		query(isolation, session -> {
+			action.doWork(session);
+			return null;
+		});
+	}
 	
 	/**
 	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
+	 * using the default isolation level
 	 */
 	public <T> T query(ReturningWork<Session, T> action) {
+		return query(-1, action);
+	}
+
+	/**
+	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
+	 * using the given transaction isolation level
+	 */
+	public <T> T query(int isolation, ReturningWork<Session, T> action) {
 
 		Session currentSession = CURRENT_THREAD_SESSION.get();
 		if (currentSession != null) {
@@ -100,6 +122,9 @@ public class SQLPlus {
 
 		try {
 			conn = dataSource.getConnection();
+			if (isolation != -1) {
+				conn.setTransactionIsolation(isolation);
+			}
 			conn.setAutoCommit(false);
 			Session newSession = new Session(conn);
 			CURRENT_THREAD_SESSION.set(newSession);
@@ -120,12 +145,7 @@ public class SQLPlus {
 		}
 
 		CURRENT_THREAD_SESSION.remove();
-		try {
-			conn.close();
-		} catch (SQLException e) {
-			throw new SQLRuntimeException(e);
-		}
-
+		Functions.runSQL(conn::close);
 		return result;
 	}
 	

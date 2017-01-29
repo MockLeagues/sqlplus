@@ -50,15 +50,20 @@ public class TransactionalService {
 		((Proxy) serviceProxy).setHandler((self, overriddenMethod, proceed, args) -> {
 			
 			ReturningWork<Session, Object> workToDoInTransaction;
+			int isolation;
+
 			if (overriddenMethod.isAnnotationPresent(DAOQuery.class)) {
+				isolation = overriddenMethod.getAnnotation(DAOQuery.class).isolation();
 				workToDoInTransaction = session -> invokeQuery(overriddenMethod, args, session);
 			} else if (overriddenMethod.isAnnotationPresent(DAOUpdate.class)) {
+				isolation = overriddenMethod.getAnnotation(DAOUpdate.class).isolation();
 				workToDoInTransaction = session -> invokeUpdate(overriddenMethod, args, session);
 			} else {
+				isolation = overriddenMethod.getAnnotation(Transactional.class).isolation();
 				workToDoInTransaction = session -> proceed.invoke(self, args);
 			}
 			
-			return sqlPlus.query(workToDoInTransaction);
+			return sqlPlus.query(isolation, workToDoInTransaction);
 		});
 		
 		return serviceProxy;
