@@ -10,13 +10,14 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Represents an individual unit of work within the SqlPlus environment
  */
 public class Session implements Closeable {
 
-	private Map<Query, Object> firstLevelCache = new HashMap<>();
+	private Map<QueryCacheKey, Object> firstLevelCache = new HashMap<>();
 	private boolean lastResultCached = false;
 
 	/**
@@ -40,7 +41,7 @@ public class Session implements Closeable {
 		return q;
 	}
 
-	public boolean isLastResultCached() {
+	public boolean wasFromCache() {
 		return lastResultCached;
 	}
 
@@ -70,7 +71,7 @@ public class Session implements Closeable {
 
 	<T> T getUniqueResult(Query query, Class<T> resultClass) {
 		lastResultCached = true;
-		return (T) firstLevelCache.computeIfAbsent(query, q -> {
+		return (T) firstLevelCache.computeIfAbsent(new QueryCacheKey(query, resultClass), q -> {
 			lastResultCached = false;
 			return query.getUniqueResultForCache(resultClass);
 		});
@@ -78,7 +79,7 @@ public class Session implements Closeable {
 
 	<T> List<T> fetch(Query query, Class<T> resultClass) {
 		lastResultCached = true;
-		return (List<T>) firstLevelCache.computeIfAbsent(query, q -> {
+		return (List<T>) firstLevelCache.computeIfAbsent(new QueryCacheKey(query, resultClass), q -> {
 			lastResultCached = false;
 			return query.fetchForCache(resultClass);
 		});
@@ -109,4 +110,38 @@ public class Session implements Closeable {
 		}
 	}
 	
+}
+
+/**
+ * Allows queries to be cached according to not just the query but also its intended result type.
+ * This allows the same query to be interpreted as different result types in the same session. Otherwise,
+ * query results would be cached as the first result type it was interpreted as
+ */
+class QueryCacheKey {
+
+	private Query query;
+	private Class<?> resultClass;
+
+	public QueryCacheKey(Query query, Class<?> resultClass) {
+		this.query = query;
+		this.resultClass = resultClass;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o instanceof QueryCacheKey) {
+			QueryCacheKey other = (QueryCacheKey) o;
+			return Objects.equals(query, other.query) && Objects.equals(resultClass, other.resultClass);
+		}
+		return false;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(query, resultClass);
+	}
+
 }

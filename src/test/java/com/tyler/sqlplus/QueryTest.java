@@ -489,9 +489,9 @@ public class QueryTest extends DatabaseTest {
 	public void queryResultsAreCachedForQueriesWithNoParams() throws Exception {
 		db.getSQLPlus().transact(sess -> {
 			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
-			assertFalse(sess.isLastResultCached());
+			assertFalse(sess.wasFromCache());
 			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
-			assertTrue(sess.isLastResultCached());
+			assertTrue(sess.wasFromCache());
 		});
 	}
 
@@ -499,9 +499,9 @@ public class QueryTest extends DatabaseTest {
 	public void queryResultsAreCachedForQueriesWithParams() throws Exception {
 		db.getSQLPlus().transact(sess -> {
 			sess.createQuery("select count(*) from address where street = ?", "maple").getUniqueResultAs(Integer.class);
-			assertFalse(sess.isLastResultCached());
+			assertFalse(sess.wasFromCache());
 			sess.createQuery("select count(*) from address where street = ?", "maple").getUniqueResultAs(Integer.class);
-			assertTrue(sess.isLastResultCached());
+			assertTrue(sess.wasFromCache());
 		});
 	}
 
@@ -509,10 +509,10 @@ public class QueryTest extends DatabaseTest {
 	public void executingUpdateInvalidatesCacheIfRowsAreAffected() throws Exception {
 		db.getSQLPlus().transact(sess -> {
 			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
-			assertFalse(sess.isLastResultCached());
+			assertFalse(sess.wasFromCache());
 			sess.createQuery("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')").executeUpdate(); // Invalidate the cache
 			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
-			assertFalse(sess.isLastResultCached());
+			assertFalse(sess.wasFromCache());
 		});
 	}
 
@@ -520,10 +520,10 @@ public class QueryTest extends DatabaseTest {
 	public void executingUpdateDoesNotInvalidateCacheIfNoRowsAreAffected() throws Exception {
 		db.getSQLPlus().transact(sess -> {
 			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
-			assertFalse(sess.isLastResultCached());
+			assertFalse(sess.wasFromCache());
 			sess.createQuery("update address set street = 'maple' where state = 'AK'").executeUpdate();
 			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
-			assertTrue(sess.isLastResultCached());
+			assertTrue(sess.wasFromCache());
 		});
 	}
 
@@ -531,10 +531,26 @@ public class QueryTest extends DatabaseTest {
 	public void executingUpdateForKeyInvalidatesCache() throws Exception {
 		db.getSQLPlus().transact(sess -> {
 			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
-			assertFalse(sess.isLastResultCached());
+			assertFalse(sess.wasFromCache());
 			sess.createQuery("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')").executeUpdate(Integer.class);
 			sess.createQuery("select count(*) from address").getUniqueResultAs(Integer.class);
-			assertFalse(sess.isLastResultCached());
+			assertFalse(sess.wasFromCache());
+		});
+	}
+
+	@Test
+	public void theSameQueryCanBeInterpretedAsDifferentTypesInTheSameSession() throws Exception {
+		db.batch("insert into employee(name, salary, hired, type) values('Bill Gates', 999999999, '2015-01-15', 'SALARY')");
+		db.getSQLPlus().transact(sess -> {
+			Query dateQuery = sess.createQuery("select hired from employee");
+
+			String strResult = dateQuery.fetchAs(String.class).get(0);
+			assertEquals("2015-01-15", strResult);
+			assertFalse(sess.wasFromCache());
+
+			LocalDate dateResult = dateQuery.fetchAs(LocalDate.class).get(0);
+			assertFalse(sess.wasFromCache());
+			assertEquals(LocalDate.of(2015, 1, 15), dateResult);
 		});
 	}
 
