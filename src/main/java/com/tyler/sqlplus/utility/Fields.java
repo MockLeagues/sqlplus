@@ -1,13 +1,13 @@
 package com.tyler.sqlplus.utility;
 
+import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.function.ReturningWork;
+import com.tyler.sqlplus.function.ThrowingBiConsumer;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.function.ReturningWork;
-import com.tyler.sqlplus.function.ThrowingBiConsumer;
 
 /**
  * Utilities for working with {@link Field} objects
@@ -106,22 +106,6 @@ public final class Fields {
 		}
 
 		return newStr.toString();
-	}
-
-	public static String camelCaseToUnderscore(String camelCaseStr) {
-		StringBuilder newStr = new StringBuilder();
-
-		char[] chars = camelCaseStr.toCharArray();
-		for (int i = 0; i < chars.length; i++) {
-
-			char thisChar = chars[i];
-			if (Character.isUpperCase(thisChar) && i > 0) {
-				newStr.append('_');
-			}
-			newStr.append(thisChar);
-		}
-
-		return newStr.toString().toUpperCase();
 	}
 
 	private static String capitalize(String s) {

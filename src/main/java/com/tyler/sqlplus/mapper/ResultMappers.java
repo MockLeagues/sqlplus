@@ -92,7 +92,7 @@ public final class ResultMappers {
 		if (isScalar) {
 			return rs -> {
 				if (rs.getMetaData().getColumnCount() > 1) {
-					throw new SQLRuntimeException("Cannot map query with more than 1 column to scalar " + klass);
+					throw new SQLRuntimeException("Cannot map query results with more than 1 column to scalar " + klass);
 				}
 				return converter.getReader(klass).read(rs, 1, klass);
 			};

@@ -10,12 +10,12 @@ public class MySQLDatabase extends AbstractDatabase {
 
     @Override
     public String getUrl() {
-        return "jdbc:mysql://localhost/sqlplus-test";
+        return "jdbc:mysql://localhost/sqlplus";
     }
 
     @Override
     public String getUsername() {
-        return "sqlplus-test";
+        return "sqlplus";
     }
 
     @Override
@@ -25,7 +25,7 @@ public class MySQLDatabase extends AbstractDatabase {
 
     @Override
     public String toString() {
-        return "MySQL";
+        return "mysql";
     }
 
 }
