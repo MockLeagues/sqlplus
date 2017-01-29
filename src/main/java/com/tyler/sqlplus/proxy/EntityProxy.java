@@ -1,20 +1,20 @@
 package com.tyler.sqlplus.proxy;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Type;
-import java.util.HashSet;
-import java.util.Set;
-
 import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
+import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SessionClosedException;
 import com.tyler.sqlplus.interpreter.QueryInterpreter;
 import com.tyler.sqlplus.utility.Fields;
-
 import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
+
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
+import java.lang.reflect.Type;
+import java.util.*;
 
 /**
  * Produces entity proxies to use when mapping POJOs from result sets
@@ -24,16 +24,21 @@ public class EntityProxy {
 	/**
 	 * Creates a proxy of the given class type which will intercept method calls in order to lazy-load related entities
 	 */
-	public static <T> T create(Class<T> type, Session session) throws InstantiationException, IllegalAccessException {
+	public static <T> T create(Class<T> type, Session session) {
 		
 		final Set<String> gettersLoaded = new HashSet<>();
 		
 		ProxyFactory factory = new ProxyFactory();
 		factory.setSuperclass(type);
-		
+
 		@SuppressWarnings("unchecked")
-		T proxy = (T) factory.createClass().newInstance();
-		
+		T proxy = null;
+		try {
+			proxy = (T) factory.createClass().newInstance();
+		} catch (InstantiationException | IllegalAccessException e) {
+			throw new ReflectionException("Could not create proxy instance of " + type, e);
+		}
+
 		((Proxy)proxy).setHandler((self, invokedMethod, proceed, args) -> {
 			
 			String methodName = invokedMethod.getName();
@@ -93,6 +98,22 @@ public class EntityProxy {
 		});
 		
 		return proxy;
+	}
+
+	/**
+	 * Determines if the given class type should result in proxy objects being returned when mapping POJOs.
+	 * Proxy objects are returned if there is at least 1 field or method in the class with a @LoadQuery annotation
+	 */
+	public static boolean isProxiable(Class<?> type) {
+
+		List<AccessibleObject> fieldsAndMethods = new ArrayList<>();
+		fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredFields()));
+		fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredMethods()));
+
+		return fieldsAndMethods.stream()
+		                       .filter(o -> o.isAnnotationPresent(LoadQuery.class))
+		                       .findFirst()
+		                       .isPresent();
 	}
 
 }

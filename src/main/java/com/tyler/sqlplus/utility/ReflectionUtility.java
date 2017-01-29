@@ -1,23 +1,31 @@
 package com.tyler.sqlplus.utility;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
 import com.tyler.sqlplus.exception.ReflectionException;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.util.*;
+
 public final class ReflectionUtility {
+
+	/**
+	 * Creates a new instance of the given class by invoking its default constructor.
+	 * The constructor does not need to be public
+	 * @throws ReflectionException If no default constructor is found or there is an error while invoking it
+	 */
+	public static <T> T newInstance(Class<T> klass) {
+		try {
+			Constructor<T> defaultConstructor = klass.getDeclaredConstructor();
+			defaultConstructor.setAccessible(true);
+			return defaultConstructor.newInstance();
+		} catch (NoSuchMethodException e) { // Give a cleaner error message
+			throw new ReflectionException(klass + " requires a no-argument constructor for instantation");
+		} catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
+			throw new ReflectionException(e);
+		}
+	}
 
 	/**
 	 * Creates a new collection instance based on the given collection type by choosing sensible defaults based
@@ -48,6 +56,9 @@ public final class ReflectionUtility {
 	}
 	
 	public static boolean isArray(Object obj) {
+		if (obj == null) {
+			return false;
+		}
 		return obj instanceof Object[]  ||
 		       obj instanceof int[]     ||
 		       obj instanceof short[]   ||
@@ -58,7 +69,10 @@ public final class ReflectionUtility {
 		       obj instanceof char[]    ||
 		       obj instanceof byte[];
 	}
-	
+
+	/**
+	 * Searches the given class and all superclasses for a field with the given annotation type
+	 */
 	public static Optional<Field> findFieldWithAnnotation(Class<? extends Annotation> annotType, Class<?> klass) {
 		if (klass.isInterface()) {
 			return Optional.empty();

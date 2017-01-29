@@ -1,7 +1,6 @@
 package com.tyler.sqlplus.mapper;
 
 import com.tyler.sqlplus.Session;
-import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.conversion.ConversionRegistry;
 import com.tyler.sqlplus.conversion.FieldReader;
 import com.tyler.sqlplus.exception.ReflectionException;
@@ -9,15 +8,16 @@ import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.proxy.EntityProxy;
 import com.tyler.sqlplus.utility.Fields;
+import com.tyler.sqlplus.utility.ReflectionUtility;
 
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Utilities for creating various result mappers
@@ -98,7 +98,7 @@ public final class ResultMappers {
 			};
 		}
 
-		boolean shouldReturnProxy = TYPE_PROXIABLE.computeIfAbsent(klass, ResultMappers::isProxiable);
+		boolean shouldReturnProxy = TYPE_PROXIABLE.computeIfAbsent(klass, EntityProxy::isProxiable);
 
 		return new ResultMapper<E>() {
 
@@ -111,12 +111,7 @@ public final class ResultMappers {
 					loadableFields = determineLoadableFields(rs, klass);
 				}
 
-				E instance;
-				try {
-					instance = shouldReturnProxy ? EntityProxy.create(klass, session) : newInstance(klass);
-				} catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
-					throw new ReflectionException("Could not construct instance of " + klass, e);
-				}
+				E instance = shouldReturnProxy ? EntityProxy.create(klass, session) : ReflectionUtility.newInstance(klass);
 
 				loadableFields.forEach((loadableField, columnName) -> {
 					Class<?> fieldType = loadableField.getType();
@@ -133,35 +128,14 @@ public final class ResultMappers {
 	}
 
 	/**
-	 * Creates a new instance of the given class by invoking its default constructor. The constructor need not be public, but
-	 * must exist
+	 * Determines which fields, if any, can be mapped from the given result set for the given class type.
+	 * A field of the given class is considered mappable if either of the following conditions are true:
+	 * <br/>
+	 * 1) A column exists in the result set with the same name
+	 * <br/>
+	 * 2) A column exists in the result set with the underscore equivalent name for the camel-case bean property name. For
+	 * instance, 'myField' would translate to the column name 'MY_FIELD'
 	 */
-	static <T> T newInstance(Class<T> klass) throws NoSuchMethodException, IllegalAccessException, InstantiationException, InvocationTargetException {
-		try {
-			Constructor<T> defaultConstructor = klass.getDeclaredConstructor();
-			defaultConstructor.setAccessible(true);
-			return defaultConstructor.newInstance();
-		} catch (NoSuchMethodException e) { // Give a cleaner error message
-			throw new ReflectionException(klass + " requires a no-argument constructor for instantation");
-		}
-	}
-	
-	/**
-	 * Determines if a given class type should result in proxy objects being returned when mapping POJOs.
-	 * Proxy objects are returned if there is at least 1 field or method in the class with a @LoadQuery annotation
-	 */
-	static boolean isProxiable(Class<?> type) {
-		
-		List<AccessibleObject> fieldsAndMethods = new ArrayList<>();
-		fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredFields()));
-		fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredMethods()));
-		
-		return fieldsAndMethods.stream()
-		                       .filter(o -> o.isAnnotationPresent(LoadQuery.class))
-		                       .findFirst()
-		                       .isPresent();
-	}
-	
 	static Map<Field, String> determineLoadableFields(ResultSet rs, Class<?> type) throws SQLException {
 		
 		Map<Field, String> loadableFields = new HashMap<>();
@@ -171,19 +145,19 @@ public final class ResultMappers {
 			
 			String columnLabel = meta.getColumnLabel(col);
 
-			Field field;
+			Field fieldForLabel;
 			try {
-				field = type.getDeclaredField(columnLabel);
+				fieldForLabel = type.getDeclaredField(columnLabel);
 			} catch (NoSuchFieldException e) {
 				try {
 					String convertedToCamelCase = Fields.underscoreToCamelCase(columnLabel);
-					field = type.getDeclaredField(convertedToCamelCase);
+					fieldForLabel = type.getDeclaredField(convertedToCamelCase);
 				} catch (NoSuchFieldException e2) {
 					continue;
 				}
 			}
 
-			loadableFields.put(field, columnLabel);
+			loadableFields.put(fieldForLabel, columnLabel);
 		}
 		
 		return loadableFields;
