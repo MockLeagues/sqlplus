@@ -1,15 +1,11 @@
 package com.tyler.sqlplus.interpreter;
 
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.exception.QueryInterpretationException;
+
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Type;
+import java.util.*;
 
 /**
  * Defines the contract for a class which is able of interpreting a query as a given java type, reflectively.
@@ -22,7 +18,6 @@ public abstract class QueryInterpreter {
 	static {
 		register(new MapQueryInterpreter());
 		register(new CollectionQueryInterpreter());
-		register(new ScalarQueryInterpreter());
 		register(new DefaultQueryInterpreter());
 	}
 	

@@ -116,7 +116,10 @@ public class TransactionalServiceTest extends DatabaseTest {
 		
 		@DAOQuery("select * from address where street = :street and state = :state")
 		public abstract Address getAddress(@BindParam("street") String street, @BindParam("state") String city);
-		
+
+		@DAOQuery("select street from address")
+		public abstract List<String> getAddressStreets();
+
 		@DAOUpdate("insert into address (street, city, state, zip) values (:street, :city, :state, :zip)")
 		public abstract void createAddress(@BindObject Address address);
 		
@@ -151,7 +154,7 @@ public class TransactionalServiceTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void queryScalarValue() throws Exception {
+	public void querySingleScalarValue() throws Exception {
 		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
@@ -160,7 +163,19 @@ public class TransactionalServiceTest extends DatabaseTest {
 		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		assertEquals(2, service.countAddress());
 	}
-	
+
+	@Test
+	public void queryScalarCollection() throws Exception {
+
+		db.batch(
+			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
+			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
+		);
+
+		List<String> streets = db.getSQLPlus().createService(QueryingService.class).getAddressStreets();
+		assertEquals(Arrays.asList("Maple Street", "Main Street"), streets);
+	}
+
 	@Test
 	public void queryAnnotatedMethodPerformsQueryForSingleResultWithNoParams() throws Exception {
 		

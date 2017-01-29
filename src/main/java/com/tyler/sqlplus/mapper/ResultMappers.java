@@ -1,5 +1,15 @@
 package com.tyler.sqlplus.mapper;
 
+import com.tyler.sqlplus.Session;
+import com.tyler.sqlplus.annotation.LoadQuery;
+import com.tyler.sqlplus.conversion.ConversionRegistry;
+import com.tyler.sqlplus.conversion.FieldReader;
+import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.function.Functions;
+import com.tyler.sqlplus.proxy.EntityProxy;
+import com.tyler.sqlplus.utility.Fields;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -7,20 +17,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import com.tyler.sqlplus.Session;
-import com.tyler.sqlplus.annotation.LoadQuery;
-import com.tyler.sqlplus.conversion.ConversionRegistry;
-import com.tyler.sqlplus.conversion.FieldReader;
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.function.Functions;
-import com.tyler.sqlplus.proxy.EntityProxy;
-import com.tyler.sqlplus.utility.Fields;
+import java.util.*;
 
 /**
  * Utilities for creating various result mappers
@@ -82,21 +79,34 @@ public final class ResultMappers {
 	};
 
 	/**
-	 * Creates a {@link ResultMapper} which will map ResultSet rows to POJOs.
+	 * Creates a {@link ResultMapper} which will map ResultSet rows to objects of the given type.
+	 * If the given type is determined to be a scalar value according to the given conversion registry, then
+	 * a mapper will be returned which simply maps scalar values of the given type from the first column.
 	 * If the given class type has any fields or methods annotated with @LoadQuery (denoting a lazy-loaded collection), a proxy
 	 * object will be returned;
 	 */
-	public static <E> ResultMapper<E> forClass(Class<E> klass, ConversionRegistry conversionRegistry, Session session) {
+	public static <E> ResultMapper<E> forClass(Class<E> klass, ConversionRegistry converter, Session session) {
+
+		// Scalar == value that cannot be reduced. These values will have dedicated readers. Therefore, if a reader exists for the type, it is scalar
+		boolean isScalar = converter.containsReader(klass);
+		if (isScalar) {
+			return rs -> {
+				if (rs.getMetaData().getColumnCount() > 1) {
+					throw new SQLRuntimeException("Cannot map query with more than 1 column to scalar " + klass);
+				}
+				return converter.getReader(klass).read(rs, 1, klass);
+			};
+		}
 
 		boolean shouldReturnProxy = TYPE_PROXIABLE.computeIfAbsent(klass, ResultMappers::isProxiable);
-		
+
 		return new ResultMapper<E>() {
 
 			private Map<Field, String> loadableFields;
 			
 			@Override
 			public E map(ResultSet rs) throws SQLException {
-				
+
 				if (loadableFields == null) {
 					loadableFields = determineLoadableFields(rs, klass);
 				}
@@ -110,7 +120,7 @@ public final class ResultMappers {
 
 				loadableFields.forEach((loadableField, columnName) -> {
 					Class<?> fieldType = loadableField.getType();
-					FieldReader<?> reader = conversionRegistry.getReader(fieldType);
+					FieldReader<?> reader = converter.getReader(fieldType);
 					Object fieldValue = Functions.runSQL(() -> reader.read(rs, columnName, fieldType));
 					Fields.set(loadableField, instance, fieldValue);
 				});

@@ -1,12 +1,12 @@
 package com.tyler.sqlplus;
 
-import com.tyler.sqlplus.exception.QueryStructureException;
-import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.base.DatabaseTest;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Address;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Employee;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Employee.Type;
-import com.tyler.sqlplus.base.DatabaseTest;
+import com.tyler.sqlplus.exception.QueryStructureException;
+import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -14,6 +14,7 @@ import org.junit.runners.Parameterized;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +25,7 @@ import static org.junit.Assert.*;
 public class QueryTest extends DatabaseTest {
 
 	@Test
-	public void testErrorThrownIfUnkownParamAdded() throws SQLException {
+	public void errorThrownIfUnknownParamAdded() throws SQLException {
 		db.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				Query q = conn.createQuery("select * from employee where employee_id = :id");
@@ -34,17 +35,19 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testErrorThrownIfParamValueNotSet() throws Exception {
+	public void errorThrownIfParamValueNotSet() throws Exception {
 		db.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		db.getSQLPlus().transact(conn -> {
-			assertThrows(() -> {
-				conn.createQuery("select address_id from address where state = :state and city = :city").setParameter("state", "s").getUniqueResultAs(Address.class);
-			}, QueryStructureException.class, "Missing parameter values for the following parameters: [city]");
+			assertThrows(
+				() -> conn.createQuery("select address_id from address where state = :state and city = :city").setParameter("state", "s").getUniqueResultAs(Address.class),
+				QueryStructureException.class,
+			"Missing parameter values for the following parameters: [city]"
+			);
 		});
 	}
 	
 	@Test
-	public void testThrowsIfParamIndexOutOfRange() throws Exception {
+	public void errorThrownIfParamIndexOutOfRange() throws Exception {
 		db.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where city = ?").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
@@ -53,7 +56,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testThrowsIfDuplicateParamAdded() throws Exception {
+	public void errorThrownIfDuplicateParamAdded() throws Exception {
 		db.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select address_id from address where city = :city and street = :city").setParameter(1, "city").setParameter(2, "state").getUniqueResultAs(Address.class);
@@ -63,7 +66,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testErrorThrownIfNoParamsSet() throws Exception {
+	public void errorThrownIfNoParamsSet() throws Exception {
 		db.getSQLPlus().transact(conn -> {
 			assertThrows(() -> {
 				conn.createQuery("select * from employee where name = :name").fetch();
@@ -72,7 +75,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testsQueryingWithParameterLabels() throws Exception {
+	public void paramsCanBeSetWithLabels() throws Exception {
 		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
@@ -88,15 +91,12 @@ public class QueryTest extends DatabaseTest {
 	}
 
 	@Test
-	public void testUnderscoreFieldNamesAreProperlyConvertedToCamelCaseEquivalents() throws Exception {
+	public void pojoFieldsCanBeMappedByConvertingUnderscoreNamesToCorrespondingCamelCaseNames() throws Exception {
 
 		db.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 
 		db.getSQLPlus().transact(conn -> {
-
-			String sql = "select ADDRESS_ID, STREET, STATE, CITY, ZIP from address a";
-
-			Address addr = conn.createQuery(sql).getUniqueResultAs(Address.class);
+			Address addr = conn.createQuery("select ADDRESS_ID, STREET, STATE, CITY, ZIP from address a").getUniqueResultAs(Address.class);
 			assertEquals("Maple Street", addr.street);
 			assertEquals("Anytown", addr.city);
 			assertEquals("MN", addr.state);
@@ -105,7 +105,7 @@ public class QueryTest extends DatabaseTest {
 	}
 
 	@Test
-	public void testQueryingWithWithMixtureOfParameterLabelsAndQuestionMarks() throws Exception {
+	public void paramsCanBeSetWithMixtureOfLabelsAndQuestionmarks() throws Exception {
 		
 		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
@@ -128,7 +128,7 @@ public class QueryTest extends DatabaseTest {
 	}
 
 	@Test
-	public void testCreatingQueryWithInitialKnownParams() throws Exception {
+	public void paramsCanBeSetInQueryConstructor() throws Exception {
 
 		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
@@ -145,7 +145,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testFetchingAsMaps() throws Exception {
+	public void resultsCanBeFetchesAsMaps() throws Exception {
 		
 		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
@@ -169,7 +169,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testBatchExec() throws Exception {
+	public void statementsCanBeExecutedInBatch() throws Exception {
 		
 		db.getSQLPlus().batchExec(
 			"insert into address (street, city, state, zip) values ('street1', 'city1', 'state1', 'zip1')",
@@ -190,7 +190,7 @@ public class QueryTest extends DatabaseTest {
 	}
 
 	@Test
-	public void testBatchProcessWithEvenBatchDivision() throws Exception {
+	public void resultsAreProcessedInBatchWhenTotalDividesEvenlyIntoBatchSize() throws Exception {
 		
 		int numAddress = 20;
 		List<String> insertSqls = new ArrayList<>();
@@ -213,7 +213,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testBatchProcessWithUnevenBatchDivision() throws Exception {
+	public void resultsAreProcessedInBatchWhenTotalDoesNotDivideEvenlyIntoBatchSize() throws Exception {
 		
 		int numAddress = 22;
 		List<String> insertSqls = new ArrayList<>();
@@ -241,7 +241,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testFieldsNotPresentInResultSetAreLeftNullInPOJO() throws Exception {
+	public void fieldsNotSelectedRemainNullInResultingPOJO() throws Exception {
 		db.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		
 		Address result = db.getSQLPlus().query(sess -> sess.createQuery("select street as \"street\", city as \"city\" from address").getUniqueResultAs(Address.class));
@@ -252,7 +252,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testMapEnumTypes() throws Exception {
+	public void enumTypesCanBeMapped() throws Exception {
 		db.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
 		Employee emp = db.getSQLPlus().query(sess -> {
 			return sess.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", salary as \"salary\", hired as \"hired\" from employee")
@@ -262,7 +262,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testBatchesAreAddedWhenExplicitlyAdded() throws Exception {
+	public void paramBatchesCanBeAddedExplicitly() throws Exception {
 
 		db.getSQLPlus().transact(conn -> {
 			
@@ -290,7 +290,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testTheLastManualBatchIsAutoAddedIfNotExplicitlyAdded() throws Exception {
+	public void lastParamBatchGetsAutoAddedIfNotDoneExplicitly() throws Exception {
 		
 		db.getSQLPlus().transact(conn -> {
 			
@@ -318,7 +318,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testFinishingABatchWithMissingParametersThrowsError() throws Exception {
+	public void finishingABatchThrowsErrorWhenParamsMissing() throws Exception {
 		db.getSQLPlus().transact(conn -> {
 			Query q = conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
 			    .setParameter("type", Type.SALARY)
@@ -330,7 +330,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testBindingParamsFromObject() throws Exception {
+	public void paramsCanBeBoundFromAnObject() throws Exception {
 		
 		Employee toCreate = new Employee();
 		LocalDate hiredAt = LocalDate.now();
@@ -352,7 +352,7 @@ public class QueryTest extends DatabaseTest {
 
 	
 	@Test
-	public void testBindingObjectParamsWhenSomeFieldIsNullSetsNull() throws Exception {
+	public void nullParamsInBoundObjectSetsValuesToNull() throws Exception {
 		
 		Employee toCreate = new Employee();
 		toCreate.type = Type.HOURLY;
@@ -378,7 +378,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void testBindParamsFailsIfNoMemberForParam() throws Exception {
+	public void bindFailsIfNoMemberExistsForParamLabel() throws Exception {
 		
 		EmployeeMissingBindParam toCreate = new EmployeeMissingBindParam();
 		toCreate.name = "tester-pojo";
@@ -393,7 +393,7 @@ public class QueryTest extends DatabaseTest {
 	}
 	
 	@Test
-	public void returnGeneratedKeys() throws Exception {
+	public void executeUpdateWillReturnAListOfGeneratedKeys() throws Exception {
 		db.batch("insert into employee(type, name, hired, salary) values ('SALARY', 'tester-1', '2015-01-01', 20500)");
 		
 		db.getSQLPlus().transact(conn -> {
@@ -408,7 +408,7 @@ public class QueryTest extends DatabaseTest {
 	}
 
 	@Test
-	public void testNoStatementsAreCommittedIfExceptionThrownInTransact() throws Exception {
+	public void dataIsNotPersistedIfAnErrorIsThrownBeforeCommit() throws Exception {
 		
 		class TransactionException extends RuntimeException {}
 		
@@ -426,9 +426,9 @@ public class QueryTest extends DatabaseTest {
 	}
 
 	@Test
-	public void testDeadlockIsNotEncounteredWhen2SeparateThreadsNeedEachOthersLockedTables() throws Exception {
+	public void deadlockIsNotEncounteredWhen2SeparateThreadsNeedEachOthersLockedTables() throws Exception {
 
-	Thread addressOwner = new Thread(() -> {
+		Thread addressOwner = new Thread(() -> {
 			db.getSQLPlus().transact(sess -> {
 				sess.createQuery("insert into address (street, city, state, zip) values('Maple Street', 'Othertown', 'MN', '12345')").executeUpdate();
 				Thread.sleep(500);
@@ -451,7 +451,28 @@ public class QueryTest extends DatabaseTest {
 	}
 
 	@Test
-	public void testLocksAreReleasedIfExceptionIsThrownBeforeQueryIsExecuted() throws Exception {
+	public void singleScalarValueCanBeQueriedSuccessfully() throws Exception {
+		db.batch("insert into address (street, city, state, zip) values ('street1', 'city1', 'state1', 'zip1')");
+		String street = db.getSQLPlus().query(s -> s.createQuery("select street from address").getUniqueResultAs(String.class));
+		assertEquals("street1", street);
+	}
+
+	@Test
+	public void listsOfScalarValuesCanBeQueriedSuccessfully() throws Exception {
+
+		db.batch(
+			"insert into address (street, city, state, zip) values ('street1', 'city1', 'state1', 'zip1')",
+			"insert into address (street, city, state, zip) values ('street2', 'city2', 'state2', 'zip2')",
+			"insert into address (street, city, state, zip) values ('street3', 'city3', 'state3', 'zip3')",
+			"insert into address (street, city, state, zip) values ('street4', 'city4', 'state4', 'zip4')"
+		);
+
+		List<String> streets = db.getSQLPlus().query(s -> s.createQuery("select street from address").fetchAs(String.class));
+		assertEquals(Arrays.asList("street1", "street2", "street3", "street4"), streets);
+	}
+
+	@Test
+	public void locksAreReleasedIfExceptionIsThrownBeforeQueryIsExecuted() throws Exception {
 		
 		try {
 			db.getSQLPlus().transact(sess -> {

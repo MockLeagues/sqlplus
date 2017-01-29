@@ -145,27 +145,6 @@ public class Query {
 	}
 	
 	/**
-	 * Returns the result of this query as a 'scalar' (single) value of the given Java class type.
-	 * 
-	 * This method will throw a SQLRuntimeException if the produced result set has more than 1 column
-	 */
-	public <T> T fetchScalar(Class<T> scalarClass) {
-		try {
-			PreparedStatement ps = prepareStatement(false);
-			ResultSet rs = ps.executeQuery();
-			if (!rs.next()) {
-				throw new NoResultsException();
-			}
-			if (rs.getMetaData().getColumnCount() > 1) {
-				throw new SQLRuntimeException("Scalar query returned more than 1 column");
-			}
-			return conversionRegistry.getReader(scalarClass).read(rs, 1, scalarClass);
-		} catch (SQLException e) {
-			throw new SQLRuntimeException("Error retrieving scalar value", e);
-		}
-	}
-	
-	/**
 	 * Execute this query's payload as an update statement
 	 */
 	public void executeUpdate() {

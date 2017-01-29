@@ -369,7 +369,11 @@ public class ConversionRegistry {
 		readers = new HashMap<>(READER_REGISTRY);
 		writers = new HashMap<>(WRITER_REGISTRY);
 	}
-	
+
+	public boolean containsReader(Class<?> type) {
+		return readers.containsKey(type);
+	}
+
 	public <T> void registerReader(Class<T> type, FieldReader<T> reader) {
 		this.readers.put(type, reader);
 	}
