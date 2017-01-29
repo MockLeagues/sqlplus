@@ -360,7 +360,7 @@ public class Query {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(getFormattedSQL(), getParameterHash());
+		return Objects.hash(getFormattedSQL(), getParameterValues());
 	}
 
 	@Override
@@ -379,14 +379,6 @@ public class Query {
 	@Override
 	public String toString() {
 		return sql;
-	}
-
-	private int getParameterHash() {
-		int paramBatchesSum = paramBatches.stream()
-						.mapToInt(m -> m.values().stream().mapToInt(Object::hashCode).sum())
-						.sum();
-		int manualBatchSum = manualParamBatch.values().stream().mapToInt(Object::hashCode).sum();
-		return paramBatchesSum + manualBatchSum;
 	}
 
 	private Collection<Object> getParameterValues() {
