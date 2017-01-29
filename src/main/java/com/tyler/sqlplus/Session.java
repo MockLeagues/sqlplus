@@ -25,7 +25,7 @@ public class Session implements Closeable {
 	 */
 	Connection conn;
 	
-	public Session(Connection conn) {
+	Session(Connection conn) {
 		this.conn = conn;
 	}
 
