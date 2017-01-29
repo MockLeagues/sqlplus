@@ -229,7 +229,7 @@ public class Query {
 		}
 		
 		String formattedSql = sql.replaceAll(REGEX_PARAM, "?");
-		PreparedStatement ps = Functions.runSQL(() -> session.getJdbcConnection().prepareStatement(formattedSql, returnKeys ? Statement.RETURN_GENERATED_KEYS : 0));
+		PreparedStatement ps = Functions.runSQL(() -> session.conn.prepareStatement(formattedSql, returnKeys ? Statement.RETURN_GENERATED_KEYS : 0));
 			
 		for (Map<Integer, Object> paramBatch : this.paramBatches) {
 

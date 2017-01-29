@@ -1,19 +1,23 @@
 package com.tyler.sqlplus;
 
+import com.tyler.sqlplus.exception.SQLRuntimeException;
+import com.tyler.sqlplus.exception.SessionClosedException;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-
-import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.exception.SessionClosedException;
 
 /**
  * Represents an individual unit of work within the SqlPlus environment
  */
 public class Session implements Closeable {
 
-	private Connection conn;
+	/**
+	 * Package-private so as to not break encapsulation.
+	 * JDBC connection object should ONLY every be retrieved from the Query class
+	 */
+	Connection conn;
 	
 	public Session(Connection conn) {
 		this.conn = conn;
@@ -63,14 +67,6 @@ public class Session implements Closeable {
 		catch (SQLException e) {
 			return false;
 		}
-	}
-	
-	/**
-	 * Package-private so as to not break encapsulation.
-	 * JDBC connection object should ONLY every be retrieved from the Query class
-	 */
-	Connection getJdbcConnection() {
-		return conn;
 	}
 	
 	@Override
