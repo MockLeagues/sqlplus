@@ -554,4 +554,25 @@ public class QueryTest extends DatabaseTest {
 		});
 	}
 
+	/**
+	 *
+	 * This test is mainly for checking that the cache behaves correctly since it caches by query and result type, which
+	 * will be the same for both queries yet the return type is different
+	 */
+	@Test
+	public void theSameQueryCanBeInterpretedBothAsAUniqueResultAndListResult() throws Exception {
+		db.batch("insert into employee(name, salary, hired, type) values('Bill Gates', 999999999, '2015-01-15', 'SALARY')");
+		db.getSQLPlus().transact(sess -> {
+			Query nameQuery = sess.createQuery("select name from employee");
+
+			List<String> listResult = nameQuery.fetchAs(String.class);
+			assertEquals(Arrays.asList("Bill Gates"), listResult);
+			assertFalse(sess.wasFromCache());
+
+			String singleResult = nameQuery.getUniqueResultAs(String.class);
+			assertTrue(sess.wasFromCache());
+			assertEquals("Bill Gates", singleResult);
+		});
+	}
+
 }

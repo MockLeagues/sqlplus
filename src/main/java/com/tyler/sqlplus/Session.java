@@ -7,17 +7,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Represents an individual unit of work within the SqlPlus environment
  */
 public class Session implements Closeable {
 
-	private Map<QueryCacheKey, Object> firstLevelCache = new HashMap<>();
+	private Map<QueryCacheKey, List<Object>> firstLevelCache = new HashMap<>();
 	private boolean lastResultCached = false;
 
 	/**
@@ -70,19 +67,16 @@ public class Session implements Closeable {
 	}
 
 	<T> T getUniqueResult(Query query, Class<T> resultClass) {
-		lastResultCached = true;
-		return (T) firstLevelCache.computeIfAbsent(new QueryCacheKey(query, resultClass), q -> {
-			lastResultCached = false;
-			return query.getUniqueResultForCache(resultClass);
-		});
+		QueryCacheKey cacheKey = new QueryCacheKey(query, resultClass);
+		lastResultCached = firstLevelCache.containsKey(cacheKey);
+		List<T> results = (List<T>) firstLevelCache.computeIfAbsent(cacheKey, q -> Arrays.asList(query.getUniqueResultForCache(resultClass)));
+		return results.get(0);
 	}
 
 	<T> List<T> fetch(Query query, Class<T> resultClass) {
-		lastResultCached = true;
-		return (List<T>) firstLevelCache.computeIfAbsent(new QueryCacheKey(query, resultClass), q -> {
-			lastResultCached = false;
-			return query.fetchForCache(resultClass);
-		});
+		QueryCacheKey cacheKey = new QueryCacheKey(query, resultClass);
+		lastResultCached = firstLevelCache.containsKey(cacheKey);
+		return (List<T>) firstLevelCache.computeIfAbsent(cacheKey, q -> (List<Object>) query.fetchForCache(resultClass));
 	}
 
 	private void assertOpen() {
