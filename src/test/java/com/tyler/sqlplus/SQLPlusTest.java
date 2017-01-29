@@ -1,6 +1,6 @@
 package com.tyler.sqlplus;
 
-import com.tyler.sqlplus.test.DatabaseTest;
+import com.tyler.sqlplus.base.DatabaseTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -20,14 +20,14 @@ public class SQLPlusTest extends DatabaseTest {
 		List<Session> sessionsRetrieved = new ArrayList<>();
 		
 		Callable<Object> childCall = () -> {
-			dbRule.getSQLPlus().transact(conn -> {
+			db.getSQLPlus().transact(conn -> {
 				sessionsRetrieved.add(conn);
 			});
 			return null;
 		};
 		
 		Callable<Object> parentCall = () -> {
-			dbRule.getSQLPlus().transact(sess -> {
+			db.getSQLPlus().transact(sess -> {
 				sessionsRetrieved.add(sess);
 				childCall.call(); // When the child call opens it's session, the session it gets should be the exact same object
 			});

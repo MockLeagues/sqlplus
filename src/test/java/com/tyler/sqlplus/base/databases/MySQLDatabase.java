@@ -1,10 +1,10 @@
-package com.tyler.sqlplus.rule;
+package com.tyler.sqlplus.base.databases;
 
 import com.tyler.sqlplus.function.Functions;
 
-public class MySQLRule extends AbstractDBRule {
+public class MySQLDatabase extends AbstractDatabase {
 
-    public MySQLRule() {
+    public MySQLDatabase() {
         Functions.run(() -> Class.forName(com.mysql.cj.jdbc.Driver.class.getName()));
     }
 
@@ -21,6 +21,11 @@ public class MySQLRule extends AbstractDBRule {
     @Override
     public String getPassword() {
         return "sqlplus";
+    }
+
+    @Override
+    public String toString() {
+        return "MySQL";
     }
 
 }

@@ -4,8 +4,8 @@ import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.*;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.rule.AbstractDBRule.Address;
-import com.tyler.sqlplus.test.DatabaseTest;
+import com.tyler.sqlplus.base.databases.AbstractDatabase.Address;
+import com.tyler.sqlplus.base.DatabaseTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -14,7 +14,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import static com.tyler.sqlplus.test.SQLPlusTesting.assertThrows;
+import static com.tyler.sqlplus.base.SQLPlusTesting.assertThrows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
@@ -38,13 +38,13 @@ public class TransactionalServiceTest extends DatabaseTest {
 	@Test
 	public void testTransactionAwareServicesExecuteMethodsInTransaction() throws Exception {
 		
-		dbRule.batch(
+		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
 		
-		TransactionAwareService service = dbRule.getSQLPlus().createService(TransactionAwareService.class);
+		TransactionAwareService service = db.getSQLPlus().createService(TransactionAwareService.class);
 		List<Address> addresses = service.getAddresses();
 		assertEquals(3, addresses.size());
 	}
@@ -57,7 +57,7 @@ public class TransactionalServiceTest extends DatabaseTest {
 	@Test
 	public void testTransactionAwareServiceThrowsErrorIfInjectFieldTypeIsNotSqlPlus() throws Exception {
 		assertThrows(
-			() -> dbRule.getSQLPlus().createService(TransactionAwareServiceBadField.class),
+			() -> db.getSQLPlus().createService(TransactionAwareServiceBadField.class),
 			AnnotationConfigurationException.class,
 			"@" + Database.class.getSimpleName() + " annotated field " + TransactionAwareServiceBadField.class.getDeclaredField("notASession") + " must be of type " + SQLPlus.class
 		);
@@ -74,13 +74,13 @@ public class TransactionalServiceTest extends DatabaseTest {
 
 	@Test
 	public void testServiceClassExtendingTransactionServiceSupport() throws Exception {
-		dbRule.batch(
+		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
 
-		SupportedService service = dbRule.getSQLPlus().createService(SupportedService.class);
+		SupportedService service = db.getSQLPlus().createService(SupportedService.class);
 		List<Address> addresses = service.getAddresses();
 		assertEquals(3, addresses.size());
 	}
@@ -94,8 +94,8 @@ public class TransactionalServiceTest extends DatabaseTest {
 	
 	@Test
 	public void proxyCanBeCreatedForInterface() throws Exception {
-		dbRule.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
-		InterfaceService service = dbRule.getSQLPlus().createService(InterfaceService.class);
+		db.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
+		InterfaceService service = db.getSQLPlus().createService(InterfaceService.class);
 		List<Address> addresses = service.getAddresses();
 		assertEquals(1, addresses.size());
 	}
@@ -142,7 +142,7 @@ public class TransactionalServiceTest extends DatabaseTest {
 	
 	@Test
 	public void queryOnVoidMethodThrowsException() throws Exception {
-		QueryingService service = dbRule.getSQLPlus().createService(QueryingService.class);
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		assertThrows(
 			() -> service.voidQuery(),
 			SQLRuntimeException.class,
@@ -152,24 +152,24 @@ public class TransactionalServiceTest extends DatabaseTest {
 	
 	@Test
 	public void queryScalarValue() throws Exception {
-		dbRule.batch(
+		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
 		
-		QueryingService service = dbRule.getSQLPlus().createService(QueryingService.class);
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		assertEquals(2, service.countAddress());
 	}
 	
 	@Test
 	public void queryAnnotatedMethodPerformsQueryForSingleResultWithNoParams() throws Exception {
 		
-		dbRule.batch(
+		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
 		
-		QueryingService service = dbRule.getSQLPlus().createService(QueryingService.class);
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		Address address = service.getMainStreet();
 		assertEquals("Main Street", address.street);
 	}
@@ -177,12 +177,12 @@ public class TransactionalServiceTest extends DatabaseTest {
 	@Test
 	public void queryAnnotatedMethodPerformsQueryForCollectionResultWithNoParams() throws Exception {
 		
-		dbRule.batch(
+		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')"
 		);
 		
-		QueryingService service = dbRule.getSQLPlus().createService(QueryingService.class);
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		List<Address> addresses = service.getAddresses();
 		assertEquals("Maple Street", addresses.get(0).street);
 		assertEquals("Main Street", addresses.get(1).street);
@@ -191,13 +191,13 @@ public class TransactionalServiceTest extends DatabaseTest {
 	@Test
 	public void queryAnnotatedMethodPerformsQueryWithBindParams() throws Exception {
 		
-		dbRule.batch(
+		db.batch(
 			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
 			"insert into address (street, city, state, zip) values('Main Street', 'Bakersfield', 'CA', '54321')",
 			"insert into address (street, city, state, zip) values('Maple Street', 'Bakersfield', 'CA', '54321')"
 		);
 		
-		QueryingService service = dbRule.getSQLPlus().createService(QueryingService.class);
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		Address address = service.getAddress("Maple Street", "CA");
 		assertEquals("Maple Street", address.street);
 		assertEquals("CA", address.state);
@@ -212,11 +212,11 @@ public class TransactionalServiceTest extends DatabaseTest {
 		add.street = "test-street";
 		add.zip = "test-zip";
 		
-		QueryingService service = dbRule.getSQLPlus().createService(QueryingService.class);
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		service.createAddress(add);
 		
 		String[][] expect = {{ "test-city", "test-state", "test-street", "test-zip" }};
-		String[][] actual = dbRule.query("select city, state, street, zip from address");
+		String[][] actual = db.query("select city, state, street, zip from address");
 		assertArrayEquals(expect, actual);
 	}
 	
@@ -229,11 +229,11 @@ public class TransactionalServiceTest extends DatabaseTest {
 		add.street = "test-street";
 		add.zip = "test-zip";
 		
-		QueryingService service = dbRule.getSQLPlus().createService(QueryingService.class);
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		Integer key = service.createAddressWithKey(add);
 		
 		String[][] expect = {{ "test-city", "test-state", "test-street", "test-zip" }};
-		String[][] actual = dbRule.query("select city, state, street, zip from address");
+		String[][] actual = db.query("select city, state, street, zip from address");
 		assertArrayEquals(expect, actual);
 		assertEquals(new Integer(1), key);
 	}
@@ -253,14 +253,14 @@ public class TransactionalServiceTest extends DatabaseTest {
 		add2.street = "test2-street";
 		add2.zip = "test2-zip";
 		
-		QueryingService service = dbRule.getSQLPlus().createService(QueryingService.class);
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		List<Integer> keys = service.createAddressesWithKeys(Arrays.asList(add1, add2));
 		
 		String[][] expect = {
 			{ "test-city", "test-state", "test-street", "test-zip" },
 			{ "test2-city", "test2-state", "test2-street", "test2-zip" }
 		};
-		String[][] actual = dbRule.query("select city, state, street, zip from address");
+		String[][] actual = db.query("select city, state, street, zip from address");
 		assertArrayEquals(expect, actual);
 		assertEquals(new Integer(1), keys.get(0));
 		assertEquals(new Integer(2), keys.get(1));
@@ -281,14 +281,14 @@ public class TransactionalServiceTest extends DatabaseTest {
 		add2.street = "test2-street";
 		add2.zip = "test2-zip";
 		
-		QueryingService service = dbRule.getSQLPlus().createService(QueryingService.class);
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
 		List<Integer> keys = service.createAddressesWithKeysVarargs(add1, add2);
 		
 		String[][] expect = {
 			{ "test-city", "test-state", "test-street", "test-zip" },
 			{ "test2-city", "test2-state", "test2-street", "test2-zip" }
 		};
-		String[][] actual = dbRule.query("select city, state, street, zip from address");
+		String[][] actual = db.query("select city, state, street, zip from address");
 		assertArrayEquals(expect, actual);
 		assertEquals(new Integer(1), keys.get(0));
 		assertEquals(new Integer(2), keys.get(1));

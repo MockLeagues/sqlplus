@@ -1,9 +1,9 @@
-package com.tyler.sqlplus.test;
+package com.tyler.sqlplus.base;
+
+import com.tyler.sqlplus.function.Task;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-
-import com.tyler.sqlplus.function.Task;
 
 public class SQLPlusTesting {
 

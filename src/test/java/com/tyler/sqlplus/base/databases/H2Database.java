@@ -1,6 +1,6 @@
-package com.tyler.sqlplus.rule;
+package com.tyler.sqlplus.base.databases;
 
-public class H2Rule extends AbstractDBRule {
+public class H2Database extends AbstractDatabase {
 
 	@Override
 	public String getUrl() {
@@ -15,6 +15,11 @@ public class H2Rule extends AbstractDBRule {
 	@Override
 	public String getPassword() {
 		return "sa";
+	}
+
+	@Override
+	public String toString() {
+		return "h2";
 	}
 
 }

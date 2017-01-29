@@ -1,17 +1,16 @@
-package com.tyler.sqlplus.rule;
+package com.tyler.sqlplus.base.databases;
 
 import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.function.Functions;
-import org.junit.rules.ExternalResource;
 
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class AbstractDBRule extends ExternalResource {
+public abstract class AbstractDatabase {
 
 	private SQLPlus sqlPlus = new SQLPlus(this::getConnection);
 	
@@ -47,17 +46,6 @@ public abstract class AbstractDBRule extends ExternalResource {
 		}
 	}
 	
-	@Override
-	public void before() {
-		destroySchema();
-		setupSchema();
-	}
-	
-	@Override
-	public void after() {
-		destroySchema();
-	}
-
 	public static class Employee {
 
 		public enum Type { HOURLY, SALARY; }
