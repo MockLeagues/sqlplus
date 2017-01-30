@@ -1,12 +1,12 @@
 package com.tyler.sqlplus;
 
 import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.function.Work;
 import com.tyler.sqlplus.proxy.TransactionalService;
 
 import javax.sql.DataSource;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -118,36 +118,30 @@ public class SQLPlus {
 			}
 		}
 
-		Connection conn = null;
+		Session session = null;
 		T result;
-
 		try {
-			conn = dataSource.getConnection();
+			session = new Session(dataSource.getConnection());
 			if (isolation != -1) {
-				conn.setTransactionIsolation(isolation);
+				session.conn.setTransactionIsolation(isolation);
 			}
-			conn.setAutoCommit(false);
-			Session newSession = new Session(conn);
-			CURRENT_THREAD_SESSION.set(newSession);
-			result = action.doReturningWork(newSession);
-			conn.commit();
+			session.conn.setAutoCommit(false);
+			CURRENT_THREAD_SESSION.set(session);
+			result = action.doReturningWork(session);
+			session.conn.commit();
 		}
 		catch (Exception e) {
 			CURRENT_THREAD_SESSION.remove();
-			if (conn != null) {
-				try {
-					conn.rollback();
-					conn.close();
-				}
-				catch (SQLException e2) {
-					throw new SQLRuntimeException(e2);
-				}
-			}
+			session.rollback();
 			throw new SQLRuntimeException(e);
 		}
 
 		CURRENT_THREAD_SESSION.remove();
-		Functions.runSQL(conn::close);
+		try {
+			session.close();
+		} catch (IOException e) {
+			throw new SQLRuntimeException(e);
+		}
 		return result;
 	}
 	

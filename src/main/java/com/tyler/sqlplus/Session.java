@@ -63,6 +63,25 @@ public class Session implements Closeable {
 		}
 	}
 
+	public boolean isOpen() {
+		try {
+			return !conn.isClosed();
+		}
+		catch (SQLException e) {
+			return false;
+		}
+	}
+
+	void rollback() {
+		try {
+			conn.rollback();
+			conn.close();
+		}
+		catch (SQLException e) {
+			throw new SQLRuntimeException(e);
+		}
+	}
+
 	void invalidateFirstLevelCache() {
 		firstLevelCache.clear();
 	}
@@ -88,20 +107,12 @@ public class Session implements Closeable {
 			throw new SessionClosedException();
 		}
 	}
-	
-	public boolean isOpen() {
-		try {
-			return !conn.isClosed();
-		}
-		catch (SQLException e) {
-			return false;
-		}
-	}
-	
+
 	@Override
 	public void close() throws IOException {
 		try {
 			conn.close();
+			firstLevelCache.clear();
 		}
 		catch (SQLException e) {
 			throw new IOException(e);

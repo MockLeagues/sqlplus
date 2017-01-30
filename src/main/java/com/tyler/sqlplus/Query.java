@@ -116,14 +116,22 @@ public class Query {
 		streamAs(batchType).forEach(data -> {
 			batch.add(data);
 			if (batch.size() == batchSize) {
-				Functions.runSQL(() -> processor.acceptBatch(batch));
+				try {
+					processor.acceptBatch(batch);
+				} catch (Exception e) {
+					throw new SQLRuntimeException(e);
+				}
 				batch.clear();
 			}
 		});
 		
 		// Will have leftover if batch size does not evenly divide into total results
 		if (!batch.isEmpty()) {
-			Functions.runSQL(() -> processor.acceptBatch(batch));
+			try {
+				processor.acceptBatch(batch);
+			} catch (Exception e) {
+				throw new SQLRuntimeException(e);
+			}
 		}
 	}
 	
