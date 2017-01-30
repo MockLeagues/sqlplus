@@ -27,11 +27,11 @@ public class SQLPlus {
 	private SQLPlus() {}
 	
 	public SQLPlus(String url, String user, String pass) {
-		this(new BasicDataSource().setUrl(url).setUsername(user).setPassword(pass));
+		this(new BasicDataSource(url, user, pass));
 	}
 	
 	public SQLPlus(Supplier<Connection> connectionFactory) {
-		this(new BasicDataSource() {
+		this(new BasicDataSource(null, null, null) {
 			
 			@Override
 			public Connection getConnection(String user, String pass) {

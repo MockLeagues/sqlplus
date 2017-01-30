@@ -1,13 +1,12 @@
 package com.tyler.sqlplus;
 
+import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.logging.Logger;
-
-import javax.sql.DataSource;
 
 public class BasicDataSource implements DataSource {
 
@@ -17,9 +16,15 @@ public class BasicDataSource implements DataSource {
 	private String username;
 	private String password;
 	private String driverClass;
-	
-	public BasicDataSource() {}
-	
+
+	private BasicDataSource() {}
+
+	public BasicDataSource(String url, String username, String password) {
+		this.url = url;
+		this.username = username;
+		this.password = password;
+	}
+
 	public String getUrl() {
 		return url;
 	}

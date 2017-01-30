@@ -32,7 +32,7 @@ public class Query {
 	
 	private Session session;
 	private String sql;
-	private LinkedHashMap<Integer, Object> manualParamBatch = new LinkedHashMap<>();
+	private LinkedHashMap<Integer, Object> currentParamBatch = new LinkedHashMap<>();
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
 	private ConversionRegistry conversionRegistry = new ConversionRegistry();
@@ -57,7 +57,7 @@ public class Query {
 			throw new QueryStructureException("Unknown query parameter: " + key);
 		}
 		Integer paramIndex = paramLabel_paramIndex.get(key);
-		manualParamBatch.put(paramIndex, val);
+		currentParamBatch.put(paramIndex, val);
 		return this;
 	}
 
@@ -206,7 +206,7 @@ public class Query {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private PreparedStatement prepareStatement(boolean returnKeys) {
 		
-		if (!manualParamBatch.isEmpty()) {
+		if (!currentParamBatch.isEmpty()) {
 			finishBatch();
 		}
 		
@@ -237,7 +237,7 @@ public class Query {
 	}
 	
 	/**
-	 * Binds the parameters in the given POJO class as a batch on this query
+	 * Binds the parameters in the given POJO class to the current parameter batch for his query
 	 */
 	public Query bind(Object o) {
 		
@@ -247,23 +247,27 @@ public class Query {
 		if (Proxy.class.isAssignableFrom(klass)) {
 			klass = klass.getSuperclass();
 		}
-		
-		LinkedHashMap<Integer, Object> bindParams = new LinkedHashMap<>();
+
+		boolean isCompleteBatch = true;
 		for (String paramLabel : paramLabel_paramIndex.keySet()) {
 			
 			Field mappedField;
 			try {
 				mappedField = klass.getDeclaredField(paramLabel);
 			} catch (NoSuchFieldException e) {
-				throw new ReflectionException("No member exists in " + klass + " to bind a value for query parameter '" + paramLabel + "'");
+				isCompleteBatch = false;
+				continue; // This member will need to be set manually
 			}
 			
 			Object member = Fields.get(mappedField, o);
 			Integer paramIndex = paramLabel_paramIndex.get(paramLabel);
-			bindParams.put(paramIndex, member);
+			currentParamBatch.put(paramIndex, member);
 		}
-		
-		addBatch(bindParams);
+
+		if (isCompleteBatch) {
+			finishBatch();
+		}
+
 		return this;
 	}
 
@@ -271,8 +275,8 @@ public class Query {
 	 * Finishes and validates the current running manual parameter batch
 	 */
 	public Query finishBatch() {
-		addBatch(manualParamBatch);
-		manualParamBatch = new LinkedHashMap<>();
+		addBatch(currentParamBatch);
+		currentParamBatch = new LinkedHashMap<>();
 		return this;
 	}
 	
@@ -359,7 +363,7 @@ public class Query {
 	private Collection<Object> getParameterValues() {
 		Collection<Object> values = new ArrayList<>();
 		paramBatches.forEach(batch -> values.addAll(batch.values()));
-		values.addAll(manualParamBatch.values());
+		values.addAll(currentParamBatch.values());
 		return values;
 	}
 

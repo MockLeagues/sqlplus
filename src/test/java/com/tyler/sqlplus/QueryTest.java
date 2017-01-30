@@ -5,7 +5,6 @@ import com.tyler.sqlplus.base.databases.AbstractDatabase.Address;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Employee;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Employee.Type;
 import com.tyler.sqlplus.exception.QueryStructureException;
-import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -13,7 +12,10 @@ import org.junit.runners.Parameterized;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 import static com.tyler.sqlplus.base.SQLPlusTesting.assertThrows;
 import static org.junit.Assert.*;
@@ -336,7 +338,34 @@ public class QueryTest extends DatabaseTest {
 		String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  hiredAt.toString(), "20000" };
 		assertArrayEquals(expectRow, actualRow);
 	}
-	
+
+	static class EmployeePartial {
+		LocalDate hired;
+		String name;
+	}
+
+	@Test
+	public void bindWillOnlyBindParamsThatAreFoundOnObjectAndWillNotThrowErrorForThoseNotFound() throws Exception {
+
+		EmployeePartial employeePartial = new EmployeePartial();
+		LocalDate hiredAt = LocalDate.now();
+		employeePartial.hired = hiredAt;
+		employeePartial.name = "tester-pojo";
+		db.getSQLPlus().transact(conn -> {
+
+			conn.createQuery("insert into employee(type, name, hired, salary) values (:type, :name, :hired, :salary)")
+			    .bind(employeePartial)
+			    .setParameter("type", Type.HOURLY)
+			    .setParameter("salary", 20000)
+			    .executeUpdate();
+		});
+
+		String[] actualRow = db.query("select type, name, hired, salary from employee")[0];
+		String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  hiredAt.toString(), "20000" };
+		assertArrayEquals(expectRow, actualRow);
+
+	}
+
 	@Test
 	public void nullParamsInBindingObjectSetsValuesToNull() throws Exception {
 		
@@ -355,27 +384,6 @@ public class QueryTest extends DatabaseTest {
 		String[] expectRow = { Type.HOURLY.name(), "tester-pojo",  null, null };
 		assertArrayEquals(expectRow, actualRow);
 		assertArrayEquals(expectRow, actualRow);
-	}
-	
-	public static class EmployeeMissingBindParam {
-		public Type type;
-		public String name;
-		public Integer salary;
-	}
-	
-	@Test
-	public void bindFailsIfNoMemberExistsForParamLabel() throws Exception {
-		
-		EmployeeMissingBindParam toCreate = new EmployeeMissingBindParam();
-		toCreate.name = "tester-pojo";
-		toCreate.salary = 20000;
-		toCreate.type = Type.HOURLY;
-		
-		db.getSQLPlus().transact(conn -> {
-			assertThrows(() -> {
-				conn.createQuery("insert into employee(hired, type, name, salary) values (:hired, :type, :name, :salary)").bind(toCreate);
-			}, ReflectionException.class);
-		});
 	}
 	
 	@Test
