@@ -112,7 +112,8 @@ public class SQLPlus {
 		if (currentSession != null) {
 			try {
 				return action.doReturningWork(currentSession);
-			} catch (Exception e) {
+			}
+			catch (Exception e) {
 				throw new SQLRuntimeException(e);
 			}
 		}
@@ -137,7 +138,8 @@ public class SQLPlus {
 				try {
 					conn.rollback();
 					conn.close();
-				} catch (SQLException e2) {
+				}
+				catch (SQLException e2) {
 					throw new SQLRuntimeException(e2);
 				}
 			}

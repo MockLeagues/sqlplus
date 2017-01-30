@@ -38,6 +38,15 @@ public class Session implements Closeable {
 		return q;
 	}
 
+	/**
+	 * Stages a new query within this session. If the session is no longer active, a {@link SessionClosedException}
+	 * will be thrown
+	 */
+	public Query createQuery(String sql) {
+		assertOpen();
+		return new Query(sql, this);
+	}
+
 	public boolean wasFromCache() {
 		return lastResultCached;
 	}
@@ -48,18 +57,10 @@ public class Session implements Closeable {
 	public void flush() {
 		try {
 			conn.commit();
-		} catch (SQLException e) {
+		}
+		catch (SQLException e) {
 			throw new SQLRuntimeException(e);
 		}
-	}
-	
-	/**
-	 * Stages a new query within this session. If the session is no longer active, a {@link SessionClosedException}
-	 * will be thrown
-	 */
-	public Query createQuery(String sql) {
-		assertOpen();
-		return new Query(sql, this);
 	}
 
 	void invalidateFirstLevelCache() {
@@ -69,7 +70,10 @@ public class Session implements Closeable {
 	<T> T getUniqueResult(Query query, Class<T> resultClass) {
 		QueryCacheKey cacheKey = new QueryCacheKey(query, resultClass);
 		lastResultCached = firstLevelCache.containsKey(cacheKey);
-		List<T> results = (List<T>) firstLevelCache.computeIfAbsent(cacheKey, q -> Arrays.asList(query.getUniqueResultForCache(resultClass)));
+		List<T> results = (List<T>) firstLevelCache.computeIfAbsent(cacheKey, q -> {
+			Object uniqueResult = query.getUniqueResultForCache(resultClass);
+			return Arrays.asList(uniqueResult);
+		});
 		return results.get(0);
 	}
 

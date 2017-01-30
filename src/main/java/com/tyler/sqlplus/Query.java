@@ -136,7 +136,8 @@ public class Query {
 		try {
 			PreparedStatement ps = prepareStatement(false);
 			return ResultStream.stream(ps.executeQuery());
-		} catch (SQLException e) {
+		}
+		catch (SQLException e) {
 			throw new SQLRuntimeException(e);
 		}
 	}
@@ -151,7 +152,8 @@ public class Query {
 			int[] affectedRowsPerBatch;
 			if (paramBatches.size() > 1) {
 				affectedRowsPerBatch = ps.executeBatch();
-			} else {
+			}
+			else {
 				affectedRowsPerBatch = new int[]{ ps.executeUpdate() };
 			}
 
@@ -176,7 +178,8 @@ public class Query {
 			PreparedStatement ps = prepareStatement(true);
 			if (paramBatches.size() > 1) {
 				ps.executeBatch();
-			} else {
+			}
+			else {
 				ps.executeUpdate();
 			}
 			
@@ -190,8 +193,8 @@ public class Query {
 
 			session.invalidateFirstLevelCache();
 			return keys;
-					
-		} catch (SQLException e) {
+		}
+		catch (SQLException e) {
 			throw new SQLRuntimeException(e);
 		}
 	}
@@ -222,7 +225,8 @@ public class Query {
 			paramBatch.forEach((paramIndex, objParam) -> {
 				if (objParam == null) {
 					Functions.runSQL(() -> ps.setObject(paramIndex, null));
-				} else {
+				}
+				else {
 					SQLConverter converter = conversionRegistry.getConverter(objParam.getClass());
 					Functions.runSQL(() -> converter.write(ps, paramIndex, objParam));
 				}
@@ -256,7 +260,7 @@ public class Query {
 				mappedField = klass.getDeclaredField(paramLabel);
 			} catch (NoSuchFieldException e) {
 				isCompleteBatch = false;
-				continue; // This member will need to be set manually
+				continue; // This parameter will need to be set manually
 			}
 			
 			Object member = Fields.get(mappedField, o);
