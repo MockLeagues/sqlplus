@@ -72,8 +72,7 @@ public class TransactionalService {
 	
 	static Object invokeQuery(Method queryMethod, Object[] invokeArgs, Session session) throws Exception {
 		
-		Class<?> returnType = queryMethod.getReturnType();
-		if (returnType == void.class) {
+		if (queryMethod.getReturnType() == void.class) {
 			throw new AnnotationConfigurationException("@" + DAOQuery.class.getSimpleName() + " annotated method " + queryMethod + " must declare a return type");
 		}
 		
@@ -123,7 +122,7 @@ public class TransactionalService {
 				Class<?> returnType = queryMethod.getReturnType();
 				if (int.class == returnType || Integer.class == returnType) {
 					return Arrays.stream(affectedRows).sum();
-				} else if (Integer[].class.isAssignableFrom(returnType) || int[].class.isAssignableFrom(returnType)) {
+				} else if (int[].class.isAssignableFrom(returnType)) {
 					return affectedRows;
 				} else {
 					throw new QueryInterpretationException("Cannot interpret update counts as " + returnType + ", must be either an integer or integer array");

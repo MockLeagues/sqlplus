@@ -4,10 +4,10 @@ import com.tyler.sqlplus.Query;
 import com.tyler.sqlplus.Session;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
-import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.exception.SessionClosedException;
 import com.tyler.sqlplus.interpreter.QueryInterpreter;
 import com.tyler.sqlplus.utility.Fields;
+import com.tyler.sqlplus.utility.ReflectionUtility;
 import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
 
@@ -37,12 +37,7 @@ public class BeanProxy {
 		factory.setSuperclass(type);
 
 		@SuppressWarnings("unchecked")
-		T proxy = null;
-		try {
-			proxy = (T) factory.createClass().newInstance();
-		} catch (InstantiationException | IllegalAccessException e) {
-			throw new ReflectionException("Could not create proxy instance of " + type, e);
-		}
+		T proxy = (T) ReflectionUtility.newInstance(factory.createClass());
 
 		((Proxy)proxy).setHandler((self, invokedMethod, proceed, args) -> {
 			

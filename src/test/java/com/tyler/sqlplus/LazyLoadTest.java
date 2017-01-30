@@ -215,26 +215,26 @@ public class LazyLoadTest extends DatabaseTest {
 		});
 		
 	}
-	
-	static class EmployeeLoadFromMethodWithUnresolvableField {
-		
-		public Integer employeeId;
 
+	public static class EmployeeLoadFromMethodWithUnresolvableField {
+
+		public Integer employeeId;
 		public List<Office> randomFieldName;
-		
+
 		@LoadQuery(
-			value = "select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
-			        "from office o " +
-			        "where o.employee_id = :employeeId"
+			"select office_id as \"officeId\", office_name as \"officeName\", employee_id as \"employeeId\", `primary` as \"primary\" " +
+			"from office o " +
+			"where o.employee_id = :employeeId"
 		)
 		public List<Office> getOffices() {
 			return randomFieldName;
 		}
-		
+
 	}
-	
+
 	@Test
 	public void testErrorThrownIfLoadQueryOnMethodWithUnresolvableField() throws Exception {
+
 		db.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
 		db.getSQLPlus().transact(conn -> {
 			
