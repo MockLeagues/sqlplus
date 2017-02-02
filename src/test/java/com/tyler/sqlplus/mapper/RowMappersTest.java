@@ -155,7 +155,11 @@ public class RowMappersTest {
 		
 		@LoadQuery("select * from table")
 		List<String> relations;
-		
+
+		public List<String> getRelations() {
+			return relations;
+		}
+
 	}
 	
 	@Test

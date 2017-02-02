@@ -139,7 +139,8 @@ public class SQLPlus {
 		CURRENT_THREAD_SESSION.remove();
 		try {
 			session.close();
-		} catch (IOException e) {
+		}
+		catch (IOException e) {
 			throw new SQLRuntimeException(e);
 		}
 		return result;

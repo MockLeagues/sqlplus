@@ -2,19 +2,20 @@ package com.tyler.sqlplus;
 
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.annotation.MapKey;
-import com.tyler.sqlplus.exception.AnnotationConfigurationException;
-import com.tyler.sqlplus.exception.QueryInterpretationException;
-import com.tyler.sqlplus.exception.SessionClosedException;
+import com.tyler.sqlplus.base.DatabaseTest;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Address;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Employee;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Employee.Type;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Office;
-import com.tyler.sqlplus.base.DatabaseTest;
+import com.tyler.sqlplus.exception.AnnotationConfigurationException;
+import com.tyler.sqlplus.exception.QueryInterpretationException;
+import com.tyler.sqlplus.exception.SessionClosedException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -192,29 +193,6 @@ public class LazyLoadTest extends DatabaseTest {
 			assertEquals("Office C", offices.get(2).officeName);
 		});
 	}
-	
-	@Test
-	public void testLazyLoadCachesDataAfterFirstRetrieval() throws Exception {
-		
-		db.batch(
-			"insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')",
-			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
-		);
-		
-		db.getSQLPlus().transact(conn -> {
-			
-			Address singleAddress = 
-			    conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
-			        .getUniqueResultAs(Address.class);
-			
-			Employee cachedEmployee = singleAddress.getEmployee();
-			db.batch("update employee set name = 'new-name' where employee_id = 1");
-			cachedEmployee = singleAddress.getEmployee(); // Should not have to make another trip to the DB
-			
-			assertEquals("tester-1", cachedEmployee.name);
-		});
-		
-	}
 
 	public static class EmployeeLoadFromMethodWithUnresolvableField {
 
@@ -238,14 +216,13 @@ public class LazyLoadTest extends DatabaseTest {
 		db.batch("insert into employee(type, name, salary, hired) values('HOURLY', 'Billy Bob', '42000', '2015-01-01')");
 		db.getSQLPlus().transact(conn -> {
 			
-			EmployeeLoadFromMethodWithUnresolvableField employee = 
-				conn.createQuery("select employee_id as \"employeeId\" from employee e ")
-			        .getUniqueResultAs(EmployeeLoadFromMethodWithUnresolvableField.class);
-			
-			assertThrows(
-				() -> employee.getOffices(),
+		assertThrows(
+				() -> {
+					conn.createQuery("select employee_id as \"employeeId\" from employee e ")
+							.getUniqueResultAs(EmployeeLoadFromMethodWithUnresolvableField.class);
+				},
 				AnnotationConfigurationException.class,
-				"Inferred lazy-load field 'offices' not found when executing method " + EmployeeLoadFromMethodWithUnresolvableField.class.getDeclaredMethod("getOffices")
+				"Could not find lazy-load field 'offices' in " + EmployeeLoadFromMethodWithUnresolvableField.class
 			);
 			
 		});
@@ -399,5 +376,43 @@ public class LazyLoadTest extends DatabaseTest {
 		});
 		
 	}
-	
+
+	public static class EmployeeMixtureOfLazyLoadGettersAndNonLazyLoadGetters {
+
+		private Integer employeeId;
+
+		@LoadQuery(
+			"select office_id as \"office_id\", office_name as \"office_name\", employee_id as \"employee_id\", `primary` as \"primary\" " +
+			"from office o " +
+			"where o.employee_id = :employeeId"
+		)
+		private List<Office> offices = new ArrayList<>();
+
+		private List<String> someList = new ArrayList<>();
+
+		public List<Office> getOffices() {
+			return offices;
+		}
+
+		public List<String> getSomeList() {
+			return someList;
+		}
+
+	}
+
+	@Test
+	public void proxyInstanceShouldStillBeAbleToCallGetterForNonLoadQueryProperty() throws Exception {
+
+		db.batch("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)");
+
+		db.getSQLPlus().transact(conn -> {
+
+			Query query = conn.createQuery("select employee_id as \"employeeId\", type as \"type\", name as \"name\", hired as \"hired\", salary as \"salary\" from employee e ");
+			EmployeeMixtureOfLazyLoadGettersAndNonLazyLoadGetters employeeNoLoad = query.getUniqueResultAs(EmployeeMixtureOfLazyLoadGettersAndNonLazyLoadGetters.class);
+			assertTrue(employeeNoLoad.getSomeList().isEmpty());
+
+		});
+
+	}
+
 }

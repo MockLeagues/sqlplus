@@ -11,8 +11,8 @@ import com.tyler.sqlplus.utility.ReflectionUtility;
 import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
 
-import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.*;
 
@@ -22,78 +22,43 @@ import java.util.*;
 public class BeanProxy {
 
 	/**
-	 * Caches which classes are proxy-able, i.e. have fields or methods annotated with @LoadQuery
+	 * Cache structure for lazy-load info for different class types
 	 */
-	static final Map<Class<?>, Boolean> TYPE_PROXIABLE = new HashMap<>();
+	static final Map<Class<?>, Map<Method, LazyLoadInfo>> LAZY_LOAD_METHODS_BY_CLASS = new HashMap<>();
 
 	/**
 	 * Creates a proxy of the given class type which will intercept method calls in order to lazy-load related entities
 	 */
 	public static <T> T create(Class<T> type, Session session) {
 		
-		final Set<String> gettersLoaded = new HashSet<>();
-		
 		ProxyFactory factory = new ProxyFactory();
 		factory.setSuperclass(type);
+		factory.setFilter(getLazyLoadInfo(type)::containsKey);
 
 		@SuppressWarnings("unchecked")
 		T proxy = (T) ReflectionUtility.newInstance(factory.createClass());
 
-		((Proxy)proxy).setHandler((self, invokedMethod, proceed, args) -> {
-			
-			String methodName = invokedMethod.getName();
-			boolean hasGetPrefix = methodName.startsWith("get");
-			boolean isMethodAnnotated = invokedMethod.isAnnotationPresent(LoadQuery.class);
-			boolean alreadyLoaded = gettersLoaded.contains(methodName);
-			boolean doLazyLoad = !alreadyLoaded && (hasGetPrefix || isMethodAnnotated);
-			
-			if (doLazyLoad) {
-				
-				// 2 critical pieces of data we need to find in order to lazy-load
-				LoadQuery loadQueryAnnot = null;
-				Field loadField = null;
-			
-				if (isMethodAnnotated) {
-					loadQueryAnnot = invokedMethod.getDeclaredAnnotation(LoadQuery.class);
-					if (!loadQueryAnnot.field().isEmpty()) {
-						loadField = type.getDeclaredField(loadQueryAnnot.field());
-					}
-					else if (hasGetPrefix) {
-						String loadFieldName = Fields.extractFieldName(methodName);
-						try {
-							loadField = type.getDeclaredField(loadFieldName);
-						}
-						catch (NoSuchFieldException ex) {
-							throw new AnnotationConfigurationException(
-								"Inferred lazy-load field '" + loadFieldName + "' not found when executing method " + invokedMethod);
-						}
-					}
-					else {
-						throw new AnnotationConfigurationException("Could not determine field to lazy-load to");
-					}
+		final Set<Method> methodsLoaded = new HashSet<>();
+		((Proxy) proxy).setHandler((self, invokedMethod, proceed, args) -> {
+
+			boolean isFirstTimeInvocation = methodsLoaded.add(invokedMethod);
+			if (isFirstTimeInvocation) {
+
+				LazyLoadInfo lazyLoadInfo = getLazyLoadInfo(type).get(invokedMethod);
+				String loadSQL = lazyLoadInfo.loadSQL;
+				Field loadField = lazyLoadInfo.loadField;
+
+				if (!session.isOpen()) {
+					throw new SessionClosedException("Cannot lazy-load field " + loadField + ", session is no longer open");
 				}
-				else if (hasGetPrefix) {
-					String loadFieldName = Fields.extractFieldName(methodName);
-					loadField = type.getDeclaredField(loadFieldName);
-					if (loadField.isAnnotationPresent(LoadQuery.class)) {
-						loadQueryAnnot = loadField.getDeclaredAnnotation(LoadQuery.class);
-					}
-				}
-				
-				if (loadField != null && loadQueryAnnot != null) {
-					if (!session.isOpen()) {
-						throw new SessionClosedException("Cannot lazy-load field " + loadField + ", session is no longer open");
-					}
-					String sql = loadQueryAnnot.value();
-					Query query = session.createQuery(sql).bind(self);
-					Type loadType = loadField.getGenericType();
-					QueryInterpreter interpreter = QueryInterpreter.forType(loadType);
-					Object result = interpreter.interpret(query, loadType, loadField);
-					Fields.set(loadField, self, result);
-					gettersLoaded.add(methodName);
-				}
+
+				Query query = session.createQuery(loadSQL).bind(self);
+				Type loadType = loadField.getGenericType();
+				QueryInterpreter interpreter = QueryInterpreter.forType(loadType);
+				Object result = interpreter.interpret(query, loadType, loadField);
+				Fields.set(loadField, self, result);
 			}
-			
+
 			return proceed.invoke(self, args);
 		});
 		
@@ -104,18 +69,78 @@ public class BeanProxy {
 	 * Determines if the given class type should result in proxy objects being returned when mapping POJOs.
 	 * Proxy objects are returned if there is at least 1 field or method in the class with a @LoadQuery annotation
 	 */
-	public static boolean isProxiable(Class<?> type) {
-		return TYPE_PROXIABLE.computeIfAbsent(type, t -> {
+	public static boolean isProxiable(Class<?> klass) {
+		return !getLazyLoadInfo(klass).isEmpty();
+	}
 
-			List<AccessibleObject> fieldsAndMethods = new ArrayList<>();
-			fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredFields()));
-			fieldsAndMethods.addAll(Arrays.asList(type.getDeclaredMethods()));
+	private static Map<Method, LazyLoadInfo> getLazyLoadInfo(Class<?> klass) {
+		return LAZY_LOAD_METHODS_BY_CLASS.computeIfAbsent(klass, BeanProxy::parseLazyLoadInfo);
+	}
 
-			return fieldsAndMethods.stream()
-							               .filter(o -> o.isAnnotationPresent(LoadQuery.class))
-							               .findFirst()
-							               .isPresent();
-		});
+	/**
+	 * Parses out a mapping of methods which should lazy load for the given class to the respective fields
+	 * and load SQL for them. A method is considered to be a lazy-loading method if either of the following is
+	 * true:
+	 * 1) It is directly annotated with @LoadQuery and has a java-bean style 'getter' name to which a corresponding
+	 * field is found (or the field name can be directly given in @LoadQuery)
+	 * 2) It is a java-bean style 'getter' method whose field is annotated with @LoadQuery
+	 */
+	private static Map<Method, LazyLoadInfo> parseLazyLoadInfo(Class<?> klass) {
+
+		Map<Method, LazyLoadInfo> parsedInfo = new HashMap<>();
+
+		for (Method method : klass.getDeclaredMethods()) {
+
+			// 2 pieces of information we need to know how to lazy load for this method
+			String loadSQL = null;
+			Field loadField = null;
+
+			if (method.isAnnotationPresent(LoadQuery.class)) {
+				LoadQuery loadQuery = method.getAnnotation(LoadQuery.class);
+				loadSQL = loadQuery.value();
+				String fieldName = loadQuery.field().isEmpty() ? Fields.extractFieldName(method.getName()) : loadQuery.field();
+				try {
+					loadField = klass.getDeclaredField(fieldName);
+				}
+				catch (NoSuchFieldException e) {
+					throw new AnnotationConfigurationException("Could not find lazy-load field '" + fieldName + "' in " + klass);
+				}
+			}
+			else if (method.getName().startsWith("get")) {
+
+				try {
+					String fieldName = Fields.extractFieldName(method.getName());
+					loadField = klass.getDeclaredField(fieldName);
+				}
+				catch (NoSuchFieldException e) {
+					continue; // Not a standard java-bean getter property. We have no way of knowing which field this is associated with, so we must skip it
+				}
+
+				if (loadField.isAnnotationPresent(LoadQuery.class)) {
+					loadSQL = loadField.getAnnotation(LoadQuery.class).value();
+				}
+			}
+
+			if (loadSQL != null && loadField != null) {
+				parsedInfo.put(method, new LazyLoadInfo(loadField, loadSQL));
+			}
+
+		}
+
+		return parsedInfo;
+	}
+
+	private static class LazyLoadInfo {
+
+		private Field loadField;
+		private String loadSQL;
+
+		public LazyLoadInfo(Field loadField, String loadSQL) {
+			this.loadField = loadField;
+			this.loadSQL = loadSQL;
+		}
+
 	}
 
 }
+
