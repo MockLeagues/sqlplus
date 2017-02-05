@@ -1,6 +1,7 @@
 package com.tyler.sqlplus;
 
 import javax.sql.DataSource;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -8,18 +9,31 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.logging.Logger;
 
+/**
+ * A basic, bare-bones implementation of a {@link DataSource} which provides connection from a username, password, and database URL.
+ * <br/>
+ * This data source makes calls directly to the {@link DriverManager}, so no connection pooling will take place. Therefore, this data source
+ * should only be used for initial development
+ */
 public class BasicDataSource implements DataSource {
 
-	private PrintWriter logWriter = new PrintWriter(System.out);
-	private int loginTimeout = 3;
+	private static final int DEFAULT_LOGIN_TIMEOUT_SECONDS = 3;
+	private static final PrintStream DEFAULT_LOGGER_PRINT_STREAM = System.out;
+
+	private PrintWriter logWriter;
+	private int loginTimeoutSeconds;
 	private String url;
 	private String username;
 	private String password;
 	private String driverClass;
 
-	private BasicDataSource() {}
+	private BasicDataSource() {
+		logWriter = new PrintWriter(DEFAULT_LOGGER_PRINT_STREAM);
+		loginTimeoutSeconds = DEFAULT_LOGIN_TIMEOUT_SECONDS;
+	}
 
 	public BasicDataSource(String url, String username, String password) {
+		this();
 		this.url = url;
 		this.username = username;
 		this.password = password;
@@ -72,27 +86,26 @@ public class BasicDataSource implements DataSource {
 
 	@Override
 	public void setLoginTimeout(int seconds) throws SQLException {
-		this.loginTimeout = seconds;
-		
+		this.loginTimeoutSeconds = seconds;
 	}
 
 	@Override
 	public int getLoginTimeout() throws SQLException {
-		return loginTimeout;
+		return loginTimeoutSeconds;
 	}
 
 	@Override
 	public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-		throw new SQLFeatureNotSupportedException();
+		throw new SQLFeatureNotSupportedException(getClass() + " does not support parent loggers");
 	}
 
 	@Override
-	public <T> T unwrap(Class<T> iface) throws SQLException {
-		throw new UnsupportedOperationException(getClass() + " does not support unwrap");
+	public <T> T unwrap(Class<T> classToUnwrap) throws SQLException {
+		throw new UnsupportedOperationException(getClass() + " does not support unwrap()");
 	}
 
 	@Override
-	public boolean isWrapperFor(Class<?> iface) throws SQLException {
+	public boolean isWrapperFor(Class<?> c) throws SQLException {
 		return false;
 	}
 

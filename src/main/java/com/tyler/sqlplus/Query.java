@@ -27,18 +27,36 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Provides encapsulation for an SQL query, allowing results to be retrieved and streamed as POJOs
+ * Represents an SQL query, including both the raw SQL and all parameters.
+ * <br/><br/>
+ * This class provides functions for interpreting the query as a list or unique result of a given java type.
  */
 public class Query {
 
 	private static final String REGEX_PARAM = ":\\w+|\\?";
-	
+
+	/** The current session which constructed this query */
 	private Session session;
+
+	/** The raw SQl for this query */
 	private String sql;
+
+	/** The current parameter batch of this query. Queries may have 1 to many parameter batches */
 	private LinkedHashMap<Integer, Object> currentParamBatch = new LinkedHashMap<>();
+
+	/** All parameter batches for this query */
 	private List<LinkedHashMap<Integer, Object>> paramBatches = new ArrayList<>();
+
+	/**
+	 * A mapping of parameter labels to their corresponding ordinal indices in this query.
+	 * <br/>
+	 * Queries may contain both string parameter labels and raw '?' parameter labels. For each query, a mapping
+	 * is constructed to associate parameter labels to their respective indices
+	 */
 	private Map<String, Integer> paramLabel_paramIndex = new HashMap<>();
-	private ConversionRegistry conversionRegistry = new ConversionRegistry();
+
+	/** Conversion registry for this query. By default, this field will be set to the default conversion registry singleton instance */
+	private ConversionRegistry conversionRegistry = ConversionRegistry.getDefault();
 	
 	/** Should only be constructed by the Session class */
 	Query(String sql, Session session) {

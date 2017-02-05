@@ -655,6 +655,10 @@ public class ConversionRegistry {
 		DEFAULT_REGISTRY.put(name, converter);
 	}
 
+	public static ConversionRegistry getDefault() {
+		return new ConversionRegistry();
+	}
+
 	public boolean containsConverter(Class<?> type) {
 		return registry.containsKey(type.getName());
 	}
