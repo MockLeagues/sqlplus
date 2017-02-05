@@ -1,4 +1,4 @@
-package com.tyler.sqlplus.base.databases;
+package com.tyler.sqlplus.base;
 
 public class H2Database extends AbstractDatabase {
 

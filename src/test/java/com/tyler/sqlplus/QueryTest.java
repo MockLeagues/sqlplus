@@ -1,9 +1,9 @@
 package com.tyler.sqlplus;
 
 import com.tyler.sqlplus.base.DatabaseTest;
-import com.tyler.sqlplus.base.databases.AbstractDatabase.Address;
-import com.tyler.sqlplus.base.databases.AbstractDatabase.Employee;
-import com.tyler.sqlplus.base.databases.AbstractDatabase.Employee.Type;
+import com.tyler.sqlplus.base.AbstractDatabase.Address;
+import com.tyler.sqlplus.base.AbstractDatabase.Employee;
+import com.tyler.sqlplus.base.AbstractDatabase.Employee.Type;
 import com.tyler.sqlplus.exception.QueryStructureException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import org.junit.Test;

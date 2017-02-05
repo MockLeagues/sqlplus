@@ -1,8 +1,5 @@
 package com.tyler.sqlplus.base;
 
-import com.tyler.sqlplus.base.databases.AbstractDatabase;
-import com.tyler.sqlplus.base.databases.H2Database;
-import com.tyler.sqlplus.base.databases.MySQLDatabase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runners.Parameterized;

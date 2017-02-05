@@ -5,7 +5,7 @@ import com.tyler.sqlplus.annotation.*;
 import com.tyler.sqlplus.annotation.SQLUpdate.ReturnInfo;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.base.databases.AbstractDatabase.Address;
+import com.tyler.sqlplus.base.AbstractDatabase.Address;
 import com.tyler.sqlplus.base.DatabaseTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -86,7 +86,7 @@ public class TransactionalServiceTest extends DatabaseTest {
 		assertEquals(3, addresses.size());
 	}
 	
-	static interface InterfaceService {
+	interface InterfaceService {
 		
 		@SQLQuery("select * from address")
 		List<Address> getAddresses();
@@ -123,7 +123,13 @@ public class TransactionalServiceTest extends DatabaseTest {
 
 		@SQLUpdate("insert into address (street, city, state, zip) values (:street, :city, :state, :zip)")
 		public abstract void createAddress(@BindObject Address address);
-		
+
+		@SQLUpdate(value = "insert into address (address_id, street, city, state, zip) values (:addressId, :street, :city, :state, :zip)", keyQuery = "select 100")
+		public abstract Integer createAddressWith100KeyProvider(@BindObject Address address);
+
+		@SQLUpdate(value = "select field from blah", keyQuery = "select 1")
+		public abstract void createObjWithKeyQueryPresentButGivenTypeHasNoKeyField(@BindObject String someStr);
+
 		@SQLUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
 			returnInfo = ReturnInfo.GENERATED_KEYS
@@ -229,6 +235,33 @@ public class TransactionalServiceTest extends DatabaseTest {
 		Address address = service.getAddress("Maple Street", "CA");
 		assertEquals("Maple Street", address.street);
 		assertEquals("CA", address.state);
+	}
+
+	@Test
+	public void updateMethodWithKeySQLShouldSetKeyUsingGivenKeySQL() throws Exception {
+
+		Address add = new Address();
+		add.city = "test-city";
+		add.state = "test-state";
+		add.street = "test-street";
+		add.zip = "test-zip";
+
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
+		service.createAddressWith100KeyProvider(add);
+
+		String[][] expect = {{ "100", "test-city", "test-state", "test-street", "test-zip" }};
+		String[][] actual = db.query("select address_id, city, state, street, zip from address");
+		assertArrayEquals(expect, actual);
+	}
+
+	@Test
+	public void updateMethodWithAnArgumentTypeThatDoesNotHaveAKeyFieldShouldThrowAnException() throws Exception {
+		QueryingService service = db.getSQLPlus().createService(QueryingService.class);
+		assertThrows(
+			() -> service.createObjWithKeyQueryPresentButGivenTypeHasNoKeyField("asdf"),
+			SQLRuntimeException.class,
+			AnnotationConfigurationException.class.getName() + ": No @" + KeyField.class.getSimpleName() + " annotation found in " + String.class + " to bind a key value to"
+		);
 	}
 
 	@Test

@@ -1,6 +1,7 @@
-package com.tyler.sqlplus.base.databases;
+package com.tyler.sqlplus.base;
 
 import com.tyler.sqlplus.SQLPlus;
+import com.tyler.sqlplus.annotation.KeyField;
 import com.tyler.sqlplus.annotation.LoadQuery;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.function.Functions;
@@ -90,7 +91,9 @@ public abstract class AbstractDatabase {
 
 	public static class Address {
 
+		@KeyField
 		public Integer addressId;
+
 		public String street;
 		public String city;
 		public String state;

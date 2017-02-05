@@ -1,8 +1,10 @@
 package com.tyler.sqlplus.utility;
 
 import com.tyler.sqlplus.exception.ReflectionException;
+import com.tyler.sqlplus.function.Functions;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -89,5 +91,40 @@ public final class ReflectionUtility {
 		}
 		return Optional.empty();
 	}
-	
+
+	/**
+	 * Executes an action for each argument in the given parameter.
+	 * <br/><br/>
+	 * If the argument is an instance of {@link Iterable}, the action will be executed for each element in the iterable.
+	 * <br/>
+	 * If the argument is an array, the action will be executed for each element in the array
+	 * <br/>
+	 * Otherwise, the action will be executed for the single argument
+	 */
+	public static void each(Object obj, Functions.ThrowingConsumer action) throws Exception {
+
+		if (obj == null) {
+			return;
+		}
+
+		if (obj instanceof Iterable) {
+			if (obj instanceof Iterable) {
+				for (Object element : (Iterable) obj) {
+					action.accept(element);
+				}
+			}
+		}
+		else if (isArray(obj)) {
+			int arrayLength = Array.getLength(obj);
+			for (int index = 0; index < arrayLength; index++) {
+				Object arrayElement = Array.get(obj, index);
+				action.accept(arrayElement);
+			}
+		}
+		else {
+			action.accept(obj);
+		}
+
+	}
+
 }

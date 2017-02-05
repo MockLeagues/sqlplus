@@ -1,11 +1,10 @@
 package com.tyler.sqlplus.proxy;
 
-import com.tyler.sqlplus.Query;
-import com.tyler.sqlplus.SQLPlus;
-import com.tyler.sqlplus.Session;
+import com.tyler.sqlplus.*;
 import com.tyler.sqlplus.annotation.*;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.QueryInterpretationException;
+import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.interpreter.QueryInterpreter;
 import com.tyler.sqlplus.utility.Fields;
@@ -77,7 +76,7 @@ public class TransactionalService {
 		
 		String sql = queryMethod.getAnnotation(SQLQuery.class).value();
 		Query query = session.createQuery(sql);
-		bindParams(query, queryMethod.getParameters(), invokeArgs);
+		bindParams(query, queryMethod.getParameters(), invokeArgs, session, null);
 		
 		Type genericReturnType = queryMethod.getGenericReturnType();
 		QueryInterpreter interpreter = QueryInterpreter.forType(genericReturnType);
@@ -87,9 +86,28 @@ public class TransactionalService {
 	static Object invokeUpdate(Method queryMethod, Object[] invokeArgs, Session session) throws Exception {
 		
 		SQLUpdate updateAnnot = queryMethod.getAnnotation(SQLUpdate.class);
-		String sql = updateAnnot.value();
-		Query query = session.createQuery(sql);
-		bindParams(query, queryMethod.getParameters(), invokeArgs);
+
+		boolean hasKeyProviderClass = updateAnnot.keyProvider() != KeyProvider.VoidKeyProvider.class;
+		boolean hasKeySQL = !updateAnnot.keyQuery().isEmpty();
+		if (hasKeyProviderClass && hasKeySQL) {
+			throw new AnnotationConfigurationException("Either keyProvider or keyQuery can be given for @" + SQLUpdate.class.getSimpleName() + ", not both");
+		}
+
+		KeyProvider<?> keyProvider = null;
+		if (hasKeyProviderClass) {
+			keyProvider = ReflectionUtility.newInstance(updateAnnot.keyProvider());
+		}
+		else if (hasKeySQL) {
+			Class<?> bindClass = invokeArgs[0].getClass();
+			Optional<Field> keyField = ReflectionUtility.findFieldWithAnnotation(KeyField.class, bindClass);
+			if (!keyField.isPresent()) {
+				throw new AnnotationConfigurationException("No @" + KeyField.class.getSimpleName() + " annotation found in " + bindClass + " to bind a key value to");
+			}
+			keyProvider = new QueryKeyProvider<>(updateAnnot.keyQuery(), keyField.get().getType());
+		}
+
+		Query updateQuery = session.createQuery(updateAnnot.value());
+		bindParams(updateQuery, queryMethod.getParameters(), invokeArgs, session, keyProvider);
 
 		switch (updateAnnot.returnInfo()) {
 
@@ -107,7 +125,7 @@ public class TransactionalService {
 				}
 
 				@SuppressWarnings("rawtypes")
-				Collection keys = query.executeUpdate(keyClass);
+				Collection keys = updateQuery.executeUpdate(keyClass);
 
 				if (Collection.class.isAssignableFrom(queryMethod.getReturnType())) {
 					return keys;
@@ -116,26 +134,41 @@ public class TransactionalService {
 				}
 
 			case AFFECTED_ROWS:
+			default:
 
-				int[] affectedRows = query.executeUpdate();
+				int[] affectedRows = updateQuery.executeUpdate();
+
 				Class<?> returnType = queryMethod.getReturnType();
-				if (int.class == returnType || Integer.class == returnType) {
+				if (returnType == void.class || returnType == Void.class) {
+					return null;
+				}
+				else if (int.class == returnType || Integer.class == returnType) {
 					return Arrays.stream(affectedRows).sum();
-				} else if (int[].class.isAssignableFrom(returnType)) {
+				}
+				else if (int[].class.isAssignableFrom(returnType)) {
 					return affectedRows;
-				} else {
+				}
+				else {
 					throw new QueryInterpretationException("Cannot interpret update counts as " + returnType + ", must be either an integer or integer array");
 				}
 
-			case NONE:
-			default:
-				return query.executeUpdate();
 		}
 		
 	}
 	
-	static void bindParams(Query query, Parameter[] params, Object[] invokeArgs) throws Exception {
-		
+	private static void bindParams(Query query, Parameter[] params, Object[] invokeArgs, Session session, KeyProvider<?> keyProvider) throws Exception {
+
+		Functions.ThrowingConsumer<Object> objectBinder = obj -> {
+
+			if (keyProvider != null) {
+				Field keyField = ReflectionUtility.findFieldWithAnnotation(KeyField.class, obj.getClass()).orElseThrow(() -> new AnnotationConfigurationException("No @" + KeyField.class.getSimpleName() + " annotation found in " + obj.getClass() + " to bind a key value to"));
+				Object newKey = keyProvider.getKey(session);
+				Fields.set(keyField, obj, newKey);
+			}
+
+			query.bind(obj);
+		};
+
 		for (int i = 0; i < params.length; i++) {
 			Parameter param = params[i];
 			Object invokeArg = invokeArgs[i];
@@ -145,23 +178,9 @@ public class TransactionalService {
 				query.setParameter(paramLabel, invokeArg);
 			}
 			else if (param.isAnnotationPresent(BindObject.class)) {
-				
-				if (invokeArg instanceof Iterable) {
-					for (Object element : (Iterable<?>) invokeArg) {
-						query.bind(element);
-					}
-				}
-				else if (ReflectionUtility.isArray(invokeArg)) {
-					int length = Array.getLength(invokeArg);
-					for (int j = 0; j < length; j++) {
-						query.bind(Array.get(invokeArg, j));
-					}
-				}
-				else {
-					query.bind(invokeArg);
-				}
+				ReflectionUtility.each(invokeArg, objectBinder::accept);
 			}
 		}
 	}
-	
+
 }

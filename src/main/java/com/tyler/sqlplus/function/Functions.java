@@ -1,8 +1,8 @@
 package com.tyler.sqlplus.function;
 
-import java.sql.SQLException;
-
 import com.tyler.sqlplus.exception.SQLRuntimeException;
+
+import java.sql.SQLException;
 
 public interface Functions {
 
@@ -31,17 +31,25 @@ public interface Functions {
 	@FunctionalInterface
 	public static interface SQLExceptionRunnable {
 		
-		public void run() throws SQLException;
+		void run() throws SQLException;
 		
 	}
 	
 	@FunctionalInterface
 	public static interface ThrowingFunction<I, O> {
 		
-		public O apply(I in) throws Exception;
+		O apply(I in) throws Exception;
 		
 	}
-	
+
+	@FunctionalInterface
+	static interface ThrowingConsumer<I> {
+
+		void accept(I in) throws Exception;
+
+	}
+
+
 	public static <O> O get(ThrowingSupplier<O> supplier) {
 		try {
 			return supplier.get();
