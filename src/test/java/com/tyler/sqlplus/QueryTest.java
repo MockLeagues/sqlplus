@@ -151,7 +151,7 @@ public class QueryTest extends DatabaseTest {
 			"insert into address (street, city, state, zip) values('Elm Street', 'Othertown', 'CA', '54321')"
 		);
 		
-		List<Map<String, Object>> rows = db.getSQLPlus().query(conn -> conn.createQuery("select street as STREET, city as CITY, state as STATE, zip as ZIP from address").fetch());
+		List<Map<String, Object>> rows = db.getSQLPlus().transactAndReturn(conn -> conn.createQuery("select street as STREET, city as CITY, state as STATE, zip as ZIP from address").fetch());
 		assertEquals(2, rows.size());
 		
 		Map<String, Object> row1 = rows.get(0);
@@ -243,7 +243,7 @@ public class QueryTest extends DatabaseTest {
 	public void fieldsNotSelectedRemainNullInResultingPOJO() throws Exception {
 		db.batch("insert into address (street, city, state, zip) values('Maple Street', 'Anytown', 'MN', '12345')");
 		
-		Address result = db.getSQLPlus().query(sess -> sess.createQuery("select street as \"street\", city as \"city\" from address").getUniqueResultAs(Address.class));
+		Address result = db.getSQLPlus().transactAndReturn(sess -> sess.createQuery("select street as \"street\", city as \"city\" from address").getUniqueResultAs(Address.class));
 		assertNull(result.state);
 		assertNull(result.zip);
 		assertNotNull(result.street);
@@ -447,7 +447,7 @@ public class QueryTest extends DatabaseTest {
 	@Test
 	public void singleScalarValueCanBeQueriedSuccessfully() throws Exception {
 		db.batch("insert into address (street, city, state, zip) values ('street1', 'city1', 'state1', 'zip1')");
-		String street = db.getSQLPlus().query(s -> s.createQuery("select street from address").getUniqueResultAs(String.class));
+		String street = db.getSQLPlus().transactAndReturn(s -> s.createQuery("select street from address").getUniqueResultAs(String.class));
 		assertEquals("street1", street);
 	}
 
@@ -461,7 +461,7 @@ public class QueryTest extends DatabaseTest {
 			"insert into address (street, city, state, zip) values ('street4', 'city4', 'state4', 'zip4')"
 		);
 
-		List<String> streets = db.getSQLPlus().query(s -> s.createQuery("select street from address").fetchAs(String.class));
+		List<String> streets = db.getSQLPlus().transactAndReturn(s -> s.createQuery("select street from address").fetchAs(String.class));
 		assertEquals(Arrays.asList("street1", "street2", "street3", "street4"), streets);
 	}
 
@@ -483,7 +483,7 @@ public class QueryTest extends DatabaseTest {
 	@Test
 	public void flushWillWriteDataToDatabase() throws Exception {
 		
-		String[][] actual = db.getSQLPlus().query(sess -> {
+		String[][] actual = db.getSQLPlus().transactAndReturn(sess -> {
 			sess.createQuery("insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)").executeUpdate();
 			sess.flush();
 			return db.query("select type, name, hired, salary from employee");

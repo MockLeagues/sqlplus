@@ -2,7 +2,7 @@ package com.tyler.sqlplus.proxy;
 
 import com.tyler.sqlplus.SQLPlus;
 import com.tyler.sqlplus.annotation.*;
-import com.tyler.sqlplus.annotation.DAOUpdate.ReturnInfo;
+import com.tyler.sqlplus.annotation.SQLUpdate.ReturnInfo;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.base.databases.AbstractDatabase.Address;
@@ -88,7 +88,7 @@ public class TransactionalServiceTest extends DatabaseTest {
 	
 	static interface InterfaceService {
 		
-		@DAOQuery("select * from address")
+		@SQLQuery("select * from address")
 		List<Address> getAddresses();
 		
 	}
@@ -103,52 +103,52 @@ public class TransactionalServiceTest extends DatabaseTest {
 	
 	static abstract class QueryingService {
 
-		@DAOQuery("select * from address")
+		@SQLQuery("select * from address")
 		public abstract void voidQuery();
 		
-		@DAOQuery("select * from address where street = 'Main Street'")
+		@SQLQuery("select * from address where street = 'Main Street'")
 		public abstract Address getMainStreet();
 		
-		@DAOQuery("select count(*) from address")
+		@SQLQuery("select count(*) from address")
 		public abstract int countAddress();
 		
-		@DAOQuery("select * from address")
+		@SQLQuery("select * from address")
 		public abstract List<Address> getAddresses();
 		
-		@DAOQuery("select * from address where street = :street and state = :state")
+		@SQLQuery("select * from address where street = :street and state = :state")
 		public abstract Address getAddress(@BindParam("street") String street, @BindParam("state") String city);
 
-		@DAOQuery("select street from address")
+		@SQLQuery("select street from address")
 		public abstract List<String> getAddressStreets();
 
-		@DAOUpdate("insert into address (street, city, state, zip) values (:street, :city, :state, :zip)")
+		@SQLUpdate("insert into address (street, city, state, zip) values (:street, :city, :state, :zip)")
 		public abstract void createAddress(@BindObject Address address);
 		
-		@DAOUpdate(
+		@SQLUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
 			returnInfo = ReturnInfo.GENERATED_KEYS
 		)
 		public abstract Integer createAddressWithKey(@BindObject Address address);
 
-		@DAOUpdate(
+		@SQLUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
 			returnInfo = ReturnInfo.GENERATED_KEYS
 		)
 		public abstract List<Integer> createAddressesWithKeys(@BindObject Collection<Address> addresses);
 		
-		@DAOUpdate(
+		@SQLUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
 			returnInfo = ReturnInfo.GENERATED_KEYS
 		)
 		public abstract List<Integer> createAddressesWithKeysVarargs(@BindObject Address... addresses);
 
-		@DAOUpdate(
+		@SQLUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
 			returnInfo = ReturnInfo.AFFECTED_ROWS
 		)
 		public abstract int[] createAddressesWithAffectedRowsArray(@BindObject Address... address);
 
-		@DAOUpdate(
+		@SQLUpdate(
 			value = "insert into address (street, city, state, zip) values (:street, :city, :state, :zip)",
 			returnInfo = ReturnInfo.AFFECTED_ROWS
 		)
@@ -162,7 +162,7 @@ public class TransactionalServiceTest extends DatabaseTest {
 		assertThrows(
 			() -> service.voidQuery(),
 			SQLRuntimeException.class,
-			AnnotationConfigurationException.class.getName() + ": @" + DAOQuery.class.getSimpleName() + " annotated method " + QueryingService.class.getDeclaredMethod("voidQuery") + " must declare a return type"
+			AnnotationConfigurationException.class.getName() + ": @" + SQLQuery.class.getSimpleName() + " annotated method " + QueryingService.class.getDeclaredMethod("voidQuery") + " must declare a return type"
 		);
 	}
 	

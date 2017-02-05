@@ -419,7 +419,7 @@ public class ConversionTest extends DatabaseTest {
 		String readSql = String.format("select %s as \"%s\" from types_table", readCol, readAlias);
 
 		db.batch(insertSql);
-		TypesBag queryResult = db.getSQLPlus().query(s -> s.createQuery(readSql).getUniqueResultAs(TypesBag.class));
+		TypesBag queryResult = db.getSQLPlus().transactAndReturn(s -> s.createQuery(readSql).getUniqueResultAs(TypesBag.class));
 		Field resultField = TypesBag.class.getDeclaredField(readAlias);
 		Object actualResult = resultField.get(queryResult);
 

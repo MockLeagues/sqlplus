@@ -226,7 +226,7 @@ abstract class WidgetService {
 	 * This is an alternate implementation of the getWidgets() method shown above which uses a more declarative, annotation-driven approach
 	 */
 	@DAOQuery("select * from widget where color = :color")
-	public abstract List<Widget> getWidgets(@BindObjectParam("color") String color);
+	public abstract List<Widget> getWidgets(@BindParam("color") String color);
 	 
 	/**
 	 * This method will bind all parameters in the given object to the annotated query, same as if you were to manually call the bind() method on a query

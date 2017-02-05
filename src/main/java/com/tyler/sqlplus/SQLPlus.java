@@ -6,7 +6,6 @@ import com.tyler.sqlplus.function.Work;
 import com.tyler.sqlplus.proxy.TransactionalService;
 
 import javax.sql.DataSource;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -76,19 +75,7 @@ public class SQLPlus {
 	 * If any exceptions are thrown, the transaction is immediately rolled back
 	 */
 	public void transact(Work<Session> action) {
-		query(session -> {
-			action.doWork(session);
-			return null;
-		});
-	}
-
-	/**
-	 * Executes an action inside of a single database transaction using the given isolation level.
-	 *
-	 * If any exceptions are thrown, the transaction is immediately rolled back
-	 */
-	public void transact(int isolation, Work<Session> action) {
-		query(isolation, session -> {
+		transactAndReturn(session -> {
 			action.doWork(session);
 			return null;
 		});
@@ -98,15 +85,15 @@ public class SQLPlus {
 	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 * using the default isolation level
 	 */
-	public <T> T query(ReturningWork<Session, T> action) {
-		return query(-1, action);
+	public <T> T transactAndReturn(ReturningWork<Session, T> action) {
+		return transactAndReturn(-1, action);
 	}
 
 	/**
 	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 * using the given transaction isolation level
 	 */
-	public <T> T query(int isolation, ReturningWork<Session, T> action) {
+	public <T> T transactAndReturn(int isolation, ReturningWork<Session, T> action) {
 
 		Session currentSession = CURRENT_THREAD_SESSION.get();
 		if (currentSession != null) {
@@ -137,12 +124,7 @@ public class SQLPlus {
 		}
 
 		CURRENT_THREAD_SESSION.remove();
-		try {
-			session.close();
-		}
-		catch (IOException e) {
-			throw new SQLRuntimeException(e);
-		}
+		session.closeQuiet();
 		return result;
 	}
 	

@@ -8,24 +8,19 @@ import java.lang.reflect.Type;
 import java.util.*;
 
 /**
- * Defines the contract for a class which is able of interpreting a query as a given java type, reflectively.
+ * Defines the contract for a class which is able of interpreting a transactAndReturn as a given java type, reflectively.
  * This class is used when interpreting query results for lazy-loaded fields as well as @SQLPlusQuery method
  * return types
  */
 public abstract class QueryInterpreter {
 
-	private static final Collection<QueryInterpreter> REGISTERED_INTERPRETERS = new ArrayList<>();
-	static {
-		register(new MapQueryInterpreter());
-		register(new CollectionQueryInterpreter());
-		register(new DefaultQueryInterpreter());
-	}
-	
+	private static final Collection<QueryInterpreter> REGISTERED_INTERPRETERS = Arrays.asList(
+		new MapQueryInterpreter(),
+		new CollectionQueryInterpreter(),
+		new UniqueResultQueryInterpreter()
+	);
+
 	private static final Map<Type, QueryInterpreter> INTERPRETER_INDEX = new HashMap<>();
-	
-	public static void register(QueryInterpreter interpreter) {
-		REGISTERED_INTERPRETERS.add(interpreter);
-	}
 	
 	public static QueryInterpreter forType(Type type) {
 		if (INTERPRETER_INDEX.containsKey(type)) {

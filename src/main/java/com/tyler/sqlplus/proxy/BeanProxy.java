@@ -91,7 +91,7 @@ public class BeanProxy {
 
 		for (Method method : klass.getDeclaredMethods()) {
 
-			// 2 pieces of information we need to know how to lazy load for this method
+			// 2 pieces of information we need to know in order to lazy load for this method
 			String loadSQL = null;
 			Field loadField = null;
 

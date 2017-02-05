@@ -108,6 +108,14 @@ public class Session implements Closeable {
 		}
 	}
 
+	public void closeQuiet() {
+		try {
+			close();
+		} catch(IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	@Override
 	public void close() throws IOException {
 		try {

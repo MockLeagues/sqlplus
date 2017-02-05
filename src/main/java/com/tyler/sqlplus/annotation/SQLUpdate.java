@@ -7,10 +7,14 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface DAOQuery {
+public @interface SQLUpdate {
+
+	enum ReturnInfo {GENERATED_KEYS, AFFECTED_ROWS, NONE; }
+
+	String value();
 
 	int isolation() default -1;
 
-	String value();
+	ReturnInfo returnInfo() default ReturnInfo.NONE;
 	
 }

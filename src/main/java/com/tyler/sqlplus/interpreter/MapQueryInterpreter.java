@@ -1,6 +1,10 @@
 package com.tyler.sqlplus.interpreter;
 
-import static java.util.stream.Collectors.toMap;
+import com.tyler.sqlplus.Query;
+import com.tyler.sqlplus.annotation.MapKey;
+import com.tyler.sqlplus.exception.AnnotationConfigurationException;
+import com.tyler.sqlplus.exception.QueryInterpretationException;
+import com.tyler.sqlplus.utility.Fields;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
@@ -9,11 +13,7 @@ import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.function.Function;
 
-import com.tyler.sqlplus.Query;
-import com.tyler.sqlplus.annotation.MapKey;
-import com.tyler.sqlplus.exception.AnnotationConfigurationException;
-import com.tyler.sqlplus.exception.QueryInterpretationException;
-import com.tyler.sqlplus.utility.Fields;
+import static java.util.stream.Collectors.toMap;
 
 public class MapQueryInterpreter extends QueryInterpreter {
 
@@ -37,12 +37,14 @@ public class MapQueryInterpreter extends QueryInterpreter {
 	public Object interpret(Query query, Type type, AccessibleObject context) {
 		
 		if (!context.isAnnotationPresent(MapKey.class)) {
-			throw new AnnotationConfigurationException("Field " + context + " requires a @MapKey annotation in order to load entities into a map");
+			throw new AnnotationConfigurationException(
+				context + " requires a @" + MapKey.class.getSimpleName() + " annotation in order to load entities into a map"
+			);
 		}
 		
 		ParameterizedType paramType = (ParameterizedType) type;
 		Class<?> valueClass = (Class<?>) paramType.getActualTypeArguments()[1];
-		
+
 		String mapKey = context.getDeclaredAnnotation(MapKey.class).value();
 		Field keyField;
 		try {

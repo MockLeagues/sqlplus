@@ -286,7 +286,7 @@ public class LazyLoadTest extends DatabaseTest {
 			"insert into employee(type, name, hired, salary, address_id) values ('SALARY', 'tester-1', '2015-01-01', 20500, 1)"
 		);
 		
-		Address foundAddress = db.getSQLPlus().query(conn -> {
+		Address foundAddress = db.getSQLPlus().transactAndReturn(conn -> {
 			return conn.createQuery("select address_id as \"addressId\", street as \"street\", state as \"state\", city as \"city\", zip as \"zip\" from address a")
 			           .getUniqueResultAs(Address.class);
 		});

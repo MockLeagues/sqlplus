@@ -1,13 +1,13 @@
 package com.tyler.sqlplus.interpreter;
 
+import com.tyler.sqlplus.Query;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Map;
 
-import com.tyler.sqlplus.Query;
-
-public class DefaultQueryInterpreter extends QueryInterpreter {
+public class UniqueResultQueryInterpreter extends QueryInterpreter {
 
 	@Override
 	public boolean canInterpret(Type type) {

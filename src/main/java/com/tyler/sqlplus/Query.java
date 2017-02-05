@@ -2,7 +2,10 @@ package com.tyler.sqlplus;
 
 import com.tyler.sqlplus.conversion.ConversionRegistry;
 import com.tyler.sqlplus.conversion.SQLConverter;
-import com.tyler.sqlplus.exception.*;
+import com.tyler.sqlplus.exception.NoResultsException;
+import com.tyler.sqlplus.exception.NonUniqueResultException;
+import com.tyler.sqlplus.exception.QueryStructureException;
+import com.tyler.sqlplus.exception.SQLRuntimeException;
 import com.tyler.sqlplus.function.BatchConsumer;
 import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.mapper.ResultStream;
@@ -137,15 +140,20 @@ public class Query {
 	
 	public <T> Stream<T> streamAs(Class<T> klass) {
 		RowMapper<T> mapper = RowMapperFactory.newMapper(klass, conversionRegistry, session);
-		return stream().map(rs -> Functions.runSQL(() -> mapper.map(rs)));
+		return stream().map(rs -> {
+			try {
+				return mapper.map(rs);
+			} catch (SQLException e) {
+				throw new SQLRuntimeException(e);
+			}
+		});
 	}
 	
 	public Stream<ResultSet> stream() {
 		try {
 			PreparedStatement ps = prepareStatement(false);
 			return ResultStream.stream(ps.executeQuery());
-		}
-		catch (SQLException e) {
+		} catch (SQLException e) {
 			throw new SQLRuntimeException(e);
 		}
 	}
@@ -160,8 +168,7 @@ public class Query {
 			int[] affectedRowsPerBatch;
 			if (paramBatches.size() > 1) {
 				affectedRowsPerBatch = ps.executeBatch();
-			}
-			else {
+			} else {
 				affectedRowsPerBatch = new int[]{ ps.executeUpdate() };
 			}
 
@@ -180,14 +187,11 @@ public class Query {
 	 * Executes this query's payload as an update statement, returning the generated keys as instances of the given class
 	 */
 	public <T> List<T> executeUpdate(Class<T> targetKeyClass) {
-
 		try {
-			
 			PreparedStatement ps = prepareStatement(true);
 			if (paramBatches.size() > 1) {
 				ps.executeBatch();
-			}
-			else {
+			} else {
 				ps.executeUpdate();
 			}
 			
@@ -221,14 +225,14 @@ public class Query {
 			finishBatch();
 		}
 		
-		if (this.paramBatches.isEmpty() && !paramLabel_paramIndex.isEmpty()) {
+		if (paramBatches.isEmpty() && !paramLabel_paramIndex.isEmpty()) {
 			throw new QueryStructureException("No parameters set");
 		}
 		
 		String formattedSql = getFormattedSQL();
 		PreparedStatement ps = Functions.runSQL(() -> session.conn.prepareStatement(formattedSql, returnKeys ? Statement.RETURN_GENERATED_KEYS : 0));
 			
-		for (Map<Integer, Object> paramBatch : this.paramBatches) {
+		paramBatches.forEach(paramBatch -> {
 
 			paramBatch.forEach((paramIndex, objParam) -> {
 				if (objParam == null) {
@@ -243,7 +247,7 @@ public class Query {
 			if (this.paramBatches.size() > 1) {
 				Functions.runSQL(() -> ps.addBatch());
 			}
-		}
+		});
 		
 		return ps;
 	}
@@ -287,30 +291,23 @@ public class Query {
 	 * Finishes and validates the current running manual parameter batch
 	 */
 	public Query finishBatch() {
-		addBatch(currentParamBatch);
-		currentParamBatch = new LinkedHashMap<>();
-		return this;
-	}
-	
-	/**
-	 * Adds a parameter batch to the list of this querie's batches.
-	 * Verifies a parameter exists in the given batch for each given parameter label. If not, a QuerySyntaxException is thrown
-	 */
-	private void addBatch(LinkedHashMap<Integer, Object> newBatch) {
-		
+
 		List<String> missingParams = new ArrayList<>();
 		paramLabel_paramIndex.forEach((param, index) -> {
-			if (!newBatch.containsKey(index)) {
+			if (!currentParamBatch.containsKey(index)) {
 				missingParams.add(param);
 			}
 		});
 		if (!missingParams.isEmpty()) {
 			throw new QueryStructureException("Missing parameter values for the following parameters: " + missingParams);
 		}
-		
-		paramBatches.add(newBatch);
-	}
 
+		paramBatches.add(currentParamBatch);
+
+		currentParamBatch = new LinkedHashMap<>();
+		return this;
+	}
+	
 	/**
 	 * Formats this query's SQL by replacing all parameter labels with '?'
 	 */

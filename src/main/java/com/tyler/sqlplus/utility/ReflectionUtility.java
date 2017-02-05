@@ -21,7 +21,7 @@ public final class ReflectionUtility {
 			defaultConstructor.setAccessible(true);
 			return defaultConstructor.newInstance();
 		} catch (NoSuchMethodException e) { // Give a cleaner error message
-			throw new ReflectionException(klass + " requires a no-argument constructor for instantation");
+			throw new ReflectionException(klass + " requires a no-argument constructor for instantiation");
 		} catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
 			throw new ReflectionException(e);
 		}
