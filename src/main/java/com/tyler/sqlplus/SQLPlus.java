@@ -1,8 +1,7 @@
 package com.tyler.sqlplus;
 
 import com.tyler.sqlplus.exception.SQLRuntimeException;
-import com.tyler.sqlplus.function.ReturningWork;
-import com.tyler.sqlplus.function.Work;
+import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.proxy.TransactionalService;
 
 import javax.sql.DataSource;
@@ -74,9 +73,9 @@ public class SQLPlus {
 	 * 
 	 * If any exceptions are thrown, the transaction is immediately rolled back
 	 */
-	public void transact(Work<Session> action) {
+	public void transact(Functions.ThrowingConsumer<Session> action) {
 		transactAndReturn(session -> {
-			action.doWork(session);
+			action.accept(session);
 			return null;
 		});
 	}
@@ -85,7 +84,7 @@ public class SQLPlus {
 	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 * using the default isolation level
 	 */
-	public <T> T transactAndReturn(ReturningWork<Session, T> action) {
+	public <T> T transactAndReturn(Functions.ThrowingFunction<Session, T> action) {
 		return transactAndReturn(-1, action);
 	}
 
@@ -93,12 +92,12 @@ public class SQLPlus {
 	 * Executes a value-returning action against a database connection obtained from this instance's connection factory
 	 * using the given transaction isolation level
 	 */
-	public <T> T transactAndReturn(int isolation, ReturningWork<Session, T> action) {
+	public <T> T transactAndReturn(int isolation, Functions.ThrowingFunction<Session, T> action) {
 
 		Session currentSession = CURRENT_THREAD_SESSION.get();
 		if (currentSession != null) {
 			try {
-				return action.doReturningWork(currentSession);
+				return action.apply(currentSession);
 			}
 			catch (Exception e) {
 				throw new SQLRuntimeException(e);
@@ -114,7 +113,7 @@ public class SQLPlus {
 			}
 			session.conn.setAutoCommit(false);
 			CURRENT_THREAD_SESSION.set(session);
-			result = action.doReturningWork(session);
+			result = action.apply(session);
 			session.conn.commit();
 		}
 		catch (Exception e) {

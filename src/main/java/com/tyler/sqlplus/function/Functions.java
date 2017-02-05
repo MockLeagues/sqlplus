@@ -7,50 +7,55 @@ import java.sql.SQLException;
 public interface Functions {
 
 	@FunctionalInterface
-	public static interface ThrowingSupplier<O> {
-		
-		public O get() throws Exception;
-		
+	interface ThrowingRunnable {
+
+		void run() throws Exception;
+
 	}
 
 	@FunctionalInterface
-	public static interface ThrowingRunnable {
-		
-		public void run() throws Exception;
-		
+	interface ThrowingSupplier<O> {
+
+		O get() throws Exception;
+
 	}
-	
+
 	@FunctionalInterface
-	public static interface SQLExceptionSupplier<O> {
-		
-		public O run() throws SQLException;
-		
+	interface SQLExceptionSupplier<O> {
+
+		O run() throws SQLException;
+
 	}
-	
-	
+
 	@FunctionalInterface
-	public static interface SQLExceptionRunnable {
-		
+	interface SQLExceptionRunnable {
+
 		void run() throws SQLException;
-		
+
 	}
 	
 	@FunctionalInterface
-	public static interface ThrowingFunction<I, O> {
+	interface ThrowingFunction<I, O> {
 		
 		O apply(I in) throws Exception;
 		
 	}
 
 	@FunctionalInterface
-	static interface ThrowingConsumer<I> {
+	interface ThrowingConsumer<I> {
 
 		void accept(I in) throws Exception;
 
 	}
 
+	@FunctionalInterface
+	interface ThrowingBiConsumer<I, E> {
 
-	public static <O> O get(ThrowingSupplier<O> supplier) {
+		void accept(I in1, E in2) throws Exception;
+
+	}
+
+	static <O> O get(ThrowingSupplier<O> supplier) {
 		try {
 			return supplier.get();
 		} catch (Exception e) {
@@ -58,7 +63,7 @@ public interface Functions {
 		}
 	}
 	
-	public static void run(ThrowingRunnable action) {
+	static void run(ThrowingRunnable action) {
 		try {
 			action.run();
 		} catch (Exception e) {
@@ -66,7 +71,7 @@ public interface Functions {
 		}
 	}
 	
-	public static <O> O runSQL(SQLExceptionSupplier<O> supplier) {
+	static <O> O runSQL(SQLExceptionSupplier<O> supplier) {
 		try {
 			return supplier.run();
 		} catch (SQLException e) {
@@ -74,7 +79,7 @@ public interface Functions {
 		}
 	}
 	
-	public static void runSQL(SQLExceptionRunnable runnable) {
+	static void runSQL(SQLExceptionRunnable runnable) {
 		try {
 			runnable.run();
 		} catch (SQLException e) {

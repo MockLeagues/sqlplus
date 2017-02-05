@@ -5,7 +5,6 @@ import com.tyler.sqlplus.annotation.*;
 import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.QueryInterpretationException;
 import com.tyler.sqlplus.function.Functions;
-import com.tyler.sqlplus.function.ReturningWork;
 import com.tyler.sqlplus.interpreter.QueryInterpreter;
 import com.tyler.sqlplus.utility.Fields;
 import com.tyler.sqlplus.utility.ReflectionUtility;
@@ -47,7 +46,7 @@ public class TransactionalService {
 		
 		((Proxy) serviceProxy).setHandler((self, overriddenMethod, proceed, args) -> {
 			
-			ReturningWork<Session, Object> workToDoInTransaction;
+			Functions.ThrowingFunction<Session, Object> workToDoInTransaction;
 			int isolation;
 
 			if (overriddenMethod.isAnnotationPresent(SQLQuery.class)) {

@@ -1,8 +1,7 @@
 package com.tyler.sqlplus.utility;
 
 import com.tyler.sqlplus.exception.ReflectionException;
-import com.tyler.sqlplus.function.ReturningWork;
-import com.tyler.sqlplus.function.ThrowingBiConsumer;
+import com.tyler.sqlplus.function.Functions;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -15,14 +14,14 @@ import java.util.Map;
 public final class Fields {
 
 	// It is important to cache reflective data since it is costly to lookup
-	private static final Map<Field, ReturningWork<Object, Object>> FIELD_GETTER = new HashMap<>();
-	private static final Map<Field, ThrowingBiConsumer<Object, Object>> FIELD_SETTER = new HashMap<>();
+	private static final Map<Field, Functions.ThrowingFunction<Object, Object>> FIELD_GETTER = new HashMap<>();
+	private static final Map<Field, Functions.ThrowingBiConsumer<Object, Object>> FIELD_SETTER = new HashMap<>();
 	
 	private Fields() {}
 
 	public static Object get(Field field, Object instance) {
-		
-		ReturningWork<Object, Object> getterFunction = FIELD_GETTER.computeIfAbsent(field, f -> {
+
+		Functions.ThrowingFunction<Object, Object> getterFunction = FIELD_GETTER.computeIfAbsent(field, f -> {
 			String capFieldName = capitalize(field.getName());
 			try {
 				Method getter = instance.getClass().getDeclaredMethod("get" + capFieldName);
@@ -41,7 +40,7 @@ public final class Fields {
 		});
 		
 		try {
-			return getterFunction.doReturningWork(instance);
+			return getterFunction.apply(instance);
 		} catch (Exception e) {
 			throw new ReflectionException(e);
 		}
@@ -49,7 +48,7 @@ public final class Fields {
 
 	public static void set(Field field, Object instance, Object value) {
 		
-		ThrowingBiConsumer<Object, Object> setterFunction = FIELD_SETTER.computeIfAbsent(field, f -> {
+		Functions.ThrowingBiConsumer<Object, Object> setterFunction = FIELD_SETTER.computeIfAbsent(field, f -> {
 			try {
 				Method setter = instance.getClass().getDeclaredMethod("set" + capitalize(field.getName()));
 				return setter::invoke; 

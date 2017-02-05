@@ -1,17 +1,17 @@
 package com.tyler.sqlplus.base;
 
-import com.tyler.sqlplus.function.Task;
+import com.tyler.sqlplus.function.Functions;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class SQLPlusTesting {
 
-	public static void assertThrows(Task t, Class<? extends Throwable> expectType) {
+	public static void assertThrows(Functions.ThrowingRunnable t, Class<? extends Throwable> expectType) {
 		assertThrows(t, expectType, null);
 	}
 	
-	public static void assertThrows(Task t, Class<? extends Throwable> expectType, String expectMsg) {
+	public static void assertThrows(Functions.ThrowingRunnable t, Class<? extends Throwable> expectType, String expectMsg) {
 		try {
 			t.run();
 			fail("Expected test to throw instance of " + expectType.getName() + " but no error was thrown");
