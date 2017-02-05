@@ -6,6 +6,8 @@ import com.tyler.sqlplus.exception.AnnotationConfigurationException;
 import com.tyler.sqlplus.exception.QueryInterpretationException;
 import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.interpreter.QueryInterpreter;
+import com.tyler.sqlplus.keyprovider.KeyProvider;
+import com.tyler.sqlplus.keyprovider.QueryKeyProvider;
 import com.tyler.sqlplus.utility.Fields;
 import com.tyler.sqlplus.utility.ReflectionUtility;
 import javassist.util.proxy.Proxy;

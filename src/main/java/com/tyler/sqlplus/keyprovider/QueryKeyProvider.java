@@ -1,4 +1,6 @@
-package com.tyler.sqlplus;
+package com.tyler.sqlplus.keyprovider;
+
+import com.tyler.sqlplus.Session;
 
 import java.sql.SQLException;
 

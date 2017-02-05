@@ -1,6 +1,6 @@
 package com.tyler.sqlplus.annotation;
 
-import com.tyler.sqlplus.KeyProvider;
+import com.tyler.sqlplus.keyprovider.KeyProvider;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
