@@ -4,10 +4,7 @@ import com.tyler.sqlplus.exception.ReflectionException;
 import com.tyler.sqlplus.function.Functions;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.*;
 import java.util.*;
 
 public final class ReflectionUtility {
@@ -19,12 +16,10 @@ public final class ReflectionUtility {
 	 */
 	public static <T> T newInstance(Class<T> klass) {
 		try {
-			Constructor<T> defaultConstructor = klass.getDeclaredConstructor();
-			defaultConstructor.setAccessible(true);
-			return defaultConstructor.newInstance();
+			return withAccess(klass.getDeclaredConstructor(), constructor -> constructor.newInstance());
 		} catch (NoSuchMethodException e) { // Give a cleaner error message
 			throw new ReflectionException(klass + " requires a no-argument constructor for instantiation");
-		} catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
+		} catch (Exception e) {
 			throw new ReflectionException(e);
 		}
 	}
@@ -123,6 +118,22 @@ public final class ReflectionUtility {
 			action.accept(obj);
 		}
 
+	}
+
+	/**
+	 * Allows a block of code to be run in which the given accessible object will have its accessible flag set to true.
+	 * When the method terminates, the accessible flag will be equal to the value it originally had at the start of
+	 * this method
+	 */
+	public static <T extends AccessibleObject, O> O withAccess(T obj, Functions.ThrowingFunction<T, O> action) throws Exception {
+		if (obj.isAccessible()) {
+			return action.apply(obj);
+		} else {
+			obj.setAccessible(true);
+			O result = action.apply(obj);
+			obj.setAccessible(false);
+			return result;
+		}
 	}
 
 }
