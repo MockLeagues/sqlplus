@@ -108,10 +108,8 @@ public final class ReflectionUtility {
 		}
 
 		if (obj instanceof Iterable) {
-			if (obj instanceof Iterable) {
-				for (Object element : (Iterable) obj) {
-					action.accept(element);
-				}
+			for (Object element : (Iterable) obj) {
+				action.accept(element);
 			}
 		}
 		else if (isArray(obj)) {

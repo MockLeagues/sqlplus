@@ -87,13 +87,6 @@ public class Query {
 	 * a NonUniqueResultException will be thrown
 	 */
 	public <T> T getUniqueResultAs(Class<T> resultClass) {
-		return session.getUniqueResult(this, resultClass);
-	}
-
-	/**
-	 * Called by the session if result is not present in its cache
-	 */
-	<T> T getUniqueResultForCache(Class<T> resultClass) {
 			List<T> results = fetchAs(resultClass);
 			if (results.isEmpty()) {
 				throw new NoResultsException();
@@ -116,13 +109,6 @@ public class Query {
 	 * Executes this query, mapping the results to the given POJO class
 	 */
 	public <T> List<T> fetchAs(Class<T> resultClass) {
-		return session.fetch(this, resultClass);
-	}
-
-	/**
-	 * Called by the session if result is not present in its cache
-	 */
-	public <T> List<T> fetchForCache(Class<T> resultClass) {
 			return streamAs(resultClass).collect(toList());
 	}
 	
@@ -190,10 +176,6 @@ public class Query {
 				affectedRowsPerBatch = new int[]{ ps.executeUpdate() };
 			}
 
-			int totalAffectedRows = Arrays.stream(affectedRowsPerBatch).sum();
-			if (totalAffectedRows > 0) {
-				session.invalidateFirstLevelCache();
-			}
 			return affectedRowsPerBatch;
 		}
 		catch (SQLException e) {
@@ -221,7 +203,6 @@ public class Query {
 				keys.add(converter.read(rsKeys, 1, targetKeyClass));
 			}
 
-			session.invalidateFirstLevelCache();
 			return keys;
 		}
 		catch (SQLException e) {

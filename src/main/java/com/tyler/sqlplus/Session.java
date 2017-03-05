@@ -7,15 +7,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.*;
 
 /**
  * Represents an individual unit of work within the SqlPlus environment
  */
 public class Session implements Closeable {
-
-	private Map<QueryCacheKey, List<Object>> firstLevelCache = new HashMap<>();
-	private boolean lastResultCached = false;
 
 	/**
 	 * Package-private so as to not break encapsulation.
@@ -45,10 +41,6 @@ public class Session implements Closeable {
 	public Query createQuery(String sql) {
 		assertOpen();
 		return new Query(sql, this);
-	}
-
-	public boolean wasFromCache() {
-		return lastResultCached;
 	}
 
 	/**
@@ -82,26 +74,6 @@ public class Session implements Closeable {
 		}
 	}
 
-	void invalidateFirstLevelCache() {
-		firstLevelCache.clear();
-	}
-
-	<T> T getUniqueResult(Query query, Class<T> resultClass) {
-		QueryCacheKey cacheKey = new QueryCacheKey(query, resultClass);
-		lastResultCached = firstLevelCache.containsKey(cacheKey);
-		List<T> results = (List<T>) firstLevelCache.computeIfAbsent(cacheKey, q -> {
-			Object uniqueResult = query.getUniqueResultForCache(resultClass);
-			return Arrays.asList(uniqueResult);
-		});
-		return results.get(0);
-	}
-
-	<T> List<T> fetch(Query query, Class<T> resultClass) {
-		QueryCacheKey cacheKey = new QueryCacheKey(query, resultClass);
-		lastResultCached = firstLevelCache.containsKey(cacheKey);
-		return (List<T>) firstLevelCache.computeIfAbsent(cacheKey, q -> (List<Object>) query.fetchForCache(resultClass));
-	}
-
 	private void assertOpen() {
 		if (!isOpen()) {
 			throw new SessionClosedException();
@@ -120,45 +92,10 @@ public class Session implements Closeable {
 	public void close() throws IOException {
 		try {
 			conn.close();
-			firstLevelCache.clear();
 		}
 		catch (SQLException e) {
 			throw new IOException(e);
 		}
 	}
 	
-}
-
-/**
- * Allows queries to be cached according to not just the query but also its intended result type.
- * This allows the same query to be interpreted as different result types in the same session. Otherwise,
- * query results would be cached as the first result type it was interpreted as
- */
-class QueryCacheKey {
-
-	private Query query;
-	private Class<?> resultClass;
-
-	public QueryCacheKey(Query query, Class<?> resultClass) {
-		this.query = query;
-		this.resultClass = resultClass;
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
-		}
-		if (o instanceof QueryCacheKey) {
-			QueryCacheKey other = (QueryCacheKey) o;
-			return Objects.equals(query, other.query) && Objects.equals(resultClass, other.resultClass);
-		}
-		return false;
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(query, resultClass);
-	}
-
 }

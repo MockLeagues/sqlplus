@@ -159,17 +159,6 @@ public class TransactionalService {
 	
 	private static void bindParams(Query query, Parameter[] params, Object[] invokeArgs, Session session, KeyProvider<?> keyProvider) throws Exception {
 
-		Functions.ThrowingConsumer<Object> objectBinder = obj -> {
-
-			if (keyProvider != null) {
-				Field keyField = ReflectionUtility.findFieldWithAnnotation(KeyField.class, obj.getClass()).orElseThrow(() -> new AnnotationConfigurationException("No @" + KeyField.class.getSimpleName() + " annotation found in " + obj.getClass() + " to bind a key value to"));
-				Object newKey = keyProvider.getKey(session);
-				Fields.set(keyField, obj, newKey);
-			}
-
-			query.bind(obj);
-		};
-
 		for (int i = 0; i < params.length; i++) {
 			Parameter param = params[i];
 			Object invokeArg = invokeArgs[i];
@@ -179,7 +168,15 @@ public class TransactionalService {
 				query.setParameter(paramLabel, invokeArg);
 			}
 			else if (param.isAnnotationPresent(BindObject.class)) {
-				ReflectionUtility.each(invokeArg, objectBinder::accept);
+				ReflectionUtility.each(invokeArg, obj -> {
+					if (keyProvider != null) {
+						Field keyField = ReflectionUtility.findFieldWithAnnotation(KeyField.class, obj.getClass())
+						                                  .orElseThrow(() -> new AnnotationConfigurationException("No @" + KeyField.class.getSimpleName() + " annotation found in " + obj.getClass() + " to bind a key value to"));
+						Object newKey = keyProvider.getKey(session);
+						Fields.set(keyField, obj, newKey);
+					}
+					query.bind(obj);
+				});
 			}
 		}
 	}
