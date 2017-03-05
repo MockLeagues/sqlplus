@@ -15,7 +15,7 @@ public class Session implements Closeable {
 
 	/**
 	 * Package-private so as to not break encapsulation.
-	 * JDBC connection object should ONLY every be retrieved from the Query class
+	 * JDBC connection object should ONLY every be used by the Query and SQLPlus classes
 	 */
 	Connection conn;
 	
@@ -84,7 +84,7 @@ public class Session implements Closeable {
 		try {
 			close();
 		} catch(IOException e) {
-			throw new RuntimeException(e);
+			throw new SQLRuntimeException(e);
 		}
 	}
 

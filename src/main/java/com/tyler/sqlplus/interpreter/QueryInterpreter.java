@@ -8,8 +8,8 @@ import java.lang.reflect.Type;
 import java.util.*;
 
 /**
- * Defines the contract for a class which is able of interpreting a transactAndReturn as a given java type, reflectively.
- * This class is used when interpreting query results for lazy-loaded fields as well as @SQLPlusQuery method
+ * Defines the contract for a class which is able of interpreting a query as a given java type, reflectively.
+ * This class is used when interpreting query results for lazy-loaded fields as well as @SQLQuery method
  * return types
  */
 public abstract class QueryInterpreter {
@@ -26,9 +26,8 @@ public abstract class QueryInterpreter {
 		if (INTERPRETER_INDEX.containsKey(type)) {
 			return INTERPRETER_INDEX.get(type);
 		}
-		Optional<QueryInterpreter> foundInterpreter = REGISTERED_INTERPRETERS.stream()
-		                                                                     .filter(i -> i.canInterpret(type))
-		                                                                     .findFirst();
+
+		Optional<QueryInterpreter> foundInterpreter = REGISTERED_INTERPRETERS.stream().filter(i -> i.canInterpret(type)).findFirst();
 		if (foundInterpreter.isPresent()) {
 			INTERPRETER_INDEX.put(type, foundInterpreter.get());
 			return foundInterpreter.get();
