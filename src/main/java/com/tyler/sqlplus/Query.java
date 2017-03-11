@@ -65,7 +65,7 @@ public class Query {
 		this.paramLabel_paramIndex = parseParams(sql);
 	}
 	
-	public Query setParameter(Integer index, Object val) {
+	public Query setParameter(int index, Object val) {
 		if (index > paramLabel_paramIndex.size()) {
 			throw new QueryStructureException(
 				"Parameter index " + index + " is out of range of this query's parameters (max parameters: " + paramLabel_paramIndex.size() + ")");
@@ -77,14 +77,14 @@ public class Query {
 		if (!paramLabel_paramIndex.containsKey(key)) {
 			throw new QueryStructureException("Unknown query parameter: " + key);
 		}
-		Integer paramIndex = paramLabel_paramIndex.get(key);
+		int paramIndex = paramLabel_paramIndex.get(key);
 		currentParamBatch.put(paramIndex, val);
 		return this;
 	}
 
 	/**
-	 * Executes this query, mapping the single result to an instance of the given POJO class. If more than 1 result is returned,
-	 * a NonUniqueResultException will be thrown
+	 * Executes this query, mapping the single result to an instance of the given POJO class.
+	 * @throws NonUniqueResultException If more than 1 result is returned
 	 */
 	public <T> T getUniqueResultAs(Class<T> resultClass) {
 			List<T> results = fetchAs(resultClass);
@@ -114,11 +114,11 @@ public class Query {
 	
 	/**
 	 * Processes results in batches of the given size.
-	 * 
+	 *
 	 * This method is useful for processing huge chunks of data which could potentially exhaust available memory if read all at once
 	 */
 	public <T> void batchProcess(Class<T> batchType, int batchSize, BatchConsumer<T> processor) {
-		
+
 		List<T> batch = new ArrayList<>();
 		streamAs(batchType).forEach(data -> {
 			batch.add(data);
@@ -131,7 +131,7 @@ public class Query {
 				batch.clear();
 			}
 		});
-		
+
 		// Will have leftover if batch size does not evenly divide into total results
 		if (!batch.isEmpty()) {
 			try {
@@ -141,7 +141,7 @@ public class Query {
 			}
 		}
 	}
-	
+
 	public <T> Stream<T> streamAs(Class<T> klass) {
 		RowMapper<T> mapper = RowMapperFactory.newMapper(klass, conversionRegistry, session);
 		return stream().map(rs -> {
@@ -161,7 +161,7 @@ public class Query {
 			throw new SQLRuntimeException(e);
 		}
 	}
-	
+
 	/**
 	 * Execute this query's payload as an update statement, returning an array of update counts for each batched statement
 	 */

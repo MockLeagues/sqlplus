@@ -659,7 +659,7 @@ public class ConversionRegistry {
 		return new ConversionRegistry();
 	}
 
-	public boolean containsConverter(Class<?> type) {
+	public boolean containsConverterFor(Class<?> type) {
 		return registry.containsKey(type.getName());
 	}
 

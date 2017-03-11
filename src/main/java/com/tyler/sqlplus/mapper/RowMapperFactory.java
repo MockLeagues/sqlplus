@@ -35,18 +35,20 @@ public final class RowMapperFactory {
 	 */
 	public static <E> RowMapper<E> newMapper(Class<E> klass, ConversionRegistry conversionRegistry, Session session) {
 
-		// Scalar == value that cannot be reduced. These values will have dedicated readers. Therefore, if a reader exists for the type, it is scalar
-		boolean isScalar = conversionRegistry.containsConverter(klass);
+		// Scalar == value that cannot be reduced to a collection of simpler, primitive values.
+		// These values will have dedicated readers. Therefore, if a reader exists for the type, it is scalar
+		boolean isScalar = conversionRegistry.containsConverterFor(klass);
 		if (isScalar) {
+			SQLConverter<E> scalarConverter = conversionRegistry.getConverter(klass);
 			return rs -> {
 				if (rs.getMetaData().getColumnCount() > 1) {
 					throw new SQLRuntimeException("Cannot map query results with more than 1 column to scalar " + klass);
 				}
-				return conversionRegistry.getConverter(klass).read(rs, 1, klass);
+				return scalarConverter.read(rs, 1, klass);
 			};
 		}
 
-		// Special case for maps
+		// Maps are handled specially
 		if (Map.class.isAssignableFrom(klass)) {
 			return rs -> {
 
