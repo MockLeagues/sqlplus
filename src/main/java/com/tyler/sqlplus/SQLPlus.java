@@ -5,6 +5,7 @@ import com.tyler.sqlplus.function.Functions;
 import com.tyler.sqlplus.proxy.TransactionalService;
 
 import javax.sql.DataSource;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -123,7 +124,11 @@ public class SQLPlus {
 		}
 
 		CURRENT_THREAD_SESSION.remove();
-		session.closeQuiet();
+		try {
+			session.close();
+		} catch (IOException ex) {
+			throw new SQLRuntimeException(ex);
+		}
 		return result;
 	}
 	

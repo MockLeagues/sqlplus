@@ -80,14 +80,6 @@ public class Session implements Closeable {
 		}
 	}
 
-	public void closeQuiet() {
-		try {
-			close();
-		} catch(IOException e) {
-			throw new SQLRuntimeException(e);
-		}
-	}
-
 	@Override
 	public void close() throws IOException {
 		try {
